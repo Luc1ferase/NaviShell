@@ -10,6 +10,7 @@
 
 mod error;
 mod known_hosts;
+mod local_pty;
 mod plugins;
 mod secrets;
 mod servers;
@@ -73,9 +74,11 @@ pub fn run() {
             ssh::connection::ssh_connect,
             ssh::connection::ssh_disconnect,
             ssh::connection::ssh_list_connections,
+            ssh::connection::ssh_auth_respond,
             ssh::exec::ssh_exec,
             // terminals
             ssh::terminal::term_open,
+            local_pty::term_open_local,
             ssh::terminal::term_write,
             ssh::terminal::term_resize,
             ssh::terminal::term_close,

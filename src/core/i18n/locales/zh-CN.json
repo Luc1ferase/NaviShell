@@ -17,13 +17,18 @@
   "topbar": {
     "quickConnect": "连接",
     "newServer": "新建服务器",
+    "newLocalTerminal": "本地终端",
+    "newLocalTerminalTooltip": "新建本地终端（Ctrl+Shift+`）",
     "settings": "设置",
     "noServers": "尚无服务器"
   },
   "status": {
     "notConnected": "未连接",
+    "localShell": "本地 Shell",
     "terminals": "{{n}} 个终端",
     "plugins": "{{n}} 个插件",
+    "authMethodTooltip": "认证方式：{{method}}",
+    "viaUnknown": "已关闭的跳板机",
     "localeTooltip": "界面语言",
     "themeTooltip": "配色主题"
   },
@@ -50,7 +55,16 @@
     "webgl": "WebGL 渲染",
     "webglHint": "不可用时自动回退到 DOM 渲染",
     "webglToggle": "优先使用 WebGL",
-    "termType": "终端类型"
+    "termType": "终端类型",
+    "localShell": {
+      "title": "本地 Shell",
+      "program": "程序",
+      "programHint": "留空则在 Windows 使用 PowerShell，其他平台使用 $SHELL",
+      "programPlaceholder": "自动",
+      "args": "启动参数",
+      "argsHint": "每行一个",
+      "argsPlaceholder": "-NoLogo"
+    }
   },
   "plugins": {
     "enabled": "启用",
@@ -84,6 +98,9 @@
     "deleted": "已删除 {{name}}",
     "duplicateName": "{{name}}（副本）",
     "passwordCleared": "已清除保存的密码",
+    "passphraseCleared": "已清除保存的密钥口令",
+    "via": "经由 {{name}}",
+    "auth": { "password": "密码", "key": "密钥", "agent": "代理" },
     "delete": {
       "title": "删除服务器",
       "message": "确定删除 {{name}} 及其保存的密码？"
@@ -103,6 +120,7 @@
       "port": "端口",
       "username": "用户名",
       "group": "分组",
+      "authMethod": "认证方式",
       "password": "密码",
       "passwordStored": "钥匙串中已保存密码",
       "passwordEmpty": "连接时询问",
@@ -110,6 +128,23 @@
       "saveToKeychain": "保存到钥匙串",
       "hasCredential": "已保存密码",
       "clearCredential": "清除保存的密码",
+      "keyPath": "私钥文件",
+      "keyPathPlaceholder": "~/.ssh/id_ed25519",
+      "keyPathHint": "本机上的 OpenSSH 私钥文件。",
+      "browse": "浏览",
+      "pickKey": "选择私钥文件",
+      "passphrase": "密钥口令",
+      "passphraseStored": "钥匙串中已保存口令",
+      "passphraseEmpty": "密钥加密时询问",
+      "passphraseHint": "仅加密私钥需要填写。",
+      "savePassphraseToKeychain": "把口令保存到钥匙串",
+      "hasPassphrase": "已保存口令",
+      "clearPassphrase": "清除保存的口令",
+      "agentHintWindows": "使用正在运行的 ssh-agent。Windows 上请启动“OpenSSH Authentication Agent”服务，并用 ssh-add 添加密钥。",
+      "agentHintUnix": "使用 SSH_AUTH_SOCK 指向的 ssh-agent，请先用 ssh-add 添加密钥。",
+      "jumpServer": "跳板机",
+      "jumpServerDirect": "直接连接",
+      "jumpServerHint": "先连接这台已保存的服务器，再跳转过去（ProxyJump）。",
       "color": "颜色",
       "noColor": "不设置颜色"
     }
@@ -118,6 +153,9 @@
     "title": "NaviShell",
     "subtitle": "可插拔的 SSH 终端，带可停靠的工作区。",
     "quickConnect": "快速连接",
+    "localShell": "本地 Shell",
+    "newLocalTerminal": "新建本地终端",
+    "newLocalTerminalHint": "在本机运行 Shell ·",
     "hints": "使用提示",
     "addFirstServer": "添加第一台服务器",
     "addFirstServerHint": "只需主机、用户名和密码",
@@ -131,9 +169,11 @@
     }
   },
   "terminal": {
+    "localTitle": "本地 Shell",
     "sessionEnded": "会话已结束",
     "connectionLost": "连接已断开",
     "reconnect": "重新连接",
+    "reopen": "新建本地 Shell",
     "exitCode": "退出码 {{code}}",
     "exitNotice": "[会话已结束，退出码 {{code}}]",
     "connectionLostNotice": "[连接已断开]"
@@ -144,6 +184,17 @@
       "connect": "连接",
       "placeholder": "SSH 密码",
       "save": "保存到钥匙串"
+    },
+    "passphrase": {
+      "title": "{{name}} 的密钥口令",
+      "placeholder": "私钥口令",
+      "save": "把口令保存到钥匙串"
+    },
+    "authPrompt": {
+      "title": "{{name}} 需要进一步验证",
+      "titleUnknown": "服务器需要进一步验证",
+      "answer": "请输入",
+      "submit": "提交"
     },
     "hostKey": {
       "title": "主机密钥已变更",
@@ -157,6 +208,9 @@
   "connect": {
     "hostKeyNew": "已信任 {{host}} 的新主机密钥（{{fingerprint}}）",
     "authFailed": "{{name}} 认证失败",
+    "agentUnavailableWindows": "找不到可用的 ssh-agent。请启动“OpenSSH Authentication Agent”服务，并用 ssh-add 添加密钥。",
+    "agentUnavailableUnix": "找不到可用的 ssh-agent。请确认 SSH_AUTH_SOCK 已设置，并用 ssh-add 添加密钥。",
+    "jumpCycle": "{{name}} 的跳板机配置形成了循环。",
     "cancelled": "已取消连接"
   },
   "command": {
@@ -165,6 +219,7 @@
     "reloadPlugins": "重新加载插件",
     "connect": "连接服务器",
     "openTerminal": "打开终端",
+    "newLocalTerminal": "新建本地终端",
     "disconnect": "断开连接",
     "openPanel": "打开面板",
     "closePanel": "关闭面板",

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { KeyRound, ShieldAlert, TriangleAlert } from 'lucide-react';
+import { KeyRound, ShieldAlert, ShieldQuestionMark, TriangleAlert } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import {
   useUiStore,
+  type AuthPromptRequest,
   type DialogRequest,
   type HostKeyRequest,
   type PasswordRequest,
@@ -181,6 +182,7 @@ function PasswordDialog({
   const [password, setPassword] = useState('');
   const [save, setSave] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const passphrase = options.kind === 'passphrase';
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -209,16 +211,86 @@ function PasswordDialog({
         className="ns-input"
         type="password"
         autoComplete="current-password"
-        placeholder={t('dialog.password.placeholder')}
+        placeholder={
+          passphrase ? t('dialog.passphrase.placeholder') : t('dialog.password.placeholder')
+        }
         value={password}
         onChange={(event) => setPassword(event.target.value)}
       />
       {options.offerSave ? (
         <label className="ns-check">
           <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} />
-          {t('dialog.password.save')}
+          {passphrase ? t('dialog.passphrase.save') : t('dialog.password.save')}
         </label>
       ) : null}
+    </DialogShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Keyboard-interactive prompts (OTP / 2FA)
+// ---------------------------------------------------------------------------
+
+function AuthPromptDialog({
+  options,
+  settle,
+}: {
+  options: AuthPromptRequest;
+  settle: (value: string[] | null) => void;
+}) {
+  const { t } = useI18n();
+  const [answers, setAnswers] = useState<string[]>(() => options.prompts.map(() => ''));
+  const inputs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    inputs.current[0]?.focus();
+  }, []);
+
+  const setAnswer = (index: number, value: string) =>
+    setAnswers((prev) => prev.map((entry, i) => (i === index ? value : entry)));
+
+  return (
+    <DialogShell
+      title={options.title}
+      icon={<ShieldQuestionMark size={16} />}
+      onCancel={() => settle(null)}
+      onSubmit={() => settle(answers)}
+      actions={
+        <>
+          <button type="button" className="ns-btn" onClick={() => settle(null)}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" className="ns-btn ns-btn--primary">
+            {t('dialog.authPrompt.submit')}
+          </button>
+        </>
+      }
+    >
+      {options.name ? <p className="ns-dialog__message">{options.name}</p> : null}
+      {options.instructions ? (
+        <p className="ns-dialog__message ns-dialog__message--pre">{options.instructions}</p>
+      ) : null}
+      {options.prompts.map((prompt, index) => (
+        <label className="ns-field" key={`${index}-${prompt.prompt}`}>
+          <span className="ns-field__label">{prompt.prompt || t('dialog.authPrompt.answer')}</span>
+          <input
+            ref={(element) => {
+              inputs.current[index] = element;
+            }}
+            className="ns-input"
+            type={prompt.echo ? 'text' : 'password'}
+            autoComplete="off"
+            value={answers[index] ?? ''}
+            onChange={(event) => setAnswer(index, event.target.value)}
+            onKeyDown={(event) => {
+              // Enter moves to the next field; the last one submits the form.
+              if (event.key !== 'Enter' || index === options.prompts.length - 1) return;
+              event.preventDefault();
+              inputs.current[index + 1]?.focus();
+            }}
+          />
+        </label>
+      ))}
     </DialogShell>
   );
 }
@@ -296,6 +368,8 @@ export function DialogHost() {
       return <PasswordDialog key={request.id} options={request.options} settle={settle} />;
     case 'hostKey':
       return <HostKeyDialog key={request.id} options={request.options} settle={settle} />;
+    case 'authPrompt':
+      return <AuthPromptDialog key={request.id} options={request.options} settle={settle} />;
     default:
       return null;
   }

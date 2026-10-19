@@ -3,27 +3,29 @@ import type { IDockviewPanelProps } from 'dockview-react';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
+import type { TerminalPanelParams } from '@/core/services/layout';
 import { useTerminalsStore } from '@/core/stores/terminals';
 import { useUiStore } from '@/core/stores/ui';
 import {
+  openLocalTerminal,
   openTerminalForServer,
   reconnectTerminal,
+  reopenLocalTerminal,
   setActiveTerminal,
 } from '@/core/terminal/manager';
 
-export interface TerminalPanelParams {
-  terminalId: string;
-  serverId: string;
-  serverName: string;
-}
+export type { TerminalPanelParams };
 
 export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
   const { terminalId, serverId, serverName } = props.params;
+  // Layouts saved before local terminals existed have no `kind`.
+  const local = props.params.kind === 'local';
   const { t } = useI18n();
   const record = useTerminalsStore((state) => state.records[terminalId]);
   const toast = useUiStore((state) => state.toast);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const session = record?.session;
+  const label = local ? t('terminal.localTitle') : serverName;
 
   // Adopt the session DOM; the session itself outlives this component.
   useEffect(() => {
@@ -53,11 +55,19 @@ export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
     };
   }, [session, props.api, terminalId]);
 
-  const reconnect = () => {
-    void reconnectTerminal(serverId, record ? terminalId : undefined).catch((error) => {
-      const message = errorMessage(error);
-      if (message) toast(message, 'error');
-    });
+  const report = (error: unknown) => {
+    const message = errorMessage(error);
+    if (message) toast(message, 'error');
+  };
+
+  /** Replace this panel with a fresh session of the same kind. */
+  const reopen = () => {
+    if (local) {
+      void reopenLocalTerminal(record ? terminalId : undefined).catch(report);
+      return;
+    }
+    if (!serverId) return;
+    void reconnectTerminal(serverId, record ? terminalId : undefined).catch(report);
   };
 
   if (!record) {
@@ -65,21 +75,25 @@ export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
     return (
       <div className="ns-placeholder">
         <strong>{t('terminal.sessionEnded')}</strong>
-        <span>{serverName}</span>
+        <span>{label}</span>
         <div className="ns-term-exit__actions">
           <button
             type="button"
             className="ns-btn ns-btn--primary"
             onClick={() => {
-              void openTerminalForServer(serverId)
-                .then(() => props.api.close())
-                .catch((error) => {
-                  const message = errorMessage(error);
-                  if (message) toast(message, 'error');
-                });
+              const opened = local
+                ? openLocalTerminal()
+                : serverId
+                  ? openTerminalForServer(serverId)
+                  : null;
+              if (!opened) {
+                props.api.close();
+                return;
+              }
+              void opened.then(() => props.api.close()).catch(report);
             }}
           >
-            {t('terminal.reconnect')}
+            {local ? t('terminal.reopen') : t('terminal.reconnect')}
           </button>
           <button type="button" className="ns-btn" onClick={() => props.api.close()}>
             {t('common.close')}
@@ -101,12 +115,12 @@ export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
           </span>
           <span className="ns-term-exit__detail">
             {record.exited.exitCode === null
-              ? serverName
+              ? label
               : t('terminal.exitCode', { code: record.exited.exitCode })}
           </span>
           <div className="ns-term-exit__actions">
-            <button type="button" className="ns-btn ns-btn--primary" onClick={reconnect}>
-              {t('terminal.reconnect')}
+            <button type="button" className="ns-btn ns-btn--primary" onClick={reopen}>
+              {local ? t('terminal.reopen') : t('terminal.reconnect')}
             </button>
             <button type="button" className="ns-btn" onClick={() => props.api.close()}>
               {t('common.close')}

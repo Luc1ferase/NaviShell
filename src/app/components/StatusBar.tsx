@@ -1,10 +1,21 @@
 import type { MouseEvent } from 'react';
-import { Fingerprint, Languages, Plug, SquareTerminal, SunMoon, Wifi, WifiOff } from 'lucide-react';
-import type { MenuItem } from '@navishell/plugin-api';
+import {
+  Fingerprint,
+  Languages,
+  Monitor,
+  Plug,
+  ShieldCheck,
+  SquareTerminal,
+  SunMoon,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
+import type { ConnectionInfo, MenuItem } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import { useConnectionsStore } from '@/core/stores/connections';
 import { usePluginsStore } from '@/core/stores/plugins';
+import { useServersStore } from '@/core/stores/servers';
 import { useSettingsStore } from '@/core/stores/settings';
 import { useTerminalsStore } from '@/core/stores/terminals';
 import { useUiStore } from '@/core/stores/ui';
@@ -17,6 +28,7 @@ function shortFingerprint(fingerprint: string): string {
 export function StatusBar() {
   const { t, locale } = useI18n();
   const connections = useConnectionsStore((state) => state.connections);
+  const servers = useServersStore((state) => state.servers);
   const records = useTerminalsStore((state) => state.records);
   const activeId = useTerminalsStore((state) => state.activeId);
   const terminalCount = useTerminalsStore((state) => state.order.length);
@@ -28,9 +40,19 @@ export function StatusBar() {
   const showContextMenu = useUiStore((state) => state.showContextMenu);
 
   const activeRecord = activeId ? records[activeId] : undefined;
-  const activeConnection =
-    connections.find((connection) => connection.id === activeRecord?.connectionId) ??
-    connections[0];
+  const localActive = activeRecord?.kind === 'local';
+  const activeConnection = localActive
+    ? undefined
+    : (connections.find((connection) => connection.id === activeRecord?.connectionId) ??
+      connections[0]);
+
+  /** Name of the jump host a connection is tunnelled through, if any. */
+  const viaLabel = (connection: ConnectionInfo): string | null => {
+    if (!connection.viaConnectionId) return null;
+    const via = connections.find((candidate) => candidate.id === connection.viaConnectionId);
+    if (!via) return t('status.viaUnknown');
+    return servers.find((server) => server.id === via.serverId)?.name ?? via.host;
+  };
 
   const openMenu = (event: MouseEvent<HTMLButtonElement>, items: MenuItem[]) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -61,16 +83,40 @@ export function StatusBar() {
     onClick: () => update((prev) => ({ ...prev, theme })),
   }));
 
+  const via = activeConnection ? viaLabel(activeConnection) : null;
+
   return (
     <footer className="ns-statusbar">
       <span className="ns-statusbar__item">
-        {activeConnection ? <Wifi size={12} /> : <WifiOff size={12} />}
+        {localActive ? (
+          <Monitor size={12} />
+        ) : activeConnection ? (
+          <Wifi size={12} />
+        ) : (
+          <WifiOff size={12} />
+        )}
         <span className="ns-statusbar__mono">
-          {activeConnection
-            ? `${activeConnection.username}@${activeConnection.host}:${activeConnection.port}`
-            : t('status.notConnected')}
+          {localActive
+            ? t('status.localShell')
+            : activeConnection
+              ? `${activeConnection.username}@${activeConnection.host}:${activeConnection.port}${
+                  via ? ` ${t('servers.via', { name: via })}` : ''
+                }`
+              : t('status.notConnected')}
         </span>
       </span>
+
+      {activeConnection ? (
+        <span
+          className="ns-statusbar__item"
+          title={t('status.authMethodTooltip', {
+            method: t(`servers.auth.${activeConnection.authMethod}`),
+          })}
+        >
+          <ShieldCheck size={12} />
+          {t(`servers.auth.${activeConnection.authMethod}`)}
+        </span>
+      ) : null}
 
       {activeConnection ? (
         <span className="ns-statusbar__item" title={activeConnection.hostKeyFingerprint}>

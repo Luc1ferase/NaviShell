@@ -15,7 +15,8 @@ import { DockLayout } from '@/app/layout/DockLayout';
 import { registerCorePanels } from '@/app/panels/corePanels';
 import { bootstrap, type BootstrapStep } from '@/core/bootstrap';
 import { onDidChangeLocale, setLocale, resolveLocale } from '@/core/i18n';
-import { listenHost } from '@/core/ipc/client';
+import { errorMessage, listenHost } from '@/core/ipc/client';
+import { handleAuthPrompt } from '@/core/services/connect';
 import { flushLayoutPersist, refreshPanelTitles } from '@/core/services/layout';
 import { applyThemeToDocument, resolveTheme } from '@/core/services/theme';
 import { flushSettings, getSettings, onDidChangeSettings } from '@/core/stores/settings';
@@ -25,6 +26,7 @@ import {
   disposeAllTerminals,
   handleConnectionClosed,
   handleTerminalExit,
+  openLocalTerminal,
 } from '@/core/terminal/manager';
 
 type Phase = 'loading' | 'ready';
@@ -80,11 +82,30 @@ export function App() {
 
     register(listenHost('terminal:exit', (p) => handleTerminalExit(p.terminalId, p.exitCode)));
     register(listenHost('connection:closed', (p) => handleConnectionClosed(p.connectionId)));
+    // Keyboard-interactive rounds arrive while `ssh_connect` is still pending.
+    register(listenHost('auth:prompt', (p) => void handleAuthPrompt(p)));
 
     return () => {
       disposed = true;
       for (const unlisten of unlisteners.splice(0)) unlisten();
     };
+  }, []);
+
+  // -- global shortcuts ----------------------------------------------------
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+Shift+` opens a local shell. Captured before xterm sees the key.
+      if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return;
+      if (event.code !== 'Backquote' && event.key !== '`' && event.key !== '~') return;
+      event.preventDefault();
+      event.stopPropagation();
+      void openLocalTerminal().catch((error) => {
+        const message = errorMessage(error);
+        if (message) useUiStore.getState().toast(message, 'error');
+      });
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, []);
 
   // -- settings / locale / theme reactions ---------------------------------

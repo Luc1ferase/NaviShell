@@ -79,6 +79,12 @@
   letter-spacing: 0.4px;
 }
 
+/* A path that had to be guessed relative to `~` rather than the shell's real cwd. */
+.ns-completion-badge-note {
+  border-color: color-mix(in srgb, var(--ns-accent) 45%, var(--ns-border));
+  color: var(--ns-fg);
+}
+
 .ns-completion-description {
   min-width: 0;
   color: var(--ns-fg-muted);

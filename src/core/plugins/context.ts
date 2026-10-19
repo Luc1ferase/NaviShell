@@ -31,6 +31,7 @@ import {
   onDidChangeActiveTerminal,
   onDidCloseTerminal,
   onDidOpenTerminal,
+  openLocalTerminal,
   openTerminalForServer,
 } from '../terminal/manager';
 import { executeCommand, useRegistryStore } from './registry';
@@ -141,8 +142,10 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
     },
 
     terminals: {
+      // Both lists include local terminals; plugins filter on `kind`.
       list: () => listTerminals(),
       getActive: () => getActiveTerminal(),
+      openLocal: (opts): Promise<TerminalHandle> => openLocalTerminal(opts ?? {}),
       onDidOpen: onDidOpenTerminal,
       onDidClose: onDidCloseTerminal,
       onDidChangeActive: onDidChangeActiveTerminal,

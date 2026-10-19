@@ -46,11 +46,21 @@ export interface TerminalSettings {
   termType: string;
 }
 
+export interface LocalShellSettings {
+  /**
+   * Program to launch for local terminals. `null` = auto-detect
+   * (Windows: `pwsh.exe` if present else `powershell.exe`; elsewhere `$SHELL` else `/bin/bash`).
+   */
+  program: string | null;
+  args: string[];
+}
+
 export interface AppSettings {
   /** "system" follows the OS locale. */
   locale: 'system' | 'en' | 'zh-CN';
   theme: 'dark' | 'light' | 'system';
   terminal: TerminalSettings;
+  localShell: LocalShellSettings;
   plugins: {
     /** Plugin ids the user disabled. */
     disabled: string[];
@@ -74,9 +84,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
     webgl: true,
     termType: 'xterm-256color',
   },
+  localShell: { program: null, args: [] },
   plugins: { disabled: [], seenPanels: [] },
   closeConnectionWithLastTerminal: true,
 };
+
+export type CredentialKind = 'password' | 'passphrase';
 
 export interface AppPaths {
   appData: string;
@@ -131,25 +144,60 @@ export interface Commands {
   /** Also deletes the stored credential (ignores a missing one). */
   servers_delete: { args: { serverId: string }; result: void };
 
-  // ---- credentials (OS keychain; service name "dev.navishell", account = serverId) ----
-  credential_exists: { args: { serverId: string }; result: boolean };
-  credential_set: { args: { serverId: string; password: string }; result: void };
-  credential_delete: { args: { serverId: string }; result: void };
+  // ---- credentials (OS keychain; service "dev.navishell") ---------------
+  /**
+   * `kind` selects the keychain account: `password` => `<serverId>`,
+   * `passphrase` (private-key passphrase) => `<serverId>:passphrase`. Default: `password`.
+   */
+  credential_exists: { args: { serverId: string; kind?: CredentialKind }; result: boolean };
+  credential_set: {
+    args: { serverId: string; password: string; kind?: CredentialKind };
+    result: void;
+  };
+  credential_delete: { args: { serverId: string; kind?: CredentialKind }; result: void };
 
   // ---- ssh connections ---------------------------------------------------
   /**
-   * Connect and authenticate.
-   * - `password` omitted => use the keychain; none stored => reject `PasswordRequired`.
-   * - `savePassword` => store `password` in the keychain after a successful auth.
+   * Connect and authenticate according to the server's `auth` method.
    * - Host keys: unknown host => trust on first use, store, `hostKeyStatus: 'new'`.
    *   Mismatch => reject `HostKeyMismatch` with `data: { fingerprint, expectedFingerprint }`
    *   unless `trustHostKey` is true (then replace the stored key).
-   * - Wrong password => `AuthFailed`. Network/DNS/timeout => `ConnectFailed` / `Timeout`.
+   * - `password` auth: `password` omitted => use the keychain; none stored => reject
+   *   `PasswordRequired`. `savePassword` => store after a successful auth.
+   * - `key` auth: load `auth.keyPath`; if the key is encrypted use `passphrase`, else the
+   *   keychain (`<serverId>:passphrase`), else reject `PassphraseRequired`.
+   *   `savePassphrase` => store after success. Unreadable/unsupported key => `AuthFailed`
+   *   with a descriptive message.
+   * - `agent` auth: talk to the ssh-agent; no agent / no identity accepted =>
+   *   `AgentUnavailable` (unreachable) or `AuthFailed` (reachable but rejected).
+   * - Keyboard-interactive fallback: when the chosen method is rejected or not offered and
+   *   the server offers `keyboard-interactive`, start it. For each info request emit the
+   *   `auth:prompt` event and wait (max 180 s) for `ssh_auth_respond` with the same
+   *   `requestId`. A single hidden prompt whose text contains "password" is answered
+   *   automatically with the available password (keychain or arg) once before asking.
+   * - ProxyJump: pass `viaConnectionId` (an OPEN connection to the jump host, obtained by
+   *   connecting to `jumpServerId` first). The session is tunnelled through a
+   *   direct-tcpip channel of that connection; `ConnectionInfo.viaConnectionId` records it.
+   *   When the jump connection closes, tunnelled connections close too.
+   * - Wrong credentials => `AuthFailed`. Network/DNS/timeout => `ConnectFailed` / `Timeout`.
    */
   ssh_connect: {
-    args: { serverId: string; password?: string; savePassword?: boolean; trustHostKey?: boolean };
+    args: {
+      serverId: string;
+      password?: string;
+      savePassword?: boolean;
+      passphrase?: string;
+      savePassphrase?: boolean;
+      trustHostKey?: boolean;
+      viaConnectionId?: string;
+    };
     result: ConnectionInfo;
   };
+  /**
+   * Answers (or cancels, with `responses: null`) a pending `auth:prompt`. Unknown or
+   * expired `requestId` => `NotFound`.
+   */
+  ssh_auth_respond: { args: { requestId: string; responses: string[] | null }; result: void };
   ssh_disconnect: { args: { connectionId: string }; result: void };
   ssh_list_connections: { args: Record<string, never>; result: ConnectionInfo[] };
   /** One-shot command on a fresh exec channel; default timeout 30s. */
@@ -165,6 +213,23 @@ export interface Commands {
    */
   term_open: {
     args: { connectionId: string; cols: number; rows: number; term: string };
+    result: { terminalId: string };
+  };
+  /**
+   * Local shell terminal (portable-pty). Same `onData: Channel<ArrayBuffer>` extra arg and
+   * the same `term_write` / `term_resize` / `term_close` commands and `terminal:exit` event
+   * as SSH terminals. `program`/`args` default to `settings.localShell` resolution; `cwd`
+   * defaults to the home directory. Environment gets `TERM=<term>` and `COLORTERM=truecolor`.
+   */
+  term_open_local: {
+    args: {
+      cols: number;
+      rows: number;
+      term: string;
+      program?: string | null;
+      args?: string[];
+      cwd?: string | null;
+    };
     result: { terminalId: string };
   };
   /** `data` is UTF-8 text written to the channel as bytes. */
@@ -221,11 +286,28 @@ export type CommandResult<K extends CommandName> = Commands[K]['result'];
 // Events (Rust -> frontend, via `app.emit(name, payload)`)
 // ---------------------------------------------------------------------------
 
+export interface AuthPromptItem {
+  prompt: string;
+  /** `false` => hide the input (password-like). */
+  echo: boolean;
+}
+
 export interface HostEvents {
   /** The SSH session ended (remote closed, network error, or `ssh_disconnect`). */
   'connection:closed': { connectionId: string; reason: string | null };
-  /** The shell channel ended. Emitted exactly once per terminal. */
+  /** The shell channel (or local shell) ended. Emitted exactly once per terminal. */
   'terminal:exit': { terminalId: string; exitCode: number | null };
+  /**
+   * Keyboard-interactive request during `ssh_connect`. The frontend shows the prompts and
+   * answers with `ssh_auth_respond`. `name`/`instructions` may be empty strings.
+   */
+  'auth:prompt': {
+    requestId: string;
+    serverId: string;
+    name: string;
+    instructions: string;
+    prompts: AuthPromptItem[];
+  };
 }
 
 export type HostEventName = keyof HostEvents;

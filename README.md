@@ -14,17 +14,29 @@ NaviShell 是一个跨平台 SSH 终端客户端：Rust（Tauri 2）负责连接
 一套类似 VS Code 的可停靠界面。核心保持精简，**其余能力都以前端插件的形式实现** ——
 内置的 SFTP 文件管理器和命令补全本身就是两个插件，使用的 API 与第三方插件完全一致。
 
-## 功能（v1）
+## 功能
 
-- **服务器管理**：分组、标签、颜色标记；密码保存在系统钥匙串（Windows 凭据管理器 /
-  macOS 钥匙串 / Linux Secret Service），不写入配置文件。
+- **服务器管理**：分组、标签、颜色标记；密码与私钥口令保存在系统钥匙串（Windows 凭据
+  管理器 / macOS 钥匙串 / Linux Secret Service），不写入配置文件。
+- **多种登录方式**：密码、OpenSSH 私钥（加密私钥的口令同样走钥匙串）、ssh-agent；当
+  服务器要求 keyboard-interactive（含 2FA / OTP）时，会把每一条提示弹窗问用户。
+- **跳板机（ProxyJump）**：服务器记录里挂一个 `jumpServerId`，先连跳板机，再把目标会话
+  通过它的 direct-tcpip 通道隧穿过去；跳板机断开时，经由它的连接一起关闭。
 - **多终端**：基于 xterm.js 的真实 PTY 会话，支持多标签、分屏停靠、布局自动保存恢复。
+- **本地终端**：不经过 SSH，直接在本机开一个 shell。默认程序为 Windows 上的 `pwsh.exe`
+  （没装则 `powershell.exe`）、其他平台的 `$SHELL`（未设置则 `/bin/bash`），可在设置的
+  「本地 shell」里改成任意程序与参数。
 - **主机密钥校验**：首次连接记录指纹（TOFU），指纹变化时弹窗提示。
-- **SFTP 文件管理器**（内置插件）：跟随当前终端的连接，浏览 / 上传 / 下载 / 重命名 /
-  删除 / 新建目录，带进度与取消的传输列表，小文件快速编辑。
-- **命令补全**（内置插件）：按服务器记录历史命令并从远端 `~/.bash_history`、
-  `~/.zsh_history` 预热，结合内置的 275 条常用命令词典（含 git / docker / kubectl /
-  systemctl 等子命令），在光标下方给出候选。
+- **SFTP 文件管理器**（内置插件）：跟随当前终端的连接（本地终端没有连接，会退回到连接
+  下拉框），浏览 / 上传 / 下载 / 重命名 / 删除 / 新建目录，带进度与取消的传输列表，
+  小文件快速编辑。
+- **命令补全**（内置插件）：按服务器记录历史命令（本地终端统一归到 `local`）并从远端
+  `~/.bash_history`、`~/.zsh_history` 预热；补全远端 `PATH` 上的可执行文件
+  （`compgen -c`）和远端目录里的路径；再结合内置的 275 条常用命令词典（含 git /
+  docker / kubectl / systemctl 等子命令），在光标下方给出候选并标注来源。
+  路径补全依赖 shell 上报的当前目录（OSC 7）；可选的 **shell 集成** 开关（默认关闭，
+  命令面板里的「开启/关闭 shell 集成」）会给新建的 SSH 终端注入一行
+  `PROMPT_COMMAND` / `precmd` 钩子，让 bash 与 zsh 在每个提示符后上报目录。
 - **中英双语**：界面语言跟随系统，可手动切换；插件可注册自己的翻译资源。
 - **深色优先的主题**：所有颜色来自一组 CSS 变量，插件复用同一套变量。
 
@@ -214,18 +226,19 @@ export default definePlugin({
 
 ## 路线图
 
-v1 之后计划中的能力（欢迎在对应 issue 下讨论）：
+v1 之后的方向（欢迎在对应 issue 下讨论）。标为「下个版本」的已经在 `master` 上实现，
+会随下一个 Release 发布：
 
-| # | 方向 |
-| - | ---- |
-| [#1](../../issues/1) | 私钥登录（PEM / OpenSSH、passphrase） |
-| [#2](../../issues/2) | ssh-agent 支持 |
-| [#3](../../issues/3) | ProxyJump / 跳板机 |
-| [#4](../../issues/4) | keyboard-interactive（含 2FA） |
-| [#5](../../issues/5) | 应用内自动更新 |
-| [#6](../../issues/6) | 本地终端（不经过 SSH） |
-| [#7](../../issues/7) | 从 URL 安装插件 |
-| [#8](../../issues/8) | 感知远端环境的命令补全（真实补全而非词典） |
+| # | 方向 | 状态 |
+| - | ---- | ---- |
+| [#1](../../issues/1) | 私钥登录（PEM / OpenSSH、passphrase） | 下个版本 |
+| [#2](../../issues/2) | ssh-agent 支持 | 下个版本 |
+| [#3](../../issues/3) | ProxyJump / 跳板机 | 下个版本 |
+| [#4](../../issues/4) | keyboard-interactive（含 2FA） | 下个版本 |
+| [#5](../../issues/5) | 应用内自动更新 | 计划中 |
+| [#6](../../issues/6) | 本地终端（不经过 SSH） | 下个版本 |
+| [#7](../../issues/7) | 从 URL 安装插件 | 计划中 |
+| [#8](../../issues/8) | 感知远端环境的命令补全（真实补全而非词典） | 下个版本 |
 
 ## 许可
 
@@ -240,10 +253,15 @@ NaviShell is a cross-platform SSH terminal built with **Tauri 2** (Rust core) an
 The core stays small: the built-in SFTP file manager and command completion are plugins that
 use exactly the same public API as third-party ones.
 
-**v1 features** — server records with credentials in the OS keychain, multi-tab PTY terminals
-(xterm.js) with persisted dock layout, TOFU host-key verification, an SFTP file manager
-(browse, upload, download, rename, delete, transfer progress and cancel), command completion
-from per-server history plus a 275-command dictionary, and English / Chinese UI.
+**Features** — server records with credentials in the OS keychain; password, private-key and
+ssh-agent authentication with a keyboard-interactive fallback for 2FA; ProxyJump through a
+saved jump host; multi-tab PTY terminals (xterm.js) with a persisted dock layout; local shell
+terminals that skip SSH entirely (`pwsh.exe`/`powershell.exe` on Windows, `$SHELL` elsewhere,
+both overridable in the settings); TOFU host-key verification; an SFTP file manager (browse,
+upload, download, rename, delete, transfer progress and cancel); command completion from
+history, the remote `PATH`, remote directory listings and a 275-command dictionary, with an
+opt-in shell-integration toggle that teaches bash and zsh to report their working directory
+through OSC 7; and an English / Chinese UI.
 
 **Development**
 

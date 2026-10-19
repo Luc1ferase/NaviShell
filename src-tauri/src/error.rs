@@ -12,6 +12,10 @@ use serde::Serialize;
 pub enum ErrorCode {
     /// `ssh_connect` needs a password: none was passed and none is stored.
     PasswordRequired,
+    /// The private key is encrypted and no (usable) passphrase was passed or stored.
+    PassphraseRequired,
+    /// No ssh-agent could be reached, or it holds no identity to try.
+    AgentUnavailable,
     /// The server rejected the credentials.
     AuthFailed,
     /// The host key differs from the stored one.
@@ -69,6 +73,16 @@ impl AppError {
 
     pub fn password_required(message: impl Into<String>) -> Self {
         Self::new(ErrorCode::PasswordRequired, message)
+    }
+
+    /// The key is encrypted and the passphrase is missing or does not decrypt it; the
+    /// frontend reacts by asking the user for one and retrying.
+    pub fn passphrase_required(message: impl Into<String>) -> Self {
+        Self::new(ErrorCode::PassphraseRequired, message)
+    }
+
+    pub fn agent_unavailable(message: impl Into<String>) -> Self {
+        Self::new(ErrorCode::AgentUnavailable, message)
     }
 
     pub fn auth_failed(message: impl Into<String>) -> Self {
@@ -143,6 +157,41 @@ impl From<russh::Error> for AppError {
             }
             E::IO(io) => Self::io(io.to_string()),
             _ => Self::internal(format!("ssh error: {err}")),
+        }
+    }
+}
+
+impl From<russh::keys::Error> for AppError {
+    /// Key handling errors: a missing passphrase and agent trouble get their own codes,
+    /// anything else about a key is reported as a failed authentication.
+    fn from(err: russh::keys::Error) -> Self {
+        use russh::keys::Error as E;
+        match &err {
+            E::KeyIsEncrypted => {
+                Self::passphrase_required("the private key is encrypted and needs a passphrase")
+            }
+            // The only crypto step while loading a key is decrypting it.
+            E::SshKey(russh::keys::ssh_key::Error::Crypto) => {
+                Self::passphrase_required("the passphrase does not decrypt the private key")
+            }
+            E::EnvVar(_) | E::BadAuthSock | E::AgentProtocolError | E::AgentFailure => {
+                Self::agent_unavailable(format!("ssh-agent error: {err}"))
+            }
+            E::IO(io) => Self::io(io.to_string()),
+            _ => Self::auth_failed(format!("key error: {err}")),
+        }
+    }
+}
+
+impl From<russh::AgentAuthError> for AppError {
+    /// Signing through the agent failed: either the session went away or the agent did.
+    fn from(err: russh::AgentAuthError) -> Self {
+        use russh::AgentAuthError as E;
+        match err {
+            E::Send(_) => Self::not_connected(
+                "the SSH session ended while the agent was signing the authentication request",
+            ),
+            E::Key(err) => Self::from(err),
         }
     }
 }

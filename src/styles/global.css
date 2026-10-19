@@ -311,6 +311,44 @@ body {
   font-family: var(--ns-font-mono);
 }
 
+.ns-textarea {
+  width: 100%;
+  padding: 5px 8px;
+  color: var(--ns-fg);
+  font-family: inherit;
+  font-size: var(--ns-font-size-sm);
+  line-height: 1.5;
+  background: var(--ns-bg-inset);
+  border: 1px solid var(--ns-border-strong);
+  border-radius: var(--ns-radius);
+  resize: vertical;
+}
+
+.ns-textarea::placeholder {
+  color: var(--ns-fg-subtle);
+}
+
+.ns-textarea:focus {
+  border-color: var(--ns-accent);
+  outline: none;
+}
+
+/** An input with a trailing button (file pickers). */
+.ns-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ns-input-row .ns-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ns-input-row .ns-btn {
+  flex: 0 0 auto;
+}
+
 .ns-field {
   display: flex;
   flex-direction: column;
@@ -465,6 +503,13 @@ body {
 }
 
 .ns-server-row__name {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.ns-server-row__name-text {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -501,6 +546,14 @@ body {
 .ns-badge--accent {
   background: var(--ns-accent-soft);
   color: var(--ns-accent);
+}
+
+/** Inline badge inside a dense list row. */
+.ns-badge--xs {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .ns-badge--danger {
@@ -824,6 +877,11 @@ body {
 .ns-dialog__message {
   margin: 0;
   color: var(--ns-fg-muted);
+}
+
+/** Server-supplied text (auth prompts): keep its line breaks. */
+.ns-dialog__message--pre {
+  white-space: pre-wrap;
 }
 
 .ns-dialog__actions {

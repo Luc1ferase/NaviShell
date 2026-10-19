@@ -1,4 +1,4 @@
-import { Plus, Server, Settings as SettingsIcon } from 'lucide-react';
+import { Plus, Server, Settings as SettingsIcon, SquareTerminal } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
@@ -6,7 +6,7 @@ import { openSettingsPanel } from '@/core/services/layout';
 import { useServersStore } from '@/core/stores/servers';
 import { useSettingsStore } from '@/core/stores/settings';
 import { useUiStore } from '@/core/stores/ui';
-import { revealOrOpenTerminal } from '@/core/terminal/manager';
+import { openLocalTerminal, revealOrOpenTerminal } from '@/core/terminal/manager';
 
 export function HomePanel() {
   const { t } = useI18n();
@@ -17,6 +17,13 @@ export function HomePanel() {
 
   const connect = (serverId: string) => {
     void revealOrOpenTerminal(serverId).catch((error) => {
+      const message = errorMessage(error);
+      if (message) toast(message, 'error');
+    });
+  };
+
+  const newLocalTerminal = () => {
+    void openLocalTerminal().catch((error) => {
       const message = errorMessage(error);
       if (message) toast(message, 'error');
     });
@@ -64,6 +71,21 @@ export function HomePanel() {
             ))}
           </div>
         )}
+      </div>
+
+      <div>
+        <div className="ns-panel__section-title">{t('home.localShell')}</div>
+        <div className="ns-home__grid">
+          <button type="button" className="ns-home__card" onClick={newLocalTerminal}>
+            <span className="ns-home__card-name">
+              <SquareTerminal size={14} />
+              {t('home.newLocalTerminal')}
+            </span>
+            <span className="ns-home__card-addr">
+              {t('home.newLocalTerminalHint')} <span className="ns-kbd">Ctrl+Shift+`</span>
+            </span>
+          </button>
+        </div>
       </div>
 
       <div>

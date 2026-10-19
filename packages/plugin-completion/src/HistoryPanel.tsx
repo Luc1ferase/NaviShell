@@ -6,8 +6,9 @@ import type { CompletionController } from './store';
 import { useSharedState } from './store';
 
 /**
- * Optional bottom panel: the recorded history of the active terminal's server, filterable,
- * click to put a command on the prompt (without executing it).
+ * Optional bottom panel: the recorded history of the active terminal's history bucket (its
+ * server, or `local` for local shells), filterable, click to put a command on the prompt
+ * without executing it.
  */
 export function createHistoryPanelComponent(
   controller: CompletionController,
@@ -15,7 +16,7 @@ export function createHistoryPanelComponent(
   function HistoryPanel({ ctx }: PanelProps): JSX.Element {
     const shared = useSharedState(controller);
     const [filter, setFilter] = useState('');
-    const history = controller.historyFor(shared.activeServerId);
+    const history = controller.historyFor(shared.activeHistoryKey);
     const needle = filter.trim().toLowerCase();
     const visible = useMemo(
       () =>

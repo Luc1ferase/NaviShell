@@ -1,11 +1,13 @@
 //! Shared, mutable runtime state of the core.
 //!
 //! One [`AppState`] is managed by Tauri (`app.manage`) and reachable from every command
-//! through `tauri::State<'_, AppState>`. It owns three registries:
+//! through `tauri::State<'_, AppState>`. It owns four registries:
 //!
 //! * live SSH connections, keyed by connection id,
-//! * live terminals (the sending end of their command channel), keyed by terminal id,
-//! * running transfers (their cancellation token), keyed by transfer id.
+//! * live terminals, SSH and local alike (the sending end of their command channel),
+//!   keyed by terminal id,
+//! * running transfers (their cancellation token), keyed by transfer id,
+//! * keyboard-interactive prompts waiting for an answer, keyed by request id.
 //!
 //! All locks are `tokio` locks, so holding one across an `.await` is safe; they are still
 //! kept for as short a time as possible and never held while doing network I/O.
@@ -13,7 +15,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::{Mutex, MutexGuard, RwLock, mpsc};
+use tokio::sync::{Mutex, MutexGuard, RwLock, mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
 use crate::error::{AppError, AppResult};
@@ -23,9 +25,13 @@ use crate::ssh::terminal::TermCmd;
 /// A live terminal: the connection it belongs to plus the channel its task listens on.
 #[derive(Debug, Clone)]
 pub struct TerminalEntry {
-    pub connection_id: String,
+    /// `Some` for an SSH shell channel, `None` for a local shell on this machine.
+    pub connection_id: Option<String>,
     pub commands: mpsc::Sender<TermCmd>,
 }
+
+/// The answers to one `auth:prompt`, or `None` when the user cancelled it.
+pub type PromptAnswers = Option<Vec<String>>;
 
 /// Runtime state shared by all commands.
 #[derive(Default)]
@@ -33,6 +39,7 @@ pub struct AppState {
     connections: RwLock<HashMap<String, Arc<Connection>>>,
     terminals: Mutex<HashMap<String, TerminalEntry>>,
     transfers: Mutex<HashMap<String, CancellationToken>>,
+    prompts: Mutex<HashMap<String, oneshot::Sender<PromptAnswers>>>,
     storage: Mutex<()>,
 }
 
@@ -77,6 +84,36 @@ impl AppState {
         infos
     }
 
+    /// The ids of the connections tunnelled through this one (ProxyJump children).
+    pub async fn connection_ids_via(&self, connection_id: &str) -> Vec<String> {
+        let connections = self.connections.read().await;
+        let mut ids: Vec<&Arc<Connection>> = connections
+            .values()
+            .filter(|c| c.info.via_connection_id.as_deref() == Some(connection_id))
+            .collect();
+        ids.sort_by_key(|c| c.info.connected_at);
+        ids.into_iter().map(|c| c.info.id.clone()).collect()
+    }
+
+    // -- auth prompts -------------------------------------------------------
+
+    /// Registers a keyboard-interactive prompt and returns the receiver to await.
+    ///
+    /// A request id that is somehow already pending is replaced; the previous waiter is
+    /// told the prompt was cancelled so no `ssh_connect` can hang forever.
+    pub async fn register_prompt(&self, request_id: String) -> oneshot::Receiver<PromptAnswers> {
+        let (sender, receiver) = oneshot::channel();
+        if let Some(previous) = self.prompts.lock().await.insert(request_id, sender) {
+            let _ = previous.send(None);
+        }
+        receiver
+    }
+
+    /// Takes the waiting end of a prompt, so exactly one answer can be delivered.
+    pub async fn take_prompt(&self, request_id: &str) -> Option<oneshot::Sender<PromptAnswers>> {
+        self.prompts.lock().await.remove(request_id)
+    }
+
     // -- terminals ----------------------------------------------------------
 
     /// Registers a terminal and its command channel.
@@ -100,11 +137,13 @@ impl AppState {
     }
 
     /// Removes and returns every terminal of a connection (used when the session dies).
+    ///
+    /// Local terminals have no connection id, so they are never collected here.
     pub async fn take_terminals_of(&self, connection_id: &str) -> Vec<(String, TerminalEntry)> {
         let mut terminals = self.terminals.lock().await;
         let ids: Vec<String> = terminals
             .iter()
-            .filter(|(_, entry)| entry.connection_id == connection_id)
+            .filter(|(_, entry)| entry.connection_id.as_deref() == Some(connection_id))
             .map(|(id, _)| id.clone())
             .collect();
         ids.into_iter()

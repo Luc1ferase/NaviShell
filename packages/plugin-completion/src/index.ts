@@ -1,10 +1,15 @@
 /**
  * navishell.completion - inline command suggestions for every terminal.
  *
- * Sources: per-server command history (recorded from typed input, seeded once per session
- * from the remote `~/.bash_history` / `~/.zsh_history`) and a built-in dictionary of common
- * commands and subcommands. The popup lives in the terminal overlay layer; keys are only
- * intercepted while it is visible.
+ * Sources, in ranking order: entries of the remote directory a path token points at,
+ * command history (per server, or `local` for local shells, seeded once per session from
+ * the remote `~/.bash_history` / `~/.zsh_history`), the executables on the remote `PATH`,
+ * and a built-in dictionary of common commands and subcommands. The popup lives in the
+ * terminal overlay layer; keys are only intercepted while it is visible.
+ *
+ * Path completion needs the shell's working directory. OSC 7 is read whenever a shell
+ * emits it; the opt-in `toggleShellIntegration` command installs a hook that makes bash and
+ * zsh emit it after every prompt.
  */
 
 import { definePlugin } from '@navishell/plugin-api';
@@ -51,6 +56,22 @@ export default definePlugin({
         handler: async () => {
           const enabled = await instance.toggle();
           ctx.ui.toast(ctx.i18n.t(enabled ? 'toast.enabled' : 'toast.disabled'), 'info');
+          return enabled;
+        },
+      }),
+    );
+
+    ctx.subscriptions.push(
+      ctx.commands.register({
+        id: 'toggleShellIntegration',
+        title: 'command.shellIntegration',
+        icon: 'Route',
+        handler: async () => {
+          const enabled = await instance.toggleShellIntegration();
+          ctx.ui.toast(
+            ctx.i18n.t(enabled ? 'toast.integrationEnabled' : 'toast.integrationDisabled'),
+            'info',
+          );
           return enabled;
         },
       }),

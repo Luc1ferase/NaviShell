@@ -1,8 +1,9 @@
 import type { ComponentType, JSX, MouseEvent } from 'react';
-import { BookOpen, Clock } from 'lucide-react';
+import { BookOpen, Clock, Folder, SquareTerminal } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { CursorPixelPosition, TerminalOverlayProps } from '@navishell/plugin-api';
 import { computeLayout } from './engine';
-import type { Suggestion } from './engine';
+import type { Suggestion, SuggestionSource } from './engine';
 import type { CompletionController } from './store';
 import { useTerminalState } from './store';
 
@@ -16,15 +17,29 @@ const FALLBACK_CURSOR: CursorPixelPosition = {
   row: 0,
 };
 
+const ICONS: Record<SuggestionSource, LucideIcon> = {
+  history: Clock,
+  remote: SquareTerminal,
+  path: Folder,
+  dict: BookOpen,
+};
+
+const BADGES: Record<SuggestionSource, string> = {
+  history: 'badge.history',
+  remote: 'badge.remote',
+  path: 'badge.path',
+  dict: 'badge.dict',
+};
+
 function Highlighted({ suggestion }: { suggestion: Suggestion }): JSX.Element {
-  const { value, matchStart, matchLength } = suggestion;
-  if (matchStart < 0 || matchLength <= 0) return <>{value}</>;
+  const { label, matchStart, matchLength } = suggestion;
+  if (matchStart < 0 || matchLength <= 0) return <>{label}</>;
   const end = matchStart + matchLength;
   return (
     <>
-      {value.slice(0, matchStart)}
-      <mark className="ns-completion-match">{value.slice(matchStart, end)}</mark>
-      {value.slice(end)}
+      {label.slice(0, matchStart)}
+      <mark className="ns-completion-match">{label.slice(matchStart, end)}</mark>
+      {label.slice(end)}
     </>
   );
 }
@@ -65,30 +80,38 @@ export function createOverlayComponent(
         role="listbox"
         aria-label={ctx.i18n.t('popup.label')}
       >
-        {state.suggestions.map((suggestion, index) => (
-          <button
-            type="button"
-            key={suggestion.value}
-            role="option"
-            aria-selected={index === state.selected}
-            className={`ns-completion-item${index === state.selected ? ' ns-completion-item-active' : ''}`}
-            onMouseDown={(event) => onPick(event, index)}
-            onMouseEnter={() => controller.select(terminal.id, index)}
-          >
-            <span className="ns-completion-source" aria-hidden="true">
-              {suggestion.source === 'history' ? <Clock size={12} /> : <BookOpen size={12} />}
-            </span>
-            <span className="ns-completion-text">
-              <Highlighted suggestion={suggestion} />
-            </span>
-            <span className="ns-completion-badge">
-              {ctx.i18n.t(suggestion.source === 'history' ? 'badge.history' : 'badge.dict')}
-            </span>
-            {suggestion.description ? (
-              <span className="ns-completion-description">{suggestion.description}</span>
-            ) : null}
-          </button>
-        ))}
+        {state.suggestions.map((suggestion, index) => {
+          const Icon = ICONS[suggestion.source];
+          // A path listed under `~` is a guess: the shell never told us where it is.
+          const guessed = suggestion.relativeToHome === true;
+          return (
+            <button
+              type="button"
+              key={suggestion.value}
+              role="option"
+              aria-selected={index === state.selected}
+              className={`ns-completion-item${index === state.selected ? ' ns-completion-item-active' : ''}`}
+              onMouseDown={(event) => onPick(event, index)}
+              onMouseEnter={() => controller.select(terminal.id, index)}
+            >
+              <span className="ns-completion-source" aria-hidden="true">
+                <Icon size={12} />
+              </span>
+              <span className="ns-completion-text">
+                <Highlighted suggestion={suggestion} />
+              </span>
+              <span
+                className={`ns-completion-badge${guessed ? ' ns-completion-badge-note' : ''}`}
+                title={guessed ? ctx.i18n.t('badge.pathHomeHint') : undefined}
+              >
+                {ctx.i18n.t(guessed ? 'badge.pathHome' : BADGES[suggestion.source])}
+              </span>
+              {suggestion.description ? (
+                <span className="ns-completion-description">{suggestion.description}</span>
+              ) : null}
+            </button>
+          );
+        })}
         <div className="ns-completion-hints">
           <span>{ctx.i18n.t('hint.navigate')}</span>
           <span>{ctx.i18n.t('hint.accept')}</span>

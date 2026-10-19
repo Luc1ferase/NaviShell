@@ -14,13 +14,18 @@ import { onDidRegisterPanel } from '@/core/plugins/registry';
 import {
   FIXED_TAB_COMPONENT,
   TERMINAL_PANEL_PREFIX,
+  TERMINAL_TAB_COMPONENT,
   applyDefaultLayout,
   maybeAutoOpenPanel,
   restoreLayout,
   runPendingAutoOpen,
   scheduleLayoutPersist,
   setDockApi,
+  type TerminalPanelParams,
 } from '@/core/services/layout';
+import { useConnectionsStore } from '@/core/stores/connections';
+import { useServersStore } from '@/core/stores/servers';
+import { useTerminalsStore } from '@/core/stores/terminals';
 import { closeTerminal, setActiveTerminal } from '@/core/terminal/manager';
 import { HomePanel } from '@/app/panels/HomePanel';
 import { PanelHost } from '@/app/panels/PluginPanel';
@@ -28,6 +33,34 @@ import { TerminalPanel } from '@/app/panels/TerminalPanel';
 
 function FixedTab(props: IDockviewPanelHeaderProps) {
   return <DockviewDefaultTab hideClose {...props} />;
+}
+
+/** Terminal tab with a tooltip describing where the session runs. */
+function TerminalTab(props: IDockviewPanelHeaderProps<TerminalPanelParams>) {
+  const { t } = useI18n();
+  const params = props.params;
+  const record = useTerminalsStore((state) => state.records[params.terminalId]);
+  const connections = useConnectionsStore((state) => state.connections);
+  const servers = useServersStore((state) => state.servers);
+
+  let tooltip = params.serverName;
+  if (params.kind === 'local') {
+    tooltip = t('terminal.localTitle');
+  } else {
+    const connection = connections.find((entry) => entry.id === record?.connectionId);
+    if (connection) {
+      tooltip = `${connection.username}@${connection.host}:${connection.port}`;
+      if (connection.viaConnectionId) {
+        const via = connections.find((entry) => entry.id === connection.viaConnectionId);
+        const viaName = via
+          ? (servers.find((server) => server.id === via.serverId)?.name ?? via.host)
+          : t('status.viaUnknown');
+        tooltip = `${tooltip} ${t('servers.via', { name: viaName })}`;
+      }
+    }
+  }
+
+  return <DockviewDefaultTab {...props} title={tooltip} />;
 }
 
 function Watermark() {
@@ -40,7 +73,10 @@ const COMPONENTS: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   home: HomePanel,
 };
 
-const TAB_COMPONENTS = { [FIXED_TAB_COMPONENT]: FixedTab };
+const TAB_COMPONENTS = {
+  [FIXED_TAB_COMPONENT]: FixedTab,
+  [TERMINAL_TAB_COMPONENT]: TerminalTab,
+};
 
 export interface DockLayoutProps {
   savedLayout: JsonValue | null;

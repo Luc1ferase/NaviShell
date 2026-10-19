@@ -11,6 +11,10 @@
 //!
 //! When the loop ends, `terminal:exit` is emitted exactly once and the terminal is
 //! removed from the registry.
+//!
+//! `term_write`, `term_resize` and `term_close` live here but are not SSH-specific: they
+//! look the terminal up in the registry and send it a [`TermCmd`], so they drive local
+//! shells (`crate::local_pty`) through exactly the same path.
 
 use russh::client::Msg;
 use russh::{ChannelMsg, ChannelReadHalf, ChannelWriteHalf};
@@ -24,18 +28,18 @@ use crate::ssh::connection;
 use crate::state::{AppState, TerminalEntry};
 
 /// How many outgoing commands may queue up before `term_write` has to wait.
-const COMMAND_BUFFER: usize = 128;
+pub(crate) const COMMAND_BUFFER: usize = 128;
 /// Fallback when the frontend sends an empty `term`.
 const DEFAULT_TERM: &str = "xterm-256color";
 
-/// A message for the task that owns a terminal channel.
+/// A message for the task (SSH) or thread (local) that owns a terminal.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TermCmd {
     /// Raw bytes to write to the shell.
     Write(Vec<u8>),
     /// New window size in cells (cols, rows).
     Resize(u32, u32),
-    /// Send EOF, close the channel and finish.
+    /// Finish: close the SSH channel, or kill the local child process.
     Close,
 }
 
@@ -87,7 +91,7 @@ pub async fn term_open(
         .insert_terminal(
             terminal_id.clone(),
             TerminalEntry {
-                connection_id: connection_id.clone(),
+                connection_id: Some(connection_id.clone()),
                 commands,
             },
         )
@@ -207,7 +211,7 @@ pub async fn term_write(
         .map_err(|_| AppError::not_found(format!("terminal {terminal_id} has exited")))
 }
 
-/// Tells the remote PTY about a new window size.
+/// Tells the PTY, remote or local, about a new window size.
 #[tauri::command]
 pub async fn term_resize(
     state: tauri::State<'_, AppState>,

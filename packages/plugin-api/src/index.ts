@@ -29,7 +29,8 @@ export interface Disposable {
   dispose(): void;
 }
 
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export type Locale = 'en' | 'zh-CN';
 
@@ -72,7 +73,19 @@ export function definePlugin(plugin: NaviShellPlugin): NaviShellPlugin {
 // Core data types (shared with the Rust side; field names are camelCase on the wire)
 // ---------------------------------------------------------------------------
 
-export type AuthMethod = { type: 'password' };
+/**
+ * How to authenticate.
+ * - `password`: stored in the OS keychain (account `<serverId>`) or prompted.
+ * - `key`: OpenSSH private key file; an encrypted key's passphrase is stored under
+ *   keychain account `<serverId>:passphrase` or prompted.
+ * - `agent`: ssh-agent (Windows OpenSSH agent named pipe, `SSH_AUTH_SOCK` elsewhere).
+ * Keyboard-interactive (OTP / 2FA) is not a method of its own: the host falls back to it
+ * automatically when the server requires it and asks the user through a prompt dialog.
+ */
+export type AuthMethod =
+  { type: 'password' } | { type: 'key'; keyPath: string } | { type: 'agent' };
+
+export type AuthMethodType = AuthMethod['type'];
 
 export interface ServerRecord {
   id: string;
@@ -86,6 +99,8 @@ export interface ServerRecord {
   /** Optional accent colour (CSS colour string). */
   color?: string;
   auth: AuthMethod;
+  /** Connect through this saved server first (ProxyJump). `null`/absent = direct. */
+  jumpServerId?: string | null;
   /** Unix epoch milliseconds. */
   createdAt: number;
   updatedAt: number;
@@ -107,6 +122,10 @@ export interface ConnectionInfo {
   /** e.g. "SHA256:abc..." */
   hostKeyFingerprint: string;
   hostKeyStatus: HostKeyStatus;
+  /** The auth method that succeeded. */
+  authMethod: AuthMethodType;
+  /** Set when the session is tunnelled through another connection (ProxyJump). */
+  viaConnectionId: string | null;
 }
 
 export interface ExecResult {
@@ -156,6 +175,10 @@ export interface TransferHandle {
 
 export type HostErrorCode =
   | 'PasswordRequired'
+  /** The private key is encrypted and no passphrase was given or stored. */
+  | 'PassphraseRequired'
+  /** No ssh-agent could be reached (or it holds no usable identity). */
+  | 'AgentUnavailable'
   | 'AuthFailed'
   | 'HostKeyMismatch'
   | 'ConnectFailed'
@@ -303,7 +326,11 @@ export interface ConnectionsApi {
   get(id: string): ConnectionInfo | undefined;
   onDidChange(cb: (connections: ConnectionInfo[]) => void): Disposable;
   /** Run a one-shot command on a separate exec channel (does not touch any terminal). */
-  exec(connectionId: string, command: string, options?: { timeoutMs?: number }): Promise<ExecResult>;
+  exec(
+    connectionId: string,
+    command: string,
+    options?: { timeoutMs?: number },
+  ): Promise<ExecResult>;
   /** Lazily opens an SFTP session on the connection and returns a client bound to it. */
   sftp(connectionId: string): SftpClient;
   disconnect(connectionId: string): Promise<void>;
@@ -324,10 +351,16 @@ export interface CursorPixelPosition {
   row: number;
 }
 
+export type TerminalKind = 'ssh' | 'local';
+
 export interface TerminalHandle {
   readonly id: string;
-  readonly serverId: string;
-  readonly connectionId: string;
+  /** `ssh` terminals belong to a connection; `local` ones run a shell on this machine. */
+  readonly kind: TerminalKind;
+  /** `null` for local terminals. */
+  readonly serverId: string | null;
+  /** `null` for local terminals. */
+  readonly connectionId: string | null;
   /** The xterm.js instance (read-only use recommended; do not dispose it). */
   readonly xterm: Terminal;
   /** Container element of the terminal panel (position: relative). */
@@ -354,6 +387,8 @@ export interface TerminalOverlayProps {
 export interface TerminalsApi {
   list(): TerminalHandle[];
   getActive(): TerminalHandle | undefined;
+  /** Open a new local shell terminal tab (program/args from the host settings). */
+  openLocal(options?: { cwd?: string }): Promise<TerminalHandle>;
   onDidOpen(cb: (terminal: TerminalHandle) => void): Disposable;
   onDidClose(cb: (terminal: TerminalHandle) => void): Disposable;
   onDidChangeActive(cb: (terminal: TerminalHandle | undefined) => void): Disposable;
@@ -366,7 +401,9 @@ export interface TerminalsApi {
    * Intercept keyboard events on every terminal before xterm handles them.
    * Return `false` to swallow the event (xterm will not see it).
    */
-  registerKeyHandler(handler: (terminal: TerminalHandle, event: KeyboardEvent) => boolean): Disposable;
+  registerKeyHandler(
+    handler: (terminal: TerminalHandle, event: KeyboardEvent) => boolean,
+  ): Disposable;
 }
 
 // ---------------------------------------------------------------------------
