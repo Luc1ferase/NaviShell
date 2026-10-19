@@ -261,12 +261,12 @@ pub async fn sftp_read_text(
     let limit = max_bytes.unwrap_or(DEFAULT_MAX_TEXT_BYTES);
     let sftp = session(&state, &connection_id).await?;
 
-    if let Some(size) = sftp.metadata(path.clone()).await?.size {
-        if size > limit {
-            return Err(AppError::invalid_argument(format!(
-                "{path} is {size} bytes, which is more than the {limit} byte limit"
-            )));
-        }
+    if let Some(size) = sftp.metadata(path.clone()).await?.size
+        && size > limit
+    {
+        return Err(AppError::invalid_argument(format!(
+            "{path} is {size} bytes, which is more than the {limit} byte limit"
+        )));
     }
 
     let bytes = sftp.read(path.clone()).await?;
