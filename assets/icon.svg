@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="NaviShell">
+  <title>NaviShell</title>
+  <defs>
+    <linearGradient id="ns-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#132037" />
+      <stop offset="1" stop-color="#070C16" />
+    </linearGradient>
+    <linearGradient id="ns-accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5EEAD4" />
+      <stop offset="1" stop-color="#22D3EE" />
+    </linearGradient>
+  </defs>
+
+  <!-- dark navy plate -->
+  <rect width="1024" height="1024" rx="232" fill="url(#ns-bg)" />
+  <rect x="10" y="10" width="1004" height="1004" rx="224" fill="none" stroke="#2DD4BF" stroke-opacity="0.2" stroke-width="20" />
+
+  <!-- compass ring: the "navi" half of the name, kept faint so it never fights the prompt -->
+  <g stroke="#5EEAD4" stroke-opacity="0.16" fill="none">
+    <circle cx="512" cy="512" r="376" stroke-width="16" />
+    <g stroke-width="26" stroke-linecap="round">
+      <path d="M512 92V168" />
+      <path d="M512 856v76" />
+      <path d="M92 512h76" />
+      <path d="M856 512h76" />
+    </g>
+  </g>
+
+  <!-- prompt mark: >_ -->
+  <g fill="none" stroke="url(#ns-accent)" stroke-width="92" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M322 330 L500 512 L322 694" />
+  </g>
+  <rect x="536" y="650" width="188" height="86" rx="43" fill="url(#ns-accent)" />
+</svg>

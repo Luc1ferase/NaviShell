@@ -1,0 +1,153 @@
+import { useEffect, useRef, useState } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import type { JsonValue } from '@navishell/plugin-api';
+
+import { registerHostCommands } from '@/app/hostCommands';
+import { ContextMenuHost } from '@/app/components/ContextMenuHost';
+import { DialogHost } from '@/app/components/Dialogs';
+import { ServerFormDialog } from '@/app/components/ServerFormDialog';
+import { Splash } from '@/app/components/Splash';
+import { StatusBar } from '@/app/components/StatusBar';
+import { TerminalOverlayHost } from '@/app/components/TerminalOverlayHost';
+import { Toasts } from '@/app/components/Toasts';
+import { TopBar } from '@/app/components/TopBar';
+import { DockLayout } from '@/app/layout/DockLayout';
+import { registerCorePanels } from '@/app/panels/corePanels';
+import { bootstrap, type BootstrapStep } from '@/core/bootstrap';
+import { onDidChangeLocale, setLocale, resolveLocale } from '@/core/i18n';
+import { listenHost } from '@/core/ipc/client';
+import { flushLayoutPersist, refreshPanelTitles } from '@/core/services/layout';
+import { applyThemeToDocument, resolveTheme } from '@/core/services/theme';
+import { flushSettings, getSettings, onDidChangeSettings } from '@/core/stores/settings';
+import { useUiStore } from '@/core/stores/ui';
+import {
+  applyTerminalSettings,
+  disposeAllTerminals,
+  handleConnectionClosed,
+  handleTerminalExit,
+} from '@/core/terminal/manager';
+
+type Phase = 'loading' | 'ready';
+
+export function App() {
+  const [phase, setPhase] = useState<Phase>('loading');
+  const [step, setStep] = useState<BootstrapStep>('settings');
+  const [savedLayout, setSavedLayout] = useState<JsonValue | null>(null);
+  const started = useRef(false);
+
+  // -- startup -------------------------------------------------------------
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
+    registerCorePanels();
+
+    void bootstrap({
+      onStep: setStep,
+      beforePlugins: registerHostCommands,
+    })
+      .then((result) => {
+        setSavedLayout(result.layout);
+        setPhase('ready');
+        if (result.warnings.length > 0) {
+          console.warn('[navishell] startup warnings', result.warnings);
+          if (isTauri()) {
+            for (const warning of result.warnings) {
+              useUiStore.getState().toast(warning, 'warning');
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('[navishell] startup failed', error);
+        setPhase('ready');
+      });
+  }, []);
+
+  // -- host events ---------------------------------------------------------
+  useEffect(() => {
+    const unlisteners: Array<() => void> = [];
+    let disposed = false;
+
+    const register = (promise: Promise<() => void>) => {
+      void promise
+        .then((unlisten) => {
+          if (disposed) unlisten();
+          else unlisteners.push(unlisten);
+        })
+        .catch((error) => console.warn('[navishell] event listener failed', error));
+    };
+
+    register(listenHost('terminal:exit', (p) => handleTerminalExit(p.terminalId, p.exitCode)));
+    register(listenHost('connection:closed', (p) => handleConnectionClosed(p.connectionId)));
+
+    return () => {
+      disposed = true;
+      for (const unlisten of unlisteners.splice(0)) unlisten();
+    };
+  }, []);
+
+  // -- settings / locale / theme reactions ---------------------------------
+  useEffect(() => {
+    let previous = getSettings();
+
+    const settingsSubscription = onDidChangeSettings((next) => {
+      if (next.theme !== previous.theme) {
+        applyThemeToDocument(resolveTheme(next.theme));
+      }
+      if (next.locale !== previous.locale) {
+        void setLocale(resolveLocale(next.locale));
+      }
+      if (next.terminal !== previous.terminal || next.theme !== previous.theme) {
+        applyTerminalSettings();
+      }
+      previous = next;
+    });
+
+    const localeSubscription = onDidChangeLocale(() => refreshPanelTitles());
+
+    const media = window.matchMedia?.('(prefers-color-scheme: light)');
+    const onSystemThemeChange = () => {
+      if (getSettings().theme === 'system') {
+        applyThemeToDocument(resolveTheme('system'));
+        applyTerminalSettings();
+      }
+    };
+    media?.addEventListener('change', onSystemThemeChange);
+
+    return () => {
+      settingsSubscription.dispose();
+      localeSubscription.dispose();
+      media?.removeEventListener('change', onSystemThemeChange);
+    };
+  }, []);
+
+  // -- teardown ------------------------------------------------------------
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      flushSettings();
+      flushLayoutPersist();
+      disposeAllTerminals();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
+  if (phase === 'loading') return <Splash step={step} />;
+
+  return (
+    <div className="ns-app">
+      <TopBar />
+      <div className="ns-app__body">
+        <DockLayout savedLayout={savedLayout} />
+      </div>
+      <StatusBar />
+
+      <TerminalOverlayHost />
+      <DialogHost />
+      <ServerFormDialog />
+      <ContextMenuHost />
+      <Toasts />
+    </div>
+  );
+}

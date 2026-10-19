@@ -1,0 +1,153 @@
+/*
+ * NaviShell design tokens.
+ *
+ * Dark is the default; `[data-theme="light"]` on <html> swaps the palette. The dockview
+ * `--dv-*` variables are mapped onto these tokens so the dock chrome follows the app
+ * theme without forking dockview's stylesheet.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --ns-bg: #0d1117;
+  --ns-bg-elevated: #161b22;
+  --ns-bg-inset: #0a0e13;
+  --ns-bg-hover: rgba(255, 255, 255, 0.06);
+  --ns-bg-active: rgba(255, 255, 255, 0.1);
+  --ns-bg-selected: rgba(45, 212, 191, 0.14);
+
+  --ns-fg: #d7dde5;
+  --ns-fg-muted: #8b949e;
+  --ns-fg-subtle: #6a7480;
+  --ns-fg-inverted: #04211d;
+
+  --ns-border: #21262d;
+  --ns-border-strong: #30363d;
+  --ns-focus-ring: rgba(45, 212, 191, 0.45);
+
+  --ns-accent: #2dd4bf;
+  --ns-accent-hover: #5eead4;
+  --ns-accent-soft: rgba(45, 212, 191, 0.16);
+
+  --ns-danger: #f87171;
+  --ns-danger-soft: rgba(248, 113, 113, 0.14);
+  --ns-warning: #e3b341;
+  --ns-warning-soft: rgba(227, 179, 65, 0.16);
+  --ns-success: #4ac98a;
+  --ns-success-soft: rgba(74, 201, 138, 0.16);
+  --ns-info: #58a6ff;
+  --ns-info-soft: rgba(88, 166, 255, 0.16);
+
+  --ns-radius-sm: 3px;
+  --ns-radius: 5px;
+  --ns-radius-lg: 8px;
+
+  --ns-font-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Inter, Roboto,
+    'Helvetica Neue', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --ns-font-mono: 'Cascadia Mono', 'JetBrains Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  --ns-font-size: 13px;
+  --ns-font-size-sm: 12px;
+  --ns-font-size-xs: 11px;
+  --ns-line-height: 1.45;
+
+  --ns-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --ns-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --ns-overlay-bg: rgba(13, 17, 23, 0.86);
+
+  --ns-row-height: 26px;
+  --ns-topbar-height: 38px;
+  --ns-statusbar-height: 24px;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --ns-bg: #ffffff;
+  --ns-bg-elevated: #f3f5f7;
+  --ns-bg-inset: #eceff2;
+  --ns-bg-hover: rgba(13, 17, 23, 0.055);
+  --ns-bg-active: rgba(13, 17, 23, 0.09);
+  --ns-bg-selected: rgba(13, 148, 136, 0.12);
+
+  --ns-fg: #1f2328;
+  --ns-fg-muted: #59636e;
+  --ns-fg-subtle: #818b96;
+  --ns-fg-inverted: #ffffff;
+
+  --ns-border: #d8dde3;
+  --ns-border-strong: #c2c9d1;
+  --ns-focus-ring: rgba(13, 148, 136, 0.4);
+
+  --ns-accent: #0d9488;
+  --ns-accent-hover: #0f766e;
+  --ns-accent-soft: rgba(13, 148, 136, 0.14);
+
+  --ns-danger: #cf222e;
+  --ns-danger-soft: rgba(207, 34, 46, 0.12);
+  --ns-warning: #9a6700;
+  --ns-warning-soft: rgba(154, 103, 0, 0.14);
+  --ns-success: #1a7f37;
+  --ns-success-soft: rgba(26, 127, 55, 0.14);
+  --ns-info: #0969da;
+  --ns-info-soft: rgba(9, 105, 218, 0.12);
+
+  --ns-shadow: 0 10px 28px rgba(31, 35, 40, 0.18);
+  --ns-shadow-sm: 0 2px 8px rgba(31, 35, 40, 0.12);
+  --ns-overlay-bg: rgba(255, 255, 255, 0.88);
+}
+
+/* --- dockview chrome ----------------------------------------------------- */
+
+.dockview-theme-dark,
+.dockview-theme-light {
+  color: var(--ns-fg);
+
+  --dv-group-view-background-color: var(--ns-bg);
+  --dv-tabs-and-actions-container-background-color: var(--ns-bg-elevated);
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-and-actions-container-font-size: var(--ns-font-size-sm);
+  --dv-tab-font-size: var(--ns-font-size-sm);
+  --dv-tab-border-radius: 0;
+  --dv-tab-divider-color: transparent;
+  --dv-tab-close-icon-size: 13px;
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--ns-bg);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--ns-bg-elevated);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--ns-bg);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--ns-bg-elevated);
+  --dv-activegroup-visiblepanel-tab-color: var(--ns-fg);
+  --dv-activegroup-hiddenpanel-tab-color: var(--ns-fg-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--ns-fg-muted);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--ns-fg-subtle);
+
+  --dv-separator-border: var(--ns-border);
+  --dv-paneview-header-border-color: var(--ns-border);
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--ns-accent);
+  --dv-icon-hover-background-color: var(--ns-bg-hover);
+  --dv-scrollbar-background-color: var(--ns-border-strong);
+  --dv-tabs-container-scrollbar-color: var(--ns-border-strong);
+
+  --dv-drag-over-background-color: var(--ns-accent-soft);
+  --dv-drag-over-border-color: var(--ns-accent);
+  --dv-drag-over-border: 1px solid var(--ns-accent);
+  --dv-dnd-compass-cell-color: var(--ns-bg-elevated);
+  --dv-dnd-compass-active-cell-color: var(--ns-accent-soft);
+  --dv-dnd-compass-color: var(--ns-border-strong);
+  --dv-edge-dock-indicator-color: var(--ns-accent);
+
+  --dv-floating-box-shadow: var(--ns-shadow);
+  --dv-floating-border: 1px solid var(--ns-border-strong);
+  --dv-floating-group-border: 1px solid var(--ns-border-strong);
+  --dv-floating-titlebar-background-color: var(--ns-bg-elevated);
+  --dv-floating-titlebar-border-bottom: 1px solid var(--ns-border);
+
+  --dv-context-menu-background-color: var(--ns-bg-elevated);
+  --dv-context-menu-color: var(--ns-fg);
+  --dv-border-radius: var(--ns-radius);
+  --dv-dropdown-border-radius: var(--ns-radius);
+  --dv-tab-group-color: var(--ns-accent);
+  --dv-smart-guides-color: var(--ns-accent);
+  --dv-transition-duration: 90ms;
+}

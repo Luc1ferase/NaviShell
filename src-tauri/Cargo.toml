@@ -1,0 +1,48 @@
+[package]
+name = "navishell"
+version = "0.1.0"
+description = "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI"
+authors = ["Luciferase"]
+repository = "https://github.com/Luc1ferase/NaviShell"
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+# The `_lib` suffix is necessary to keep the lib name unique from the bin name on Windows.
+name = "navishell_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "io-util", "fs", "net"] }
+tokio-util = { version = "0.7", features = ["io"] }
+# `ring` replaces the default `aws-lc-rs` crypto backend: it is pure Rust plus
+# pregenerated assembly, so building needs no NASM/C toolchain on Windows.
+russh = { version = "0.64", default-features = false, features = ["ring", "flate2", "rsa"] }
+russh-sftp = "3"
+keyring = { version = "4", features = ["v1"] }
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+bytes = "1"
+base64 = "0.23"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+futures = "0.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
+
+[profile.dev]
+# Keep incremental cargo check fast; nothing is built locally beyond `cargo check`.
+opt-level = 0

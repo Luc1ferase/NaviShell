@@ -1,0 +1,14 @@
+{
+  "id": "navishell.sftp",
+  "name": { "en": "File Manager (SFTP)", "zh-CN": "文件管理 (SFTP)" },
+  "version": "0.1.0",
+  "description": {
+    "en": "Browse, upload and download files over the active SSH connection.",
+    "zh-CN": "通过当前 SSH 连接浏览、上传和下载文件。"
+  },
+  "author": "NaviShell",
+  "main": "main.js",
+  "styles": ["style.css"],
+  "icon": "FolderTree",
+  "minHostVersion": "0.1.0"
+}

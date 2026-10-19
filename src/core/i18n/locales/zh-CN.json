@@ -1,0 +1,173 @@
+{
+  "common": {
+    "ok": "确定",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "close": "关闭",
+    "dismiss": "关闭提示"
+  },
+  "panel": {
+    "home": { "title": "欢迎" },
+    "servers": { "title": "服务器" },
+    "settings": { "title": "设置" },
+    "unavailable": "面板不可用",
+    "unavailableHint": "对应插件未加载、已禁用或激活失败。"
+  },
+  "topbar": {
+    "quickConnect": "连接",
+    "newServer": "新建服务器",
+    "settings": "设置",
+    "noServers": "尚无服务器"
+  },
+  "status": {
+    "notConnected": "未连接",
+    "terminals": "{{n}} 个终端",
+    "plugins": "{{n}} 个插件",
+    "localeTooltip": "界面语言",
+    "themeTooltip": "配色主题"
+  },
+  "settings": {
+    "title": "设置",
+    "general": "通用",
+    "terminal": "终端",
+    "plugins": "插件",
+    "about": "关于",
+    "localeLabel": "语言",
+    "themeLabel": "主题",
+    "locale": { "system": "跟随系统" },
+    "theme": { "system": "跟随系统", "dark": "深色", "light": "浅色" },
+    "closeWithLastTerminal": "自动断开连接",
+    "closeWithLastTerminalHint": "关闭连接的最后一个终端时断开 SSH",
+    "fontFamily": "字体",
+    "fontSize": "字号",
+    "lineHeight": "行高",
+    "cursorStyle": "光标样式",
+    "cursor": { "block": "方块", "underline": "下划线", "bar": "竖线" },
+    "cursorBlink": "光标闪烁",
+    "cursorBlinkHint": "让光标闪烁",
+    "scrollback": "回滚行数",
+    "webgl": "WebGL 渲染",
+    "webglHint": "不可用时自动回退到 DOM 渲染",
+    "webglToggle": "优先使用 WebGL",
+    "termType": "终端类型"
+  },
+  "plugins": {
+    "enabled": "启用",
+    "openFolder": "打开插件目录",
+    "reload": "重新加载插件",
+    "reloaded": "插件已重新加载",
+    "none": "未发现插件",
+    "status": { "active": "已激活", "disabled": "已禁用", "error": "错误" },
+    "source": { "builtin": "内置", "external": "外部" },
+    "errors": {
+      "manifest": "无法读取 plugin.json：{{message}}",
+      "noExport": "插件包没有导出 NaviShell 插件对象",
+      "hostVersion": "需要 NaviShell {{required}} 或更高版本（当前为 {{actual}}）"
+    }
+  },
+  "about": {
+    "version": "版本",
+    "platform": "平台",
+    "appData": "数据目录",
+    "logs": "日志目录",
+    "repository": "代码仓库"
+  },
+  "servers": {
+    "searchPlaceholder": "搜索服务器",
+    "add": "添加服务器",
+    "connect": "连接",
+    "empty": "还没有服务器，点击 + 添加。",
+    "noMatches": "没有匹配的服务器。",
+    "ungrouped": "未分组",
+    "saved": "已保存 {{name}}",
+    "deleted": "已删除 {{name}}",
+    "duplicateName": "{{name}}（副本）",
+    "passwordCleared": "已清除保存的密码",
+    "delete": {
+      "title": "删除服务器",
+      "message": "确定删除 {{name}} 及其保存的密码？"
+    },
+    "menu": {
+      "connect": "连接",
+      "newTerminal": "新建终端",
+      "edit": "编辑",
+      "duplicate": "复制",
+      "delete": "删除"
+    },
+    "form": {
+      "createTitle": "新建服务器",
+      "editTitle": "编辑服务器",
+      "name": "名称",
+      "host": "主机",
+      "port": "端口",
+      "username": "用户名",
+      "group": "分组",
+      "password": "密码",
+      "passwordStored": "钥匙串中已保存密码",
+      "passwordEmpty": "连接时询问",
+      "passwordHint": "仅在勾选“保存到钥匙串”时才会写入。",
+      "saveToKeychain": "保存到钥匙串",
+      "hasCredential": "已保存密码",
+      "clearCredential": "清除保存的密码",
+      "color": "颜色",
+      "noColor": "不设置颜色"
+    }
+  },
+  "home": {
+    "title": "NaviShell",
+    "subtitle": "可插拔的 SSH 终端，带可停靠的工作区。",
+    "quickConnect": "快速连接",
+    "hints": "使用提示",
+    "addFirstServer": "添加第一台服务器",
+    "addFirstServerHint": "只需主机、用户名和密码",
+    "openSettings": "打开设置",
+    "hint": {
+      "doubleClick": "在侧边栏双击服务器即可打开终端。",
+      "copyPaste": "复制与粘贴快捷键",
+      "rightClick": "在终端中右键粘贴；有选中内容时右键复制。",
+      "dock": "拖动标签页可拆分工作区，布局会在下次启动时恢复。",
+      "plugins": "把插件放进插件目录，然后在设置中重新加载。"
+    }
+  },
+  "terminal": {
+    "sessionEnded": "会话已结束",
+    "connectionLost": "连接已断开",
+    "reconnect": "重新连接",
+    "exitCode": "退出码 {{code}}",
+    "exitNotice": "[会话已结束，退出码 {{code}}]",
+    "connectionLostNotice": "[连接已断开]"
+  },
+  "dialog": {
+    "password": {
+      "title": "{{name}} 的密码",
+      "connect": "连接",
+      "placeholder": "SSH 密码",
+      "save": "保存到钥匙串"
+    },
+    "hostKey": {
+      "title": "主机密钥已变更",
+      "mismatch": "服务器出示的主机密钥与本地保存的不一致。可能是服务器重装过，也可能连接正在被劫持。",
+      "host": "主机",
+      "expected": "已保存的指纹",
+      "received": "收到的指纹",
+      "trust": "信任新密钥"
+    }
+  },
+  "connect": {
+    "hostKeyNew": "已信任 {{host}} 的新主机密钥（{{fingerprint}}）",
+    "authFailed": "{{name}} 认证失败",
+    "cancelled": "已取消连接"
+  },
+  "command": {
+    "openSettings": "打开设置",
+    "newServer": "新建服务器",
+    "reloadPlugins": "重新加载插件",
+    "connect": "连接服务器",
+    "openTerminal": "打开终端",
+    "disconnect": "断开连接",
+    "openPanel": "打开面板",
+    "closePanel": "关闭面板",
+    "togglePanel": "切换面板"
+  }
+}
