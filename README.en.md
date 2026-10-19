@@ -290,4 +290,6 @@ Marketplace. The index is still empty; pull requests adding a plugin are welcome
 
 ## License
 
-MIT
+[Apache License 2.0](LICENSE). Use, modify and redistribute freely; redistributions and
+derivative works must keep the copyright and attribution in `LICENSE` and `NOTICE`, and
+modified files must say they were changed.

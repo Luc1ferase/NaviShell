@@ -2,6 +2,7 @@
   "name": "@navishell/plugin-completion",
   "version": "0.1.0",
   "description": "NaviShell built-in command completion plugin (history + command dictionary)",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "scripts": {
