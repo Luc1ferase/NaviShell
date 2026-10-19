@@ -111,6 +111,7 @@ pub fn run() {
             plugins::plugins_install_from_url,
             plugins::plugins_install_from_file,
             plugins::plugins_uninstall,
+            plugins::plugins_fetch_registry,
             plugins::plugin_storage_get,
             plugins::plugin_storage_set,
             plugins::plugin_storage_remove,

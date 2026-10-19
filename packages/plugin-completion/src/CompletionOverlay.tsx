@@ -1,5 +1,5 @@
 import type { ComponentType, JSX, MouseEvent } from 'react';
-import { BookOpen, Clock, Folder, SquareTerminal } from 'lucide-react';
+import { BookOpen, Clock, Folder, Route, SquareTerminal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { CursorPixelPosition, TerminalOverlayProps } from '@navishell/plugin-api';
 import { computeLayout } from './engine';
@@ -116,6 +116,13 @@ export function createOverlayComponent(
           <span>{ctx.i18n.t('hint.navigate')}</span>
           <span>{ctx.i18n.t('hint.accept')}</span>
           <span>{ctx.i18n.t('hint.dismiss')}</span>
+          {/* The shell is reporting its cwd and the commands it runs, so both are exact. */}
+          {state.integrationActive ? (
+            <span className="ns-completion-integration" title={ctx.i18n.t('hint.integrationHint')}>
+              <Route size={10} aria-hidden="true" />
+              {ctx.i18n.t('hint.integration')}
+            </span>
+          ) : null}
         </div>
       </div>
     );

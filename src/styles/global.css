@@ -770,6 +770,45 @@ body {
   padding: 8px 0 2px;
 }
 
+.ns-marketplace {
+  padding: 2px 0 6px;
+}
+
+.ns-marketplace__head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 2px 0 6px;
+}
+
+.ns-marketplace__status {
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-sm);
+  word-break: break-word;
+}
+
+.ns-marketplace__url {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ns-marketplace__home {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 3px;
+  font-size: var(--ns-font-size-xs);
+}
+
+/** Badge with a leading icon, e.g. the host-version warning. */
+.ns-badge--icon {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
 .ns-about-row {
   display: flex;
   gap: 8px;

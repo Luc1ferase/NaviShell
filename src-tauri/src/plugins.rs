@@ -34,6 +34,14 @@ const BUILTIN_ID_PREFIX: &str = "navishell.";
 const MAX_ARCHIVE_BYTES: u64 = 50 * 1024 * 1024;
 /// Deadline for the whole download, connection setup included.
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(60);
+/// Registry index used when the caller passes none; mirrors `DEFAULT_PLUGIN_REGISTRY_URL`
+/// of the IPC contract.
+const DEFAULT_REGISTRY_URL: &str =
+    "https://raw.githubusercontent.com/Luc1ferase/NaviShell/master/registry/plugins.json";
+/// Cap on a downloaded registry index. It is a listing, not a payload.
+const MAX_REGISTRY_BYTES: u64 = 1024 * 1024;
+/// Deadline for fetching a registry index, connection setup included.
+const REGISTRY_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// `plugin.json`, mirroring `PluginManifest` of the plugin API.
 ///
@@ -346,33 +354,14 @@ async fn install_archive(
 
 /// Streams an http(s) URL into `dest`, refusing anything over [`MAX_ARCHIVE_BYTES`].
 async fn download_archive(url: &str, dest: &Path) -> AppResult<()> {
-    let parsed = reqwest::Url::parse(url)
-        .map_err(|e| AppError::invalid_argument(format!("{url:?} is not a valid URL: {e}")))?;
-    if !matches!(parsed.scheme(), "http" | "https") {
-        return Err(AppError::invalid_argument(format!(
-            "unsupported URL scheme {:?}: only http and https can be installed from",
-            parsed.scheme()
-        )));
-    }
-
-    // `rustls` is built without a default crypto provider (see Cargo.toml), so pick one
-    // before the first client exists. Installing it can only fail if another thread won
-    // the race, which is just as good.
-    if rustls::crypto::CryptoProvider::get_default().is_none() {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-    }
-
-    let client = reqwest::Client::builder()
-        .user_agent(concat!("NaviShell/", env!("CARGO_PKG_VERSION")))
-        .timeout(DOWNLOAD_TIMEOUT)
-        .build()
-        .map_err(|e| AppError::io(format!("could not build the HTTP client: {e}")))?;
+    let parsed = parse_http_url(url)?;
+    let client = http_client(DOWNLOAD_TIMEOUT)?;
 
     let mut response = client
         .get(parsed)
         .send()
         .await
-        .map_err(|e| http_error(url, &e))?;
+        .map_err(|e| http_error(url, &e, DOWNLOAD_TIMEOUT))?;
     let status = response.status();
     if !status.is_success() {
         return Err(AppError::io(format!("{url} returned HTTP {status}"))
@@ -390,7 +379,11 @@ async fn download_archive(url: &str, dest: &Path) -> AppResult<()> {
     let mut total: u64 = 0;
     // `Content-Length` is a hint at best, so the running total is what actually enforces
     // the limit; the connection is dropped as soon as it is passed.
-    while let Some(chunk) = response.chunk().await.map_err(|e| http_error(url, &e))? {
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| http_error(url, &e, DOWNLOAD_TIMEOUT))?
+    {
         total = total.saturating_add(chunk.len() as u64);
         if total > MAX_ARCHIVE_BYTES {
             return Err(too_large(total));
@@ -412,14 +405,43 @@ async fn download_archive(url: &str, dest: &Path) -> AppResult<()> {
     Ok(())
 }
 
+/// Parses a URL the core is willing to fetch: http(s) and nothing else, so that neither a
+/// `file:` nor a `data:` URL can reach the download paths.
+fn parse_http_url(url: &str) -> AppResult<reqwest::Url> {
+    let parsed = reqwest::Url::parse(url)
+        .map_err(|e| AppError::invalid_argument(format!("{url:?} is not a valid URL: {e}")))?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err(AppError::invalid_argument(format!(
+            "unsupported URL scheme {:?}: only http and https can be downloaded from",
+            parsed.scheme()
+        )));
+    }
+    Ok(parsed)
+}
+
+/// An HTTP client carrying the core's user agent and `timeout` as its whole-request
+/// deadline.
+fn http_client(timeout: Duration) -> AppResult<reqwest::Client> {
+    // `rustls` is built without a default crypto provider (see Cargo.toml), so pick one
+    // before the first client exists. Installing it can only fail if another thread won
+    // the race, which is just as good.
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    }
+
+    reqwest::Client::builder()
+        .user_agent(concat!("NaviShell/", env!("CARGO_PKG_VERSION")))
+        .timeout(timeout)
+        .build()
+        .map_err(|e| AppError::io(format!("could not build the HTTP client: {e}")))
+}
+
 /// Maps a `reqwest` failure onto the `Io` code the contract promises, carrying the HTTP
-/// status in `data` whenever there was one.
-fn http_error(url: &str, err: &reqwest::Error) -> AppError {
+/// status in `data` whenever there was one. `timeout` is the deadline the request ran
+/// under, so that a timed-out request says which one it blew.
+fn http_error(url: &str, err: &reqwest::Error, timeout: Duration) -> AppError {
     let error = AppError::io(if err.is_timeout() {
-        format!(
-            "{url} did not answer within {} s",
-            DOWNLOAD_TIMEOUT.as_secs()
-        )
+        format!("{url} did not answer within {} s", timeout.as_secs())
     } else if err.is_connect() {
         format!("could not connect to {url}: {err}")
     } else {
@@ -676,6 +698,183 @@ async fn installed_version(dir: &Path) -> Option<String> {
     storage::read_json_lenient::<PluginManifest>(&dir.join(MANIFEST_FILE))
         .await
         .map(|manifest| manifest.version)
+}
+
+// ---------------------------------------------------------------------------
+// Registry index: the plugin marketplace list (issue #7)
+// ---------------------------------------------------------------------------
+
+/// One entry of a registry index, mirroring `PluginRegistryEntry` of the IPC contract.
+///
+/// `name` and `description` are either a string or a per-locale object, so they stay raw
+/// JSON and the frontend picks the locale, exactly as in [`PluginManifest`]. The three
+/// required strings default to empty instead of failing the whole entry, so that
+/// [`registry_entry_problem`] is the one place that says why an entry was dropped;
+/// `name` has no sensible default and a missing one drops the entry at parse time.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRegistryEntry {
+    #[serde(default)]
+    pub id: String,
+    pub name: serde_json::Value,
+    #[serde(default)]
+    pub version: String,
+    /// Direct http(s) URL of the plugin zip, installable with `plugins_install_from_url`.
+    #[serde(default)]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<serde_json::Value>,
+    /// Hex SHA-256 of the zip, verified by `plugins_install_from_url` at install time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub homepage: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_host_version: Option<String>,
+    /// `lucide-react` icon name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+}
+
+/// A validated registry index, the result of [`plugins_fetch_registry`].
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRegistry {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// ISO date of the last index update.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    pub plugins: Vec<PluginRegistryEntry>,
+}
+
+/// The index as downloaded: entries stay raw JSON so that one unreadable entry costs that
+/// entry rather than the whole listing. Unknown keys (`$schema`) are ignored.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawRegistry {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    updated_at: Option<String>,
+    #[serde(default)]
+    plugins: Vec<serde_json::Value>,
+}
+
+/// Downloads a registry index and keeps the entries that could actually be installed.
+///
+/// `url` defaults to [`DEFAULT_REGISTRY_URL`]. Per the contract, an entry that cannot be
+/// read or cannot be installed is dropped and logged rather than failing the call; only a
+/// bad URL, the download itself, the HTTP status and the JSON parse are errors.
+#[tauri::command]
+pub async fn plugins_fetch_registry(url: Option<String>) -> AppResult<PluginRegistry> {
+    // An empty `registryUrl` in the settings means the same as none at all.
+    let url = match url.as_deref().map(str::trim) {
+        Some(url) if !url.is_empty() => url,
+        _ => DEFAULT_REGISTRY_URL,
+    };
+    let body = fetch_registry(url).await?;
+    let raw: RawRegistry = serde_json::from_str(&body)
+        .map_err(|e| AppError::io(format!("{url} is not a usable plugin registry: {e}")))?;
+
+    let listed = raw.plugins.len();
+    let mut plugins: Vec<PluginRegistryEntry> = Vec::with_capacity(listed);
+    for value in raw.plugins {
+        match serde_json::from_value::<PluginRegistryEntry>(value) {
+            Ok(entry) => match registry_entry_problem(&entry) {
+                Some(reason) => {
+                    tracing::warn!(url, reason, "dropping a plugin registry entry");
+                }
+                None => plugins.push(entry),
+            },
+            Err(e) => {
+                tracing::warn!(url, error = %e, "dropping an unreadable plugin registry entry");
+            }
+        }
+    }
+    tracing::info!(url, listed, kept = plugins.len(), "plugin registry fetched");
+
+    Ok(PluginRegistry {
+        name: raw.name,
+        updated_at: raw.updated_at,
+        plugins,
+    })
+}
+
+/// Why a registry entry cannot be offered for install, or `None` when it can.
+///
+/// These are the install-time rules of [`read_staged_manifest`] applied early, so the
+/// marketplace never lists something `plugins_install_from_url` would refuse anyway.
+fn registry_entry_problem(entry: &PluginRegistryEntry) -> Option<String> {
+    if let Err(e) = validate_plugin_id(&entry.id) {
+        return Some(e.message);
+    }
+    if entry.id.starts_with(BUILTIN_ID_PREFIX) {
+        return Some(format!(
+            "plugin id {:?} is reserved: {BUILTIN_ID_PREFIX}* belongs to the built-in plugins",
+            entry.id
+        ));
+    }
+    if entry.version.trim().is_empty() {
+        return Some(format!("plugin {} declares no version", entry.id));
+    }
+    if let Err(e) = parse_http_url(&entry.url) {
+        return Some(format!("plugin {}: {}", entry.id, e.message));
+    }
+    None
+}
+
+/// Downloads a registry index into memory, refusing anything over [`MAX_REGISTRY_BYTES`].
+async fn fetch_registry(url: &str) -> AppResult<String> {
+    let parsed = parse_http_url(url)?;
+    let client = http_client(REGISTRY_TIMEOUT)?;
+
+    let mut response = client
+        .get(parsed)
+        .send()
+        .await
+        .map_err(|e| http_error(url, &e, REGISTRY_TIMEOUT))?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(AppError::io(format!("{url} returned HTTP {status}"))
+            .with_data(serde_json::json!({ "status": status.as_u16() })));
+    }
+    if let Some(length) = response.content_length()
+        && length > MAX_REGISTRY_BYTES
+    {
+        return Err(registry_too_large(length));
+    }
+
+    let mut body: Vec<u8> = Vec::new();
+    // `Content-Length` is a hint at best, so the running total is what actually enforces
+    // the limit; the connection is dropped as soon as it is passed.
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| http_error(url, &e, REGISTRY_TIMEOUT))?
+    {
+        let total = (body.len() as u64).saturating_add(chunk.len() as u64);
+        if total > MAX_REGISTRY_BYTES {
+            return Err(registry_too_large(total));
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    let text = String::from_utf8(body)
+        .map_err(|_| AppError::io(format!("{url} did not return UTF-8 JSON")))?;
+    // A self-hosted index saved by a Windows editor tends to start with a BOM, which
+    // `serde_json` refuses.
+    Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
+}
+
+/// The single error for a registry index past [`MAX_REGISTRY_BYTES`].
+fn registry_too_large(bytes: u64) -> AppError {
+    AppError::io(format!(
+        "the registry index exceeds the {} MiB limit ({bytes} bytes)",
+        MAX_REGISTRY_BYTES / (1024 * 1024)
+    ))
 }
 
 /// Path of the JSON object backing one plugin's storage.

@@ -1,20 +1,38 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Download, FolderOpen, PackagePlus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  Check,
+  CircleArrowUp,
+  Download,
+  ExternalLink,
+  FolderOpen,
+  PackagePlus,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { resolveLocalized, type Locale } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
-import { call, errorMessage, toHostError } from '@/core/ipc/client';
-import type { ExternalPluginInfo } from '@/core/ipc/contract';
+import { call, errorMessage } from '@/core/ipc/client';
+import { DEFAULT_PLUGIN_REGISTRY_URL, type PluginRegistryEntry } from '@/core/ipc/contract';
+import { installPlugin, type InstallAttempt } from '@/core/plugins/install';
 import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
 import { checkForUpdates, downloadAndInstall, restartApp } from '@/core/services/updater';
+import {
+  clearPluginRegistry,
+  ensurePluginRegistry,
+  fetchPluginRegistry,
+  useMarketplaceStore,
+} from '@/core/stores/marketplace';
 import { useSettingsStore } from '@/core/stores/settings';
 import { usePluginsStore, type PluginEntry } from '@/core/stores/plugins';
 import { useUiStore } from '@/core/stores/ui';
 import { useUpdaterStore } from '@/core/stores/updater';
-import { formatBytes } from '@/core/util/fn';
-import { Icon } from '@/app/components/Icon';
+import { compareVersions, formatBytes } from '@/core/util/fn';
+import { Icon, resolveIcon } from '@/app/components/Icon';
 
 /** Project repository shown in the About section. */
 const REPO_URL = 'https://github.com/Luc1ferase/NaviShell';
@@ -34,19 +52,6 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 // ---------------------------------------------------------------------------
 // Plugins
 // ---------------------------------------------------------------------------
-
-/**
- * `plugins_install_from_*` rejects with `InvalidArgument` and
- * `data: { exists: true, version }` when that id is installed and `replace` was not set.
- */
-function existingInstall(error: unknown): { version: string | null } | null {
-  const host = toHostError(error);
-  if (host.code !== 'InvalidArgument') return null;
-  const data = host.data;
-  if (!data || data.exists !== true) return null;
-  // `version` is null when the installed plugin.json could not be read.
-  return { version: typeof data.version === 'string' ? data.version : null };
-}
 
 function PluginCard({ entry }: { entry: PluginEntry }) {
   const { t, locale } = useI18n();
@@ -146,46 +151,17 @@ function PluginCard({ entry }: { entry: PluginEntry }) {
 
 /** URL / local-zip install form for external plugins (issue #7). */
 function PluginInstaller() {
-  const { t, locale } = useI18n();
-  const confirm = useUiStore((state) => state.confirm);
+  const { t } = useI18n();
   const toast = useUiStore((state) => state.toast);
   const [url, setUrl] = useState('');
   const [sha256, setSha256] = useState('');
   const [busy, setBusy] = useState(false);
 
-  /**
-   * Runs one install attempt; when that id is already installed, asks whether to replace
-   * it and retries once with `replace: true`. A successful install reloads the plugins, so
-   * the new one appears (and activates) without a restart.
-   */
-  const install = async (
-    attempt: (replace: boolean) => Promise<ExternalPluginInfo>,
-  ): Promise<ExternalPluginInfo | null> => {
+  /** {@link installPlugin} with the form disabled while it runs. */
+  const install = async (attempt: InstallAttempt) => {
     setBusy(true);
     try {
-      let info: ExternalPluginInfo;
-      try {
-        info = await attempt(false);
-      } catch (error) {
-        const existing = existingInstall(error);
-        if (!existing) throw error;
-        const replace = await confirm({
-          title: t('plugins.install.replaceTitle'),
-          message: existing.version
-            ? t('plugins.install.replaceMessage', { version: existing.version })
-            : t('plugins.install.replaceMessageUnknown'),
-          okLabel: t('plugins.install.replaceOk'),
-        });
-        if (!replace) return null;
-        info = await attempt(true);
-      }
-      await reloadPlugins();
-      const name = resolveLocalized(info.manifest.name, locale) || info.manifest.id;
-      toast(t('plugins.install.done', { name, version: info.manifest.version }), 'success');
-      return info;
-    } catch (error) {
-      toast(errorMessage(error), 'error');
-      return null;
+      return await installPlugin(attempt);
     } finally {
       setBusy(false);
     }
@@ -273,6 +249,259 @@ function PluginInstaller() {
           {t('plugins.install.fromFile')}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Marketplace
+// ---------------------------------------------------------------------------
+
+/** What a registry entry offers, derived from the installed plugins. */
+type MarketplaceAction =
+  | { kind: 'install' }
+  | { kind: 'update'; installed: string }
+  | { kind: 'upToDate'; installed: string }
+  | { kind: 'builtin' };
+
+/**
+ * Built-ins ship with the app and are never installed over; otherwise the registry
+ * version decides between "Install", "Update" and a disabled "Installed vX".
+ */
+function marketplaceAction(
+  entry: PluginRegistryEntry,
+  installed: PluginEntry | undefined,
+): MarketplaceAction {
+  if (!installed) return { kind: 'install' };
+  if (installed.source === 'builtin') return { kind: 'builtin' };
+  const current = installed.manifest.version;
+  if (compareVersions(entry.version, current) > 0) return { kind: 'update', installed: current };
+  return { kind: 'upToDate', installed: current };
+}
+
+/** `updatedAt` is an ISO date; anything unparseable is shown as the index wrote it. */
+function formatRegistryDate(raw: string | undefined, locale: Locale): string | null {
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return parsed.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function MarketplaceCard({ entry }: { entry: PluginRegistryEntry }) {
+  const { t, locale } = useI18n();
+  const toast = useUiStore((state) => state.toast);
+  const hostVersion = useSettingsStore((state) => state.appInfo?.version ?? null);
+  const installed = usePluginsStore((state) => state.entries.find((e) => e.id === entry.id));
+  const [busy, setBusy] = useState(false);
+
+  const action = marketplaceAction(entry, installed);
+  const name = resolveLocalized(entry.name, locale) || entry.id;
+  const description = resolveLocalized(entry.description, locale);
+  const homepage = entry.homepage;
+  const minHostVersion = entry.minHostVersion;
+  // Without `app_info` (the app running outside Tauri) there is nothing to compare
+  // against, so the requirement is not enforced here either - as in the loader.
+  const hostTooOld =
+    minHostVersion !== undefined &&
+    hostVersion !== null &&
+    compareVersions(hostVersion, minHostVersion) < 0;
+
+  /** A finished install reloads the plugins, so the card re-renders with its new state. */
+  const install = async (replace: boolean) => {
+    setBusy(true);
+    try {
+      await installPlugin(
+        (useReplace) =>
+          call('plugins_install_from_url', {
+            url: entry.url,
+            ...(entry.sha256 ? { sha256: entry.sha256 } : {}),
+            ...(useReplace ? { replace: true } : {}),
+          }),
+        { replace },
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let button: ReactNode;
+  switch (action.kind) {
+    case 'install':
+      button = (
+        <button
+          type="button"
+          className="ns-btn ns-btn--sm ns-btn--primary"
+          disabled={busy || hostTooOld}
+          onClick={() => void install(false)}
+        >
+          <Download size={13} />
+          {busy ? t('plugins.install.busy') : t('plugins.market.install')}
+        </button>
+      );
+      break;
+    case 'update':
+      button = (
+        <button
+          type="button"
+          className="ns-btn ns-btn--sm ns-btn--primary"
+          disabled={busy || hostTooOld}
+          onClick={() => void install(true)}
+        >
+          <CircleArrowUp size={13} />
+          {busy ? t('plugins.install.busy') : t('plugins.market.update')}
+        </button>
+      );
+      break;
+    case 'upToDate':
+      button = (
+        <button type="button" className="ns-btn ns-btn--sm" disabled>
+          <Check size={13} />
+          {t('plugins.market.installedVersion', { version: action.installed })}
+        </button>
+      );
+      break;
+    case 'builtin':
+      button = <span className="ns-badge">{t('plugins.source.builtin')}</span>;
+      break;
+  }
+
+  return (
+    <div className="ns-plugin-card">
+      <Icon name={resolveIcon(entry.icon) ? entry.icon : 'Puzzle'} size={16} />
+      <div className="ns-plugin-card__body">
+        <div className="ns-plugin-card__name">
+          {name}
+          {action.kind === 'update' ? (
+            <span className="ns-badge ns-badge--accent">
+              {t('plugins.market.available', { version: entry.version })}
+            </span>
+          ) : null}
+          {hostTooOld ? (
+            <span className="ns-badge ns-badge--warning ns-badge--icon">
+              <TriangleAlert size={11} />
+              {t('plugins.market.requiresHost', { version: minHostVersion })}
+            </span>
+          ) : null}
+        </div>
+        <div className="ns-plugin-card__meta">
+          {entry.id} · v{entry.version}
+          {entry.author ? ` · ${entry.author}` : ''}
+        </div>
+        {description ? <div className="ns-plugin-card__desc">{description}</div> : null}
+        {homepage ? (
+          <button
+            type="button"
+            className="ns-link ns-marketplace__home"
+            onClick={() => {
+              void openUrl(homepage).catch((error) => toast(errorMessage(error), 'error'));
+            }}
+          >
+            <ExternalLink size={11} />
+            {t('plugins.market.homepage')}
+          </button>
+        ) : null}
+      </div>
+      <div className="ns-plugin-card__actions">{button}</div>
+    </div>
+  );
+}
+
+/** Registry index URL; empty falls back to {@link DEFAULT_PLUGIN_REGISTRY_URL}. */
+function RegistryUrlRow() {
+  const { t } = useI18n();
+  const registryUrl = useSettingsStore((state) => state.settings.plugins.registryUrl);
+  const updatePlugins = useSettingsStore((state) => state.updatePlugins);
+  const [text, setText] = useState(() => registryUrl ?? '');
+
+  const apply = (value: string) => {
+    setText(value);
+    const next = value.trim().length > 0 ? value.trim() : null;
+    if (next === registryUrl) return;
+    updatePlugins({ registryUrl: next });
+    // The cached list came from the previous URL.
+    clearPluginRegistry();
+  };
+
+  return (
+    <Row label={t('plugins.market.registryUrl')} hint={t('plugins.market.registryUrlHint')}>
+      <span className="ns-marketplace__url">
+        <input
+          className="ns-input ns-input--mono"
+          spellCheck={false}
+          placeholder={DEFAULT_PLUGIN_REGISTRY_URL}
+          value={text}
+          onChange={(event) => apply(event.target.value)}
+        />
+        <button
+          type="button"
+          className="ns-btn ns-btn--sm"
+          disabled={registryUrl === null && text.length === 0}
+          onClick={() => apply('')}
+        >
+          <RotateCcw size={13} />
+          {t('plugins.market.reset')}
+        </button>
+      </span>
+    </Row>
+  );
+}
+
+/** The registry index: installable plugins, fetched through `plugins_fetch_registry`. */
+function PluginMarketplace() {
+  const { t, locale } = useI18n();
+  const toast = useUiStore((state) => state.toast);
+  const registry = useMarketplaceStore((state) => state.registry);
+  const source = useMarketplaceStore((state) => state.source);
+  const loading = useMarketplaceStore((state) => state.loading);
+  const error = useMarketplaceStore((state) => state.error);
+
+  // Once per app session, the first time the Plugins section is rendered.
+  useEffect(() => {
+    void ensurePluginRegistry();
+  }, []);
+
+  const refresh = async () => {
+    const message = await fetchPluginRegistry();
+    if (message) toast(message, 'error');
+  };
+
+  const entries = registry?.plugins ?? [];
+  const updatedAt = formatRegistryDate(registry?.updatedAt, locale);
+
+  let status: string;
+  if (registry) {
+    const title = registry.name ?? t('plugins.market.untitled');
+    status = updatedAt ? `${title} · ${t('plugins.market.updated', { date: updatedAt })}` : title;
+  } else {
+    status = loading ? t('plugins.market.loading') : t('plugins.market.notLoaded');
+  }
+
+  return (
+    <div className="ns-marketplace">
+      <div className="ns-marketplace__head">
+        <button type="button" className="ns-btn" disabled={loading} onClick={() => void refresh()}>
+          <RefreshCw size={14} className={loading ? 'ns-spin' : undefined} />
+          {t('plugins.market.refresh')}
+        </button>
+        <span className="ns-marketplace__status" title={source ?? DEFAULT_PLUGIN_REGISTRY_URL}>
+          {status}
+        </span>
+      </div>
+      <RegistryUrlRow />
+      {error ? (
+        <div className="ns-plugin-card__error">
+          {t('plugins.market.failed', { message: error })}
+        </div>
+      ) : null}
+      {registry ? (
+        entries.length === 0 ? (
+          <div className="ns-empty">{t('plugins.market.empty')}</div>
+        ) : (
+          entries.map((entry) => <MarketplaceCard key={entry.id} entry={entry} />)
+        )
+      ) : loading || error ? null : (
+        <div className="ns-empty">{t('plugins.market.hint')}</div>
+      )}
     </div>
   );
 }
@@ -691,6 +920,9 @@ export function SettingsPanel() {
               </button>
             </div>
             {appInfo ? <div className="ns-mono">{appInfo.paths.pluginsDir}</div> : null}
+
+            <h4 className="ns-settings__subtitle">{t('plugins.market.title')}</h4>
+            <PluginMarketplace />
 
             <h4 className="ns-settings__subtitle">{t('plugins.install.title')}</h4>
             <PluginInstaller />

@@ -99,6 +99,26 @@
       "replaceMessageUnknown": "This plugin is already installed. Replace it?",
       "replaceOk": "Replace"
     },
+    "market": {
+      "title": "Marketplace",
+      "refresh": "Refresh",
+      "loading": "Loading registry…",
+      "notLoaded": "Registry not loaded",
+      "untitled": "Plugin registry",
+      "updated": "updated {{date}}",
+      "hint": "Refresh to load the list of available plugins",
+      "empty": "The registry lists no plugins",
+      "failed": "Could not load the registry: {{message}}",
+      "install": "Install",
+      "update": "Update",
+      "installedVersion": "Installed v{{version}}",
+      "available": "v{{version}} available",
+      "requiresHost": "Needs NaviShell {{version}}",
+      "homepage": "Homepage",
+      "registryUrl": "Registry URL",
+      "registryUrlHint": "JSON index of installable plugins; empty = the official one",
+      "reset": "Reset"
+    },
     "uninstall": {
       "label": "Uninstall",
       "title": "Uninstall plugin",

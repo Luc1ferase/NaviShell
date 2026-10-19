@@ -20,7 +20,7 @@ release, and no issue is left open.
 | Login               | username + password; private key with passphrase, ssh-agent, keyboard-interactive fallback and ProxyJump *(post-v1)* | – |
 | Core features       | server records, connect, terminal, one-shot exec, SFTP primitives; local shell terminals *(post-v1)* | – |
 | Built-in plugins    | SFTP file manager, command completion (history + dictionary; remote `PATH`, directory listings and cwd tracking *(post-v1)*) | – |
-| Plugin sources      | built-in + `<appData>/plugins/<id>/`; install from a zip URL or a local zip, and uninstall, from Settings *(post-v1)* | – |
+| Plugin sources      | built-in + `<appData>/plugins/<id>/`; install from a zip URL or a local zip, and uninstall, from Settings; marketplace list from a registry index JSON *(post-v1)* | – |
 | Credentials         | OS keychain (`keyring` crate, service `dev.navishell`, account `<serverId>`, or `<serverId>:passphrase` for a key passphrase) | – |
 | UI language         | zh-CN + en (i18next), default follows system                           | –                        |
 | Release             | GitHub Release via tauri-action; Win x64, macOS x64+arm64, Linux x64+arm64; signed updater artifacts + `latest.json` *(post-v1)* | – |
@@ -56,6 +56,7 @@ NaviShell/
 │  ├─ plugin-sftp/            built-in file manager plugin
 │  └─ plugin-completion/      built-in command completion plugin
 ├─ scripts/plugin-vite.mjs    shared Vite config for plugin bundles (CJS, externals)
+├─ registry/                  plugins.json (marketplace index), its JSON Schema, submission guide
 ├─ src-tauri/                 Rust core
 │  ├─ Cargo.toml, tauri.conf.json, capabilities/default.json, icons/
 │  └─ src/
@@ -69,7 +70,7 @@ NaviShell/
 │     ├─ known_hosts.rs       known_hosts.json (TOFU store)
 │     ├─ local_pty.rs         term_open_local (local shells through portable-pty)
 │     ├─ ssh/{mod,connection,terminal,exec,sftp}.rs
-│     └─ plugins.rs           plugins_list_external/read_file/install_*/uninstall, plugin_storage_*
+│     └─ plugins.rs           plugins_list_external/read_file/install_*/uninstall/fetch_registry, plugin_storage_*
 └─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release)
 ```
 
@@ -146,6 +147,17 @@ Changing a contract means updating both sides; prefer additive changes.
   every error path cleans up, and `<appData>/tmp` is emptied again on startup.
   `plugins_uninstall` removes the directory (never following a symlink in its place) and
   `plugin-data/<id>.json` with it.
+- **Plugin marketplace** (`plugins.rs`): `plugins_fetch_registry` downloads a registry
+  index (`settings.plugins.registryUrl`, defaulting to `registry/plugins.json` of this
+  repository on `raw.githubusercontent.com`) into memory — http(s) only, 15 s deadline,
+  1 MiB cap against both `Content-Length` and the running total, same shared
+  `parse_http_url`/`http_client`/`http_error` helpers as the installer. The index is
+  parsed with its entries left as raw JSON, so an unreadable entry is dropped and logged
+  instead of failing the whole listing; an entry is dropped for the same reasons it could
+  never be installed (`id` outside `^[a-z0-9][a-z0-9._-]*$` or starting with `navishell.`,
+  empty `version`, non-http(s) `url`, missing `name`). Nothing is cached and nothing is
+  downloaded from the entries: installing a listed plugin is an ordinary
+  `plugins_install_from_url` call with the entry's `url` and `sha256`.
 - **Updates** (issue #5): `tauri-plugin-updater` + `tauri-plugin-process`, registered
   under `#[cfg(desktop)]`. `plugins.updater` in `tauri.conf.json` holds the minisign
   public key and the single endpoint
@@ -175,7 +187,9 @@ Changing a contract means updating both sides; prefer additive changes.
   uninstall. On `InvalidArgument` carrying `data.exists` the UI asks whether to replace
   the installed version (`data.version`, `null` when its manifest is unreadable) and
   retries with `replace: true`. After any of those, the plugin list is reloaded in place —
-  no restart.
+  no restart. The marketplace list in the same panel comes from `plugins_fetch_registry`
+  (fetched on demand, not at startup) and installs a chosen entry through the very same
+  "install from URL" path, passing the entry's `sha256` along.
 - **Update check**: with `settings.updates.checkOnStartup` the host runs `check()` from
   `@tauri-apps/plugin-updater` once after mount and offers the new version in a toast.
   Accepting runs `downloadAndInstall()` with progress, then `relaunch()` from
@@ -245,8 +259,13 @@ Changing a contract means updating both sides; prefer additive changes.
   `P;Cwd=`) through `terminal.xterm.parser.registerOscHandler`. Until a shell reports one,
   relative tokens are resolved against `$HOME` and the popup badge says so (`path ~`). The
   opt-in `toggleShellIntegration` command (stored in plugin storage, default off) writes a
-  one-line `PROMPT_COMMAND`/`precmd` hook into each new SSH shell, 500 ms after its first
-  output, so bash and zsh emit OSC 7 after every prompt.
+  one-line hook into each new SSH shell, 500 ms after its first output (bash: `DEBUG` trap +
+  `PROMPT_COMMAND`; zsh: `preexec`/`precmd`; bash-preexec hook arrays are reused when
+  present). The hook makes the shell emit OSC 7 (cwd) after every prompt, `OSC 633;E;<cmd>`
+  right before a command runs and `OSC 133;D;<exit>` when it finishes. When `E` reports are
+  seen, history is recorded from the exact command text instead of the keystroke-tracked
+  line (the pending keystroke candidate is dropped), and commands that exit with 127
+  (command not found) are skipped.
 
 ## 5. Conventions
 
