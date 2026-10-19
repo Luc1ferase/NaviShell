@@ -1,0 +1,14 @@
+{
+  "id": "navishell.completion",
+  "name": { "en": "Command Completion", "zh-CN": "命令补全" },
+  "version": "0.1.0",
+  "description": {
+    "en": "Inline suggestions from your command history and a built-in command dictionary.",
+    "zh-CN": "基于历史命令与内置命令字典的下拉补全提示。"
+  },
+  "author": "NaviShell",
+  "main": "main.js",
+  "styles": ["style.css"],
+  "icon": "Sparkles",
+  "minHostVersion": "0.1.0"
+}

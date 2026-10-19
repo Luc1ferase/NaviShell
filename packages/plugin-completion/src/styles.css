@@ -1,0 +1,194 @@
+/*
+ * navishell.completion styles.
+ *
+ * The popup is rendered inside the terminal overlay layer, which is `pointer-events: none`;
+ * only the popup itself re-enables pointer events so clicks work but the terminal keeps
+ * receiving mouse events everywhere else. Classes are prefixed with `ns-completion-`.
+ */
+
+.ns-completion-popup {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden auto;
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg-elevated, var(--ns-bg));
+  color: var(--ns-fg);
+  font-family: var(--ns-font-ui);
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  scrollbar-width: thin;
+}
+
+.ns-completion-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, auto) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 22px;
+  padding: 2px 5px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns-completion-item-active {
+  background: color-mix(in srgb, var(--ns-accent) 28%, transparent);
+}
+
+.ns-completion-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ns-fg-muted);
+}
+
+.ns-completion-text {
+  min-width: 0;
+  font-family: var(--ns-font-mono);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-completion-match {
+  background: transparent;
+  color: var(--ns-accent);
+  font-weight: 600;
+}
+
+.ns-completion-badge {
+  flex: none;
+  padding: 0 4px;
+  border: 1px solid var(--ns-border);
+  border-radius: 999px;
+  color: var(--ns-fg-muted);
+  font-size: 9px;
+  line-height: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ns-completion-description {
+  min-width: 0;
+  color: var(--ns-fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-completion-hints {
+  display: flex;
+  gap: 10px;
+  padding: 3px 6px 1px;
+  border-top: 1px solid var(--ns-border);
+  margin-top: 2px;
+  color: var(--ns-fg-muted);
+  font-size: 10px;
+}
+
+/* -- history panel -------------------------------------------------------- */
+
+.ns-completion-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ns-bg);
+  color: var(--ns-fg);
+  font-family: var(--ns-font-ui);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.ns-completion-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-bottom: 1px solid var(--ns-border);
+  background: var(--ns-bg-elevated, var(--ns-bg));
+}
+
+.ns-completion-filter {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg);
+  color: var(--ns-fg);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.ns-completion-filter:focus {
+  outline: 1px solid var(--ns-accent);
+  outline-offset: -1px;
+}
+
+.ns-completion-panel-count {
+  flex: none;
+  color: var(--ns-fg-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ns-completion-panel-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 0;
+}
+
+.ns-completion-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns-completion-panel-row:hover {
+  background: color-mix(in srgb, var(--ns-fg) 8%, transparent);
+}
+
+.ns-completion-panel-icon {
+  flex: none;
+  color: var(--ns-fg-muted);
+}
+
+.ns-completion-panel-command {
+  min-width: 0;
+  font-family: var(--ns-font-mono);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-completion-panel-empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ns-fg-muted);
+}

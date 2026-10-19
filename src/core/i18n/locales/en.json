@@ -1,0 +1,173 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "close": "Close",
+    "dismiss": "Dismiss"
+  },
+  "panel": {
+    "home": { "title": "Welcome" },
+    "servers": { "title": "Servers" },
+    "settings": { "title": "Settings" },
+    "unavailable": "Panel unavailable",
+    "unavailableHint": "Its plugin is not loaded, disabled or failed to activate."
+  },
+  "topbar": {
+    "quickConnect": "Connect",
+    "newServer": "New server",
+    "settings": "Settings",
+    "noServers": "No servers yet"
+  },
+  "status": {
+    "notConnected": "Not connected",
+    "terminals": "{{n}} terminals",
+    "plugins": "{{n}} plugins",
+    "localeTooltip": "Interface language",
+    "themeTooltip": "Colour theme"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "terminal": "Terminal",
+    "plugins": "Plugins",
+    "about": "About",
+    "localeLabel": "Language",
+    "themeLabel": "Theme",
+    "locale": { "system": "Follow system" },
+    "theme": { "system": "System", "dark": "Dark", "light": "Light" },
+    "closeWithLastTerminal": "Close connections",
+    "closeWithLastTerminalHint": "Disconnect when the last terminal of a connection closes",
+    "fontFamily": "Font family",
+    "fontSize": "Font size",
+    "lineHeight": "Line height",
+    "cursorStyle": "Cursor style",
+    "cursor": { "block": "Block", "underline": "Underline", "bar": "Bar" },
+    "cursorBlink": "Cursor blink",
+    "cursorBlinkHint": "Blink the cursor",
+    "scrollback": "Scrollback",
+    "webgl": "WebGL renderer",
+    "webglHint": "Falls back to DOM rendering when unavailable",
+    "webglToggle": "Prefer WebGL",
+    "termType": "Terminal type"
+  },
+  "plugins": {
+    "enabled": "Enabled",
+    "openFolder": "Open plugins folder",
+    "reload": "Reload plugins",
+    "reloaded": "Plugins reloaded",
+    "none": "No plugins found",
+    "status": { "active": "active", "disabled": "disabled", "error": "error" },
+    "source": { "builtin": "built-in", "external": "external" },
+    "errors": {
+      "manifest": "Could not read plugin.json: {{message}}",
+      "noExport": "The bundle does not export a NaviShell plugin",
+      "hostVersion": "Requires NaviShell {{required}} or newer (this is {{actual}})"
+    }
+  },
+  "about": {
+    "version": "Version",
+    "platform": "Platform",
+    "appData": "App data",
+    "logs": "Logs",
+    "repository": "Repository"
+  },
+  "servers": {
+    "searchPlaceholder": "Search servers",
+    "add": "Add server",
+    "connect": "Connect",
+    "empty": "No servers yet. Use + to add one.",
+    "noMatches": "No server matches the search.",
+    "ungrouped": "Ungrouped",
+    "saved": "Saved {{name}}",
+    "deleted": "Deleted {{name}}",
+    "duplicateName": "{{name}} (copy)",
+    "passwordCleared": "Stored password removed",
+    "delete": {
+      "title": "Delete server",
+      "message": "Delete {{name}} and its stored password?"
+    },
+    "menu": {
+      "connect": "Connect",
+      "newTerminal": "New terminal",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "form": {
+      "createTitle": "New server",
+      "editTitle": "Edit server",
+      "name": "Name",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "group": "Group",
+      "password": "Password",
+      "passwordStored": "A password is stored in the keychain",
+      "passwordEmpty": "Asked for on connect",
+      "passwordHint": "Only stored when \"Save to keychain\" is ticked.",
+      "saveToKeychain": "Save to keychain",
+      "hasCredential": "Password stored",
+      "clearCredential": "Clear stored password",
+      "color": "Colour",
+      "noColor": "No colour"
+    }
+  },
+  "home": {
+    "title": "NaviShell",
+    "subtitle": "A pluggable SSH terminal with a dockable workspace.",
+    "quickConnect": "Quick connect",
+    "hints": "Tips",
+    "addFirstServer": "Add your first server",
+    "addFirstServerHint": "Host, user and password are all it takes",
+    "openSettings": "Open settings",
+    "hint": {
+      "doubleClick": "Double-click a server in the sidebar to open a terminal.",
+      "copyPaste": "Copy and paste with",
+      "rightClick": "Right-click a terminal to paste, or to copy the selection.",
+      "dock": "Drag tabs to split the workspace; the layout is restored next time.",
+      "plugins": "Drop plugins into the plugins folder and reload them from Settings."
+    }
+  },
+  "terminal": {
+    "sessionEnded": "Session ended",
+    "connectionLost": "Connection closed",
+    "reconnect": "Reconnect",
+    "exitCode": "Exit code {{code}}",
+    "exitNotice": "[session ended, exit code {{code}}]",
+    "connectionLostNotice": "[connection closed]"
+  },
+  "dialog": {
+    "password": {
+      "title": "Password for {{name}}",
+      "connect": "Connect",
+      "placeholder": "SSH password",
+      "save": "Save to keychain"
+    },
+    "hostKey": {
+      "title": "Host key changed",
+      "mismatch": "The server presented a different host key than the one stored. This can mean the server was reinstalled, or that the connection is being intercepted.",
+      "host": "Host",
+      "expected": "Stored fingerprint",
+      "received": "Received fingerprint",
+      "trust": "Trust the new key"
+    }
+  },
+  "connect": {
+    "hostKeyNew": "Trusted new host key for {{host}} ({{fingerprint}})",
+    "authFailed": "Authentication failed for {{name}}",
+    "cancelled": "Connection cancelled"
+  },
+  "command": {
+    "openSettings": "Open settings",
+    "newServer": "New server",
+    "reloadPlugins": "Reload plugins",
+    "connect": "Connect to server",
+    "openTerminal": "Open terminal",
+    "disconnect": "Disconnect",
+    "openPanel": "Open panel",
+    "closePanel": "Close panel",
+    "togglePanel": "Toggle panel"
+  }
+}
