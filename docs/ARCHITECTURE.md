@@ -271,6 +271,9 @@ Changing a contract means updating both sides; prefer additive changes.
 
 - TypeScript strict, `noUncheckedIndexedAccess`. No `any` without a comment.
 - Rust: `cargo fmt`, `cargo clippy -- -D warnings` clean. `tracing` for logs.
+- Terminal palettes are independent of the UI theme: `src/core/terminal/schemes.ts` holds the
+  built-in schemes, `settings.terminal.colorScheme.{dark,light}` names one per resolved UI
+  theme, and `settings.terminal.minimumContrastRatio` is passed straight to xterm.
 - CSS: plain CSS with variables defined in `src/styles/theme.css` (dark first; light values
   under `[data-theme="light"]`). Plugins may ship their own CSS but should use the host
   variables (`--ns-bg`, `--ns-fg`, `--ns-border`, `--ns-accent`, …) for consistency.

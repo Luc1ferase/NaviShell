@@ -84,6 +84,9 @@ export class TerminalSession implements TerminalHandle {
 
     this.element = document.createElement('div');
     this.element.className = 'ns-term-root';
+    const theme = terminalTheme(options.settings, options.theme);
+    // The padding around the screen must match the scheme, not the UI theme.
+    this.element.style.background = theme.background ?? '';
 
     this.screenHost = document.createElement('div');
     this.screenHost.className = 'ns-term-screen';
@@ -103,7 +106,8 @@ export class TerminalSession implements TerminalHandle {
       fontSize: options.settings.fontSize,
       lineHeight: options.settings.lineHeight,
       scrollback: options.settings.scrollback,
-      theme: terminalTheme(options.theme),
+      theme,
+      minimumContrastRatio: options.settings.minimumContrastRatio,
       macOptionIsMeta: true,
       scrollOnUserInput: true,
     });
@@ -196,7 +200,10 @@ export class TerminalSession implements TerminalHandle {
     options.cursorBlink = settings.cursorBlink;
     options.cursorStyle = settings.cursorStyle;
     options.scrollback = settings.scrollback;
-    options.theme = { ...terminalTheme(theme) };
+    const palette = terminalTheme(settings, theme);
+    options.theme = palette;
+    options.minimumContrastRatio = settings.minimumContrastRatio;
+    this.element.style.background = palette.background ?? '';
     this.enableWebgl(settings.webgl);
     this.refit();
   }

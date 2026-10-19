@@ -22,7 +22,14 @@ export const onDidChangeSettings = settingsChanged.event;
 
 /** Fill in anything a stored settings file is missing (forward/backward compatibility). */
 export function mergeSettings(raw: Partial<AppSettings> | null | undefined): AppSettings {
-  const terminal: TerminalSettings = { ...DEFAULT_SETTINGS.terminal, ...(raw?.terminal ?? {}) };
+  const terminal: TerminalSettings = {
+    ...DEFAULT_SETTINGS.terminal,
+    ...(raw?.terminal ?? {}),
+    colorScheme: {
+      ...DEFAULT_SETTINGS.terminal.colorScheme,
+      ...(raw?.terminal?.colorScheme ?? {}),
+    },
+  };
   const localShell: LocalShellSettings = {
     program: raw?.localShell?.program ?? DEFAULT_SETTINGS.localShell.program,
     args: raw?.localShell?.args ?? [...DEFAULT_SETTINGS.localShell.args],

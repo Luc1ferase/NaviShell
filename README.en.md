@@ -59,7 +59,12 @@ plugins that use exactly the same API as third-party ones.
   restarts. Every bundle carries a minisign signature; a mismatch is always rejected.
 - **English / Chinese UI**: follows the system language and can be switched manually;
   plugins register their own translations.
-- **Dark-first theme**: every colour comes from one set of CSS variables that plugins reuse.
+- **UI theme and terminal palette are separate**: the UI is dark, light or follows the
+  system, with every colour coming from one set of CSS variables that plugins reuse. The
+  terminal picks from 16 built-in schemes (One Half, Dracula, Nord, Gruvbox, Solarized,
+  Catppuccin, Monokai, Campbell, …), one remembered for the dark UI and one for the light
+  UI, so a dark terminal on the light UI is fine. A 4.5 : 1 minimum contrast (VS Code's
+  default) is on by default and nudges text that would blend into the background.
 
 ## Screenshots
 

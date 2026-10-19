@@ -30,3 +30,6 @@ Thumbs.db
 # TypeScript build info
 *.tsbuildinfo
 packages/*/dist-types/
+
+# Playwright MCP scratch output
+.playwright-mcp/

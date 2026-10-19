@@ -3,6 +3,7 @@ import {
   DockviewDefaultTab,
   DockviewReact,
   themeDark,
+  themeLight,
   type DockviewReadyEvent,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
@@ -10,6 +11,7 @@ import {
 import type { JsonValue } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
+import { useAppliedTheme } from '@/core/services/theme';
 import { onDidRegisterPanel } from '@/core/plugins/registry';
 import {
   FIXED_TAB_COMPONENT,
@@ -83,6 +85,7 @@ export interface DockLayoutProps {
 }
 
 export function DockLayout({ savedLayout }: DockLayoutProps) {
+  const appliedTheme = useAppliedTheme();
   // Only used for its side effect: re-render (and thus re-title) on locale change.
   useI18n();
   const disposables = useRef<Array<{ dispose(): void }>>([]);
@@ -134,7 +137,7 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
   return (
     <DockviewReact
       className="ns-dock"
-      theme={themeDark}
+      theme={appliedTheme === 'light' ? themeLight : themeDark}
       components={COMPONENTS}
       tabComponents={TAB_COMPONENTS}
       watermarkComponent={Watermark}
