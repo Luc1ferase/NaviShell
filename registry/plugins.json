@@ -1,0 +1,6 @@
+{
+  "$schema": "./plugins.schema.json",
+  "name": "NaviShell plugin registry",
+  "updatedAt": "2026-10-19",
+  "plugins": []
+}

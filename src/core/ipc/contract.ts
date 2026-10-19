@@ -20,6 +20,7 @@ import type {
   ExecResult,
   HostError,
   JsonValue,
+  LocalizedText,
   PluginManifest,
   ServerInput,
   ServerRecord,
@@ -68,6 +69,8 @@ export interface AppSettings {
   plugins: {
     /** Plugin ids the user disabled. */
     disabled: string[];
+    /** Registry index URL for the marketplace list; `null` = {@link DEFAULT_PLUGIN_REGISTRY_URL}. */
+    registryUrl: string | null;
     /** Panel ids (`<pluginId>:<panelId>`) that have been auto-opened once (for `defaultOpen`). */
     seenPanels: string[];
   };
@@ -90,7 +93,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   localShell: { program: null, args: [] },
   updates: { checkOnStartup: true },
-  plugins: { disabled: [], seenPanels: [] },
+  plugins: { disabled: [], registryUrl: null, seenPanels: [] },
   closeConnectionWithLastTerminal: true,
 };
 
@@ -113,6 +116,36 @@ export interface AppInfo {
 // ---------------------------------------------------------------------------
 // External plugins
 // ---------------------------------------------------------------------------
+
+/**
+ * One entry of a plugin registry index (the "marketplace"). The index is a plain JSON
+ * document, see `registry/plugins.json` in this repository for the canonical one.
+ */
+export interface PluginRegistryEntry {
+  id: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  version: string;
+  /** Direct http(s) URL of the plugin zip, installable with `plugins_install_from_url`. */
+  url: string;
+  /** Hex SHA-256 of the zip; strongly recommended. */
+  sha256?: string;
+  homepage?: string;
+  author?: string;
+  minHostVersion?: string;
+  /** lucide-react icon name. */
+  icon?: string;
+}
+
+export interface PluginRegistry {
+  name?: string;
+  /** ISO date of the last index update. */
+  updatedAt?: string;
+  plugins: PluginRegistryEntry[];
+}
+
+export const DEFAULT_PLUGIN_REGISTRY_URL =
+  'https://raw.githubusercontent.com/Luc1ferase/NaviShell/master/registry/plugins.json';
 
 export interface ExternalPluginInfo {
   manifest: PluginManifest;
@@ -301,6 +334,13 @@ export interface Commands {
   };
   /** Deletes `<pluginsDir>/<id>/` (external plugins only; `NotFound` otherwise). */
   plugins_uninstall: { args: { pluginId: string }; result: void };
+  /**
+   * Downloads and validates a registry index (`url` defaults to
+   * {@link DEFAULT_PLUGIN_REGISTRY_URL}; http(s) only, 15 s timeout, 1 MiB cap).
+   * Entries with an invalid `id` (same rule as installs), a non-http(s) `url` or a missing
+   * `version` are dropped, not fatal. Network/HTTP/parse failures => `Io`.
+   */
+  plugins_fetch_registry: { args: { url?: string }; result: PluginRegistry };
   plugin_storage_get: { args: { pluginId: string; key: string }; result: JsonValue | null };
   plugin_storage_set: { args: { pluginId: string; key: string; value: JsonValue }; result: void };
   plugin_storage_remove: { args: { pluginId: string; key: string }; result: void };
