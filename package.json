@@ -4,6 +4,7 @@
   "version": "0.2.0",
   "description": "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI",
   "type": "module",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "vite",
     "build": "pnpm build:plugins && tsc --noEmit -p tsconfig.json && vite build",
