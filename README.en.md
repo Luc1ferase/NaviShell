@@ -6,7 +6,7 @@
 
 **A pluggable SSH terminal** · Tauri 2 + React 19 + TypeScript
 
-[简体中文](README.md) | English
+[简体中文](README.md) | English | [日本語](README.ja.md)
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
