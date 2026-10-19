@@ -7,9 +7,11 @@
  * and a built-in dictionary of common commands and subcommands. The popup lives in the
  * terminal overlay layer; keys are only intercepted while it is visible.
  *
- * Path completion needs the shell's working directory. OSC 7 is read whenever a shell
- * emits it; the opt-in `toggleShellIntegration` command installs a hook that makes bash and
- * zsh emit it after every prompt.
+ * Path completion needs the shell's working directory, and exact history needs the command
+ * the shell really ran. Both are read from whatever a shell reports on its own (OSC 7, and
+ * the VS Code-style OSC 133/633 marks); the opt-in `toggleShellIntegration` command installs
+ * a hook in new SSH shells that makes bash and zsh report the cwd after every prompt, the
+ * command line before it runs and its exit code afterwards.
  */
 
 import { definePlugin } from '@navishell/plugin-api';

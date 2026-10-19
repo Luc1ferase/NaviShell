@@ -14,6 +14,9 @@ import { createEmitter } from '../util/events';
 /** The `updates` block of {@link AppSettings} (the contract declares it inline). */
 export type UpdateSettings = AppSettings['updates'];
 
+/** The `plugins` block of {@link AppSettings} (the contract declares it inline). */
+export type PluginSettings = AppSettings['plugins'];
+
 const settingsChanged = createEmitter<AppSettings>();
 export const onDidChangeSettings = settingsChanged.event;
 
@@ -32,6 +35,7 @@ export function mergeSettings(raw: Partial<AppSettings> | null | undefined): App
     updates: { ...DEFAULT_SETTINGS.updates, ...(raw?.updates ?? {}) },
     plugins: {
       disabled: raw?.plugins?.disabled ?? [],
+      registryUrl: raw?.plugins?.registryUrl ?? DEFAULT_SETTINGS.plugins.registryUrl,
       seenPanels: raw?.plugins?.seenPanels ?? [],
     },
     closeConnectionWithLastTerminal:
@@ -56,6 +60,7 @@ export interface SettingsStore {
   updateTerminal(partial: Partial<TerminalSettings>): void;
   updateLocalShell(partial: Partial<LocalShellSettings>): void;
   updateUpdates(partial: Partial<UpdateSettings>): void;
+  updatePlugins(partial: Partial<PluginSettings>): void;
   markPanelSeen(panelId: string): void;
 }
 
@@ -84,13 +89,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   updateUpdates(partial) {
     get().update((prev) => ({ ...prev, updates: { ...prev.updates, ...partial } }));
   },
+  updatePlugins(partial) {
+    get().update((prev) => ({ ...prev, plugins: { ...prev.plugins, ...partial } }));
+  },
   markPanelSeen(panelId) {
     const { settings } = get();
     if (settings.plugins.seenPanels.includes(panelId)) return;
-    get().update((prev) => ({
-      ...prev,
-      plugins: { ...prev.plugins, seenPanels: [...prev.plugins.seenPanels, panelId] },
-    }));
+    get().updatePlugins({ seenPanels: [...settings.plugins.seenPanels, panelId] });
   },
 }));
 

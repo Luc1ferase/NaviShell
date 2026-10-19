@@ -9,6 +9,11 @@
  * History is grouped per server for SSH terminals and under a single `local` key for local
  * shells, which have no server to belong to. Remote-only work (executables on `PATH`, cwd
  * tracking, directory listings) lives in `./remote` and is skipped for local terminals.
+ *
+ * Commands reach that history by two routes. The line reconstructed from keystrokes is held
+ * for a moment when Enter is pressed; if the shell then reports what it is really running
+ * (OSC 633 `E`, which needs shell integration), the exact text replaces the pending guess,
+ * and a command that turns out to exit 127 is dropped again - it does not exist.
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
@@ -30,7 +35,8 @@ export interface CompletionSettings {
   maxItems: number;
   /**
    * Opt-in: inject a `PROMPT_COMMAND`/`precmd` hook into new SSH shells so they report
-   * their working directory (OSC 7), which is what makes path completion exact.
+   * their working directory (OSC 7), the commands they run (OSC 633 `E`) and the exit
+   * codes (OSC 133 `D`) - what makes path completion and history capture exact.
    */
   shellIntegration: boolean;
 }
@@ -50,6 +56,17 @@ const SEED_COMMAND =
 const PERSIST_DEBOUNCE_MS = 400;
 /** History key shared by every local shell terminal. */
 const LOCAL_HISTORY_KEY = 'local';
+/**
+ * How long a keystroke-tracked line waits before it is recorded, leaving room for the
+ * shell's own report of the same command (one round trip away) to replace it.
+ */
+const TYPED_GRACE_MS = 600;
+/** The same wait once a terminal is known to report commands: enough for a slow link. */
+const TYPED_GRACE_EXACT_MS = 2500;
+/** How long an exact command waits for its OSC 133 `D` exit code before being recorded. */
+const EXIT_GRACE_MS = 400;
+/** `command not found`: never worth keeping as a suggestion. */
+const EXIT_CODE_NOT_FOUND = 127;
 
 export interface TerminalCompletionState {
   /** Our reconstruction of the current input line. */
@@ -59,6 +76,16 @@ export interface TerminalCompletionState {
   selected: number;
   cursor: CursorPixelPosition | null;
   container: { width: number; height: number };
+  /** A shell integration is reporting in this terminal (an OSC 133/633 report arrived). */
+  integrationActive: boolean;
+}
+
+/** A command seen but not recorded yet; see {@link CompletionController.pendTyped}. */
+interface PendingCommand {
+  /** The history bucket it belongs to, resolved when the command was seen. */
+  key: string;
+  command: string;
+  timer: ReturnType<typeof setTimeout>;
 }
 
 const HIDDEN: TerminalCompletionState = {
@@ -68,6 +95,7 @@ const HIDDEN: TerminalCompletionState = {
   selected: 0,
   cursor: null,
   container: { width: 0, height: 0 },
+  integrationActive: false,
 };
 
 /** State shared by the overlay and the history panel. */
@@ -108,12 +136,19 @@ export class CompletionController {
   private readonly seeded = new Set<string>();
   private readonly started = new Set<string>();
   private readonly persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly pendingTyped = new Map<string, PendingCommand>();
+  private readonly pendingExact = new Map<string, PendingCommand>();
   private readonly listeners = new Set<() => void>();
   private readonly remote: RemoteIndex;
   private disposed = false;
 
   constructor(private readonly ctx: PluginContext) {
-    this.remote = new RemoteIndex(ctx, this.onRemoteData);
+    this.remote = new RemoteIndex(ctx, {
+      onChange: this.onRemoteData,
+      onIntegrationActive: this.onIntegrationActive,
+      onExactCommand: this.onExactCommand,
+      onCommandExit: this.onCommandExit,
+    });
   }
 
   // -- store plumbing ------------------------------------------------------
@@ -147,6 +182,12 @@ export class CompletionController {
     if (this.disposed) return;
     this.states.set(terminalId, state);
     this.emit();
+  }
+
+  /** The popup-is-hidden state for one terminal, keeping the facts that outlive it. */
+  private hiddenFor(terminalId: string, line = ''): TerminalCompletionState {
+    const { integrationActive } = this.stateFor(terminalId);
+    return { ...HIDDEN, line, integrationActive };
   }
 
   /** Stable snapshot of one history bucket, most recent first. */
@@ -215,9 +256,14 @@ export class CompletionController {
   }
 
   dispose(): void {
-    this.disposed = true;
-    for (const timer of this.persistTimers.values()) clearTimeout(timer);
+    // Anything still in flight belongs in the history that is about to be written out.
+    for (const id of [...this.tracked.keys()]) this.flushPending(id);
+    for (const [key, timer] of this.persistTimers) {
+      clearTimeout(timer);
+      void this.persistHistory(key);
+    }
     this.persistTimers.clear();
+    this.disposed = true;
     for (const id of [...this.tracked.keys()]) this.untrackTerminal(id);
     this.remote.dispose();
     this.states.clear();
@@ -229,7 +275,7 @@ export class CompletionController {
     const settings = { ...this.settings, enabled: !this.settings.enabled };
     this.patchShared({ settings });
     if (!settings.enabled) {
-      for (const id of this.states.keys()) this.setState(id, HIDDEN);
+      for (const id of this.states.keys()) this.setState(id, this.hiddenFor(id));
     }
     await this.persistSettings(settings);
     return settings.enabled;
@@ -271,6 +317,8 @@ export class CompletionController {
   }
 
   private untrackTerminal(terminalId: string): void {
+    // The last command of a terminal that is closing still belongs in its history.
+    this.flushPending(terminalId);
     const disposers = this.tracked.get(terminalId);
     if (disposers) for (const dispose of disposers) dispose();
     this.tracked.delete(terminalId);
@@ -294,13 +342,19 @@ export class CompletionController {
     if (existing) clearTimeout(existing);
     const timer = setTimeout(() => {
       this.persistTimers.delete(key);
-      const history = this.histories.get(key);
-      if (!history) return;
-      void this.ctx.storage
-        .set(`history:${key}`, [...history])
-        .catch((error: unknown) => this.ctx.log.warn('[completion] persist failed', error));
+      void this.persistHistory(key);
     }, PERSIST_DEBOUNCE_MS);
     this.persistTimers.set(key, timer);
+  }
+
+  private async persistHistory(key: string): Promise<void> {
+    const history = this.histories.get(key);
+    if (!history) return;
+    try {
+      await this.ctx.storage.set(`history:${key}`, [...history]);
+    } catch (error) {
+      this.ctx.log.warn('[completion] persist failed', error);
+    }
   }
 
   /** Loads the stored history of a terminal's bucket and, for SSH, seeds it from the host. */
@@ -358,6 +412,45 @@ export class CompletionController {
     this.setHistory(key, pushHistory(history, trimmed, HISTORY_CAP));
   }
 
+  /**
+   * Hold a keystroke-tracked command line rather than recording it at once: the shell may
+   * be about to report the same command exactly (OSC 633 `E`), and that report wins. When
+   * none arrives the reconstruction is recorded, which is what keeps history working on
+   * hosts without shell integration - and brings it back by itself if integration stops.
+   */
+  private pendTyped(terminal: TerminalHandle, command: string): void {
+    const key = historyKey(terminal);
+    this.clearPending(this.pendingTyped, terminal.id);
+    const exact = this.remote.hasExactCapture(terminal.id);
+    const timer = setTimeout(
+      () => {
+        this.pendingTyped.delete(terminal.id);
+        this.record(key, command);
+      },
+      exact ? TYPED_GRACE_EXACT_MS : TYPED_GRACE_MS,
+    );
+    this.pendingTyped.set(terminal.id, { key, command, timer });
+  }
+
+  private clearPending(
+    pending: Map<string, PendingCommand>,
+    terminalId: string,
+  ): PendingCommand | undefined {
+    const entry = pending.get(terminalId);
+    if (!entry) return undefined;
+    clearTimeout(entry.timer);
+    pending.delete(terminalId);
+    return entry;
+  }
+
+  /** Record what a terminal still had in flight, because it (or the plugin) is going away. */
+  private flushPending(terminalId: string): void {
+    const exact = this.clearPending(this.pendingExact, terminalId);
+    const typed = this.clearPending(this.pendingTyped, terminalId);
+    const pending = exact ?? typed;
+    if (pending) this.record(pending.key, pending.command);
+  }
+
   // -- input tracking ------------------------------------------------------
 
   private handleInput(terminal: TerminalHandle, data: string): void {
@@ -365,7 +458,7 @@ export class CompletionController {
     let abort = false;
     for (const char of data) {
       if (char === '\r' || char === '\n') {
-        if (line.trim() !== '') this.record(historyKey(terminal), line);
+        if (line.trim() !== '') this.pendTyped(terminal, line);
         line = '';
         continue;
       }
@@ -388,7 +481,7 @@ export class CompletionController {
       line = '';
     }
     if (abort) {
-      this.setState(terminal.id, HIDDEN);
+      this.setState(terminal.id, this.hiddenFor(terminal.id));
       return;
     }
     this.refresh(terminal, line);
@@ -407,6 +500,43 @@ export class CompletionController {
     // tracked line are no longer trustworthy.
     if (data.includes(0x0a)) this.setState(terminal.id, { ...state, visible: false });
   }
+
+  // -- shell integration reports -------------------------------------------
+
+  /** The first report of a terminal: the popup footer says integration is live. */
+  private readonly onIntegrationActive = (terminalId: string): void => {
+    const state = this.stateFor(terminalId);
+    if (state.integrationActive) return;
+    this.setState(terminalId, { ...state, integrationActive: true });
+  };
+
+  /**
+   * OSC 633 `E`: the shell named the command it is about to run, so our reconstruction of
+   * that line is dropped. The exact text then waits briefly for its exit code instead of
+   * being recorded at once - see {@link onCommandExit}.
+   */
+  private readonly onExactCommand = (terminalId: string, command: string): void => {
+    if (this.disposed || command.trim() === '') return;
+    const terminal = this.terminals.get(terminalId);
+    if (!terminal) return;
+    this.clearPending(this.pendingTyped, terminalId);
+    // A command whose exit code never arrived clearly ran: record it before the new one.
+    const previous = this.clearPending(this.pendingExact, terminalId);
+    if (previous) this.record(previous.key, previous.command);
+    const key = historyKey(terminal);
+    const timer = setTimeout(() => {
+      this.pendingExact.delete(terminalId);
+      this.record(key, command);
+    }, EXIT_GRACE_MS);
+    this.pendingExact.set(terminalId, { key, command, timer });
+  };
+
+  /** OSC 133 `D`: the command finished. 127 means it never existed, so it is forgotten. */
+  private readonly onCommandExit = (terminalId: string, exitCode: number | null): void => {
+    const pending = this.clearPending(this.pendingExact, terminalId);
+    if (!pending || this.disposed || exitCode === EXIT_CODE_NOT_FOUND) return;
+    this.record(pending.key, pending.command);
+  };
 
   /**
    * Remote data landed (executables, a directory listing). Recompute the terminals that
@@ -427,7 +557,7 @@ export class CompletionController {
   private refresh(terminal: TerminalHandle, line: string): void {
     const { settings } = this.shared;
     if (!settings.enabled) {
-      this.setState(terminal.id, { ...HIDDEN, line });
+      this.setState(terminal.id, this.hiddenFor(terminal.id, line));
       return;
     }
     const token = analyzeToken(line);
@@ -446,7 +576,7 @@ export class CompletionController {
       minChars: settings.minChars,
     });
     if (suggestions.length === 0) {
-      this.setState(terminal.id, { ...HIDDEN, line });
+      this.setState(terminal.id, this.hiddenFor(terminal.id, line));
       return;
     }
     let cursor: CursorPixelPosition | null = null;
@@ -465,6 +595,7 @@ export class CompletionController {
         width: terminal.element.clientWidth,
         height: terminal.element.clientHeight,
       },
+      integrationActive: this.stateFor(terminal.id).integrationActive,
     });
   }
 
@@ -501,7 +632,7 @@ export class CompletionController {
     const suggestion = state.suggestions[index ?? state.selected];
     if (!suggestion) return;
     // Keep our tracked line in sync with what the shell now holds, and hide the popup.
-    this.setState(terminalId, { ...HIDDEN, line: suggestion.value });
+    this.setState(terminalId, this.hiddenFor(terminalId, suggestion.value));
     try {
       await terminal.write(`\x15${suggestion.value}`);
     } catch (error) {
@@ -552,7 +683,7 @@ export class CompletionController {
     const terminalId = this.shared.activeTerminalId;
     const terminal = terminalId ? this.terminals.get(terminalId) : undefined;
     if (!terminal) return;
-    this.setState(terminal.id, { ...HIDDEN, line: command });
+    this.setState(terminal.id, this.hiddenFor(terminal.id, command));
     await terminal.write(`\x15${command}`);
     terminal.focus();
   }

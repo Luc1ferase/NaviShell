@@ -50,7 +50,8 @@ plugins that use exactly the same API as third-party ones.
   terminals so bash and zsh report the directory after every prompt.
 - **Plugin installation**: besides dropping a directory into the plugins folder, Settings →
   Plugins installs from a zip URL (with an optional SHA-256 check) or a local zip file and
-  uninstalls in place, all without a restart.
+  uninstalls in place, all without a restart. A **marketplace** tab lists the plugins of a
+  registry index and installs them in one click.
 - **In-app updates**: after startup (can be disabled in Settings) and from Settings → About,
   NaviShell checks the latest GitHub Release and, once confirmed, downloads, installs and
   restarts. Every bundle carries a minisign signature; a mismatch is always rejected.
@@ -175,6 +176,19 @@ Settings → Plugins can also install straight from a zip, skipping the manual c
   directory, moving the old one aside first and restoring it if the swap fails.
 - Uninstalling also removes the plugin's storage file `plugin-data/<id>.json`.
 
+### Plugin marketplace
+
+Settings → Plugins → Marketplace lists a registry index, by default this repository's
+[`registry/plugins.json`](registry/plugins.json): picking a plugin installs it from the URL
+and SHA-256 of its entry, so there is no address to type. The index URL can be pointed at
+your own in Settings → Plugins (empty means the default one). The download is capped at
+15 s and 1 MiB, only http / https is accepted, and an entry with invalid fields is dropped
+with a log warning rather than failing the whole list.
+
+To get a plugin into that list, open a pull request against [`registry/`](registry/). The
+entry format, how to host the zip and how to compute its SHA-256 are documented in
+[`registry/README.md`](registry/README.md).
+
 ### Manifest `plugin.json`
 
 ```json
@@ -291,11 +305,12 @@ Directions planned after v1 and their status (discuss in the linked issues):
 | [#4](../../issues/4) | keyboard-interactive (including 2FA) | shipped in 0.2.0 |
 | [#5](../../issues/5) | In-app auto update | shipped in 0.2.0 |
 | [#6](../../issues/6) | Local terminals (no SSH) | shipped in 0.2.0 |
-| [#7](../../issues/7) | Install plugins from a URL | shipped in 0.2.0 |
+| [#7](../../issues/7) | Install plugins from a URL + marketplace | shipped in 0.2.0 |
 | [#8](../../issues/8) | Remote-aware command completion (real completion, not a dictionary) | shipped in 0.2.0 |
 
-A plugin marketplace (the registry index JSON mentioned in #7) is not built yet; for now
-you supply the URL yourself.
+The plugin marketplace (the registry index JSON mentioned in #7) is
+[`registry/plugins.json`](registry/plugins.json), listed under Settings → Plugins →
+Marketplace. The index is still empty; pull requests adding a plugin are welcome.
 
 ## License
 

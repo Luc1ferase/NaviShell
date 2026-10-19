@@ -99,6 +99,26 @@
       "replaceMessageUnknown": "该插件已安装，要替换它吗？",
       "replaceOk": "替换"
     },
+    "market": {
+      "title": "插件市场",
+      "refresh": "刷新",
+      "loading": "正在加载索引…",
+      "notLoaded": "尚未加载索引",
+      "untitled": "插件索引",
+      "updated": "更新于 {{date}}",
+      "hint": "点击刷新以加载可安装的插件列表",
+      "empty": "索引中暂无插件",
+      "failed": "无法加载插件索引：{{message}}",
+      "install": "安装",
+      "update": "更新",
+      "installedVersion": "已安装 v{{version}}",
+      "available": "可更新到 v{{version}}",
+      "requiresHost": "需要 NaviShell {{version}}",
+      "homepage": "项目主页",
+      "registryUrl": "索引地址",
+      "registryUrlHint": "列出可安装插件的 JSON 索引，留空使用官方索引",
+      "reset": "恢复默认"
+    },
     "uninstall": {
       "label": "卸载",
       "title": "卸载插件",
