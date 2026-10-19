@@ -6,6 +6,8 @@
 
 **一个可插拔的 SSH 终端** · Tauri 2 + React 19 + TypeScript
 
+简体中文 | [English](README.en.md)
+
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 </div>
@@ -102,7 +104,7 @@ cargo check
 2. 提交后打 tag 并推送：
 
    ```bash
-   git tag v0.1.0 && git push origin v0.1.0
+   git tag v0.2.0 && git push origin v0.2.0
    ```
 
 3. `.github/workflows/release.yml` 会在 Windows x64、macOS（Intel + Apple Silicon）、
@@ -257,77 +259,21 @@ export default definePlugin({
 
 ## 路线图
 
-v1 之后的方向（欢迎在对应 issue 下讨论）。标为「下个版本」的已经在 `master` 上实现，
-会随下一个 Release 发布：
+v1 之后规划的方向及其状态（欢迎在对应 issue 下讨论）：
 
 | # | 方向 | 状态 |
 | - | ---- | ---- |
-| [#1](../../issues/1) | 私钥登录（PEM / OpenSSH、passphrase） | 下个版本 |
-| [#2](../../issues/2) | ssh-agent 支持 | 下个版本 |
-| [#3](../../issues/3) | ProxyJump / 跳板机 | 下个版本 |
-| [#4](../../issues/4) | keyboard-interactive（含 2FA） | 下个版本 |
-| [#5](../../issues/5) | 应用内自动更新 | 下个版本 |
-| [#6](../../issues/6) | 本地终端（不经过 SSH） | 下个版本 |
-| [#7](../../issues/7) | 从 URL 安装插件 | 下个版本 |
-| [#8](../../issues/8) | 感知远端环境的命令补全（真实补全而非词典） | 下个版本 |
+| [#1](../../issues/1) | 私钥登录（PEM / OpenSSH、passphrase） | 已实现（0.2.0） |
+| [#2](../../issues/2) | ssh-agent 支持 | 已实现（0.2.0） |
+| [#3](../../issues/3) | ProxyJump / 跳板机 | 已实现（0.2.0） |
+| [#4](../../issues/4) | keyboard-interactive（含 2FA） | 已实现（0.2.0） |
+| [#5](../../issues/5) | 应用内自动更新 | 已实现（0.2.0） |
+| [#6](../../issues/6) | 本地终端（不经过 SSH） | 已实现（0.2.0） |
+| [#7](../../issues/7) | 从 URL 安装插件 | 已实现（0.2.0） |
+| [#8](../../issues/8) | 感知远端环境的命令补全（真实补全而非词典） | 已实现（0.2.0） |
 
 插件市场（#7 里提到的注册表索引 JSON）还没做，目前只能自己给 URL。
 
 ## 许可
 
 MIT
-
----
-
-## English
-
-NaviShell is a cross-platform SSH terminal built with **Tauri 2** (Rust core) and
-**React 19 + TypeScript**, with a VS Code-like dockable layout and a frontend plugin system.
-The core stays small: the built-in SFTP file manager and command completion are plugins that
-use exactly the same public API as third-party ones.
-
-**Features** — server records with credentials in the OS keychain; password, private-key and
-ssh-agent authentication with a keyboard-interactive fallback for 2FA; ProxyJump through a
-saved jump host; multi-tab PTY terminals (xterm.js) with a persisted dock layout; local shell
-terminals that skip SSH entirely (`pwsh.exe`/`powershell.exe` on Windows, `$SHELL` elsewhere,
-both overridable in the settings); TOFU host-key verification; an SFTP file manager (browse,
-upload, download, rename, delete, transfer progress and cancel); command completion from
-history, the remote `PATH`, remote directory listings and a 275-command dictionary, with an
-opt-in shell-integration toggle that teaches bash and zsh to report their working directory
-through OSC 7; plugin installation from a zip URL or a local zip file (with an optional
-SHA-256 check) and uninstallation, both without a restart; in-app updates against the
-latest GitHub Release, signed with minisign; and an English / Chinese UI.
-
-**Development**
-
-```bash
-pnpm install
-pnpm typecheck        # tsc across the app and both plugin packages
-pnpm lint
-pnpm build            # plugin bundles + dist/
-cd src-tauri && cargo check    # needs dist/ to exist first
-```
-
-Nothing is packaged locally. To release, bump the version in `package.json`,
-`src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, then push a `vX.Y.Z` tag: GitHub
-Actions builds Windows x64, macOS (Intel + Apple silicon) and Linux x64 + arm64 bundles and
-uploads them, their `.sig` signatures and `latest.json` to a **draft** release for a human
-to publish. Signing needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` and
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (`pnpm tauri signer generate`); the matching public
-key is `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`. The draft has to be
-published and not flagged as a prerelease, because the updater reads
-`releases/latest/download/latest.json` and GitHub's `latest` skips both.
-
-**Writing a plugin** — ship a directory with `plugin.json` and a CommonJS `main.js` into
-`%APPDATA%\dev.navishell.app\plugins\<id>\` (Windows),
-`~/Library/Application Support/dev.navishell.app/plugins/<id>/` (macOS) or
-`~/.local/share/dev.navishell.app/plugins/<id>/` (Linux), or zip it up and point Settings
-> Plugins at the file or at an http(s) URL. In a zip, `plugin.json` goes at the root or
-inside a single top-level directory; the archive may not exceed 50 MiB, and entries with
-absolute paths or `..` are rejected. `react`, `react/jsx-runtime`,
-`react-dom`, `react-dom/client`, `@navishell/plugin-api` and `lucide-react` are provided by
-the host and must stay external; everything else is bundled. Plugins only ever talk to the
-host through `PluginContext` (`panels`, `commands`, `servers`, `connections`, `terminals`,
-`storage`, `i18n`, `ui`, `log`) — never through `@tauri-apps/*`. See
-`packages/plugin-api/src/index.ts` for the full contract and the two built-in plugins for
-worked examples.
