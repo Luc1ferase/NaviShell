@@ -60,6 +60,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The macOS image ships a preinstalled toolchain whose directories make rustup's
+      # component rename fail (ENOTEMPTY). Refresh rustup and start from a clean toolchain.
+      - name: Reset preinstalled Rust toolchain (macOS)
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          rustup self update || true
+          rustup toolchain uninstall stable || true
+
       # Both macOS architectures are built on the same runner image.
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -80,7 +88,6 @@ jobs:
             build-essential \
             curl \
             file \
-            libappindicator3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libssl-dev \

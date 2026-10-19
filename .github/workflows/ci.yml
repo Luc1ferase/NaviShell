@@ -73,6 +73,14 @@ jobs:
       - name: Build frontend
         run: pnpm build
 
+      # The macOS image ships a preinstalled toolchain whose directories make rustup's
+      # component rename fail (ENOTEMPTY). Refresh rustup and start from a clean toolchain.
+      - name: Reset preinstalled Rust toolchain (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          rustup self update || true
+          rustup toolchain uninstall stable || true
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -91,7 +99,6 @@ jobs:
             build-essential \
             curl \
             file \
-            libappindicator3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libssl-dev \
