@@ -11,17 +11,6 @@ use crate::error::AppResult;
 use crate::state::AppState;
 use crate::storage::{self, AppPaths};
 
-/// UI language. `System` follows the OS locale.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Locale {
-    #[default]
-    System,
-    En,
-    #[serde(rename = "zh-CN")]
-    ZhCn,
-}
-
 /// Colour theme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -111,7 +100,9 @@ pub struct PluginSettings {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppSettings {
-    pub locale: Locale,
+    /// UI language tag (`en`, `zh-CN`, or one contributed by a language-pack plugin);
+    /// `system` follows the OS locale. Resolved by the frontend, so it is an open string.
+    pub locale: String,
     pub theme: Theme,
     pub terminal: TerminalSettings,
     pub plugins: PluginSettings,
@@ -122,7 +113,7 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            locale: Locale::default(),
+            locale: "system".to_string(),
             theme: Theme::default(),
             terminal: TerminalSettings::default(),
             plugins: PluginSettings::default(),

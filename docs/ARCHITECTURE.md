@@ -22,7 +22,7 @@ release, and no issue is left open.
 | Built-in plugins    | SFTP file manager, command completion (history + dictionary; remote `PATH`, directory listings and cwd tracking *(post-v1)*) | – |
 | Plugin sources      | built-in + `<appData>/plugins/<id>/`; install from a zip URL or a local zip, and uninstall, from Settings; marketplace list from a registry index JSON *(post-v1)* | – |
 | Credentials         | OS keychain (`keyring` crate, service `dev.navishell`, account `<serverId>`, or `<serverId>:passphrase` for a key passphrase) | – |
-| UI language         | zh-CN + en (i18next), default follows system                           | –                        |
+| UI language         | zh-CN + en built in (i18next); ja + zh-TW as built-in language-pack plugins; packs register via `ctx.i18n.registerLocale` | – |
 | Release             | GitHub Release via tauri-action; Win x64, macOS x64+arm64, Linux x64+arm64; signed updater artifacts + `latest.json` *(post-v1)* | – |
 | Updates             | in-app check against the latest GitHub Release, download, install and restart *(post-v1)* | – |
 
@@ -44,7 +44,7 @@ NaviShell/
 │  │  ├─ stores/              zustand stores: settings, servers, connections, terminals, ui, plugins
 │  │  ├─ plugins/             plugin host: loader (builtin + external), require shim, PluginContext impl, registries
 │  │  ├─ terminal/            xterm factory, TerminalHandle impl
-│  │  └─ i18n/                i18next setup, locales/en.json, locales/zh-CN.json
+│  │  └─ i18n/                i18next setup, locales/en.json, locales/zh-CN.json; language packs add more
 │  ├─ app/
 │  │  ├─ layout/              DockLayout (dockview), default layout, persistence
 │  │  ├─ panels/              ServersPanel, TerminalPanel, HomePanel, SettingsPanel, PluginPanel (generic)
@@ -231,7 +231,12 @@ Changing a contract means updating both sides; prefer additive changes.
   ResizeObserver + fit -> `term_resize`. Closing the last terminal of a connection
   disconnects it when `closeConnectionWithLastTerminal` is on.
 - **i18n**: i18next with namespaces; host strings in `host` namespace, each plugin gets its
-  own namespace via `ctx.i18n.addResources`.
+  own namespace via `ctx.i18n.addResources`. Only `en` and `zh-CN` are built in: other UI
+  languages are language-pack plugins (`packages/lang-ja`, `packages/lang-zh-tw`) that call
+  `ctx.i18n.registerLocale` with a host bundle plus bundles for other plugins (keyed by plugin
+  id). The available-locale list is dynamic; `settings.locale` is an open string, and a locale
+  whose pack is disabled falls back to the system/built-in one. A pack may declare a
+  `fallback` locale that is consulted before `en` (zh-TW → zh-CN).
 
 ### Plugins
 

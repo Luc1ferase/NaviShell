@@ -57,8 +57,12 @@ plugins that use exactly the same API as third-party ones.
 - **In-app updates**: after startup (can be disabled in Settings) and from Settings → About,
   NaviShell checks the latest GitHub Release and, once confirmed, downloads, installs and
   restarts. Every bundle carries a minisign signature; a mismatch is always rejected.
-- **English / Chinese UI**: follows the system language and can be switched manually;
-  plugins register their own translations.
+- **Multilingual UI**: English and Simplified Chinese are built in; Japanese and
+  Traditional Chinese ship as **language-pack plugins** (like VS Code language packs,
+  they can be disabled under Settings → Plugins). The UI follows the system language or a
+  manual choice. Any plugin can contribute a whole language with
+  `ctx.i18n.registerLocale`, including strings for other plugins; ordinary plugins register
+  their own translations with `addResources`.
 - **UI theme and terminal palette are separate**: the UI is dark, light or follows the
   system, with every colour coming from one set of CSS variables that plugins reuse. The
   terminal picks from 16 built-in schemes (One Half, Dracula, Nord, Gruvbox, Solarized,
@@ -220,7 +224,7 @@ The `ctx` passed to `activate(ctx)` is everything a plugin can touch. **Never ca
 | `ctx.connections` | connection list, one-shot `exec`, `sftp(connectionId)`, disconnect |
 | `ctx.terminals` | terminal handles, input/output events, overlay components, key interception |
 | `ctx.storage` | private persistent key/value store (`<appData>/plugin-data/<pluginId>.json`) |
-| `ctx.i18n` | register translations, `t()`, current locale and locale-change events |
+| `ctx.i18n` | register translations, `t()`, current locale and locale-change events; `registerLocale()` contributes a whole UI language (a language pack) |
 | `ctx.ui` | toasts, confirm and prompt dialogs, file and save pickers, context menus |
 | `ctx.log` | write to the application log |
 | `ctx.subscriptions` | `Disposable`s pushed here are released automatically on deactivation |
@@ -268,6 +272,28 @@ export default definePlugin({
 Build it into `main.js` + `style.css` and put them next to `plugin.json` in the plugin
 directory above. For complete examples read [`packages/plugin-sftp`](packages/plugin-sftp)
 and [`packages/plugin-completion`](packages/plugin-completion).
+
+### Language packs
+
+UI languages are plugins too: Japanese and Traditional Chinese come from the built-in
+`navishell.lang-ja` and `navishell.lang-zh-tw`, the same idea as VS Code's language packs,
+and can be disabled under Settings → Plugins. A pack does one thing in `activate`:
+
+```ts
+ctx.i18n.registerLocale({
+  id: 'ja', // BCP 47 tag
+  name: '日本語', // shown in the language menu
+  matches: ['ja'], // lower-case OS language prefixes that pick it when following the system
+  fallback: 'en', // tried before en when a string is missing
+  host: {
+    /* host strings, same shape as src/core/i18n/locales/en.json */
+  },
+  plugins: { 'navishell.sftp': { 'panel.title': 'ファイル' } }, // other plugins, by plugin id
+});
+```
+
+The completion plugin's dictionary descriptions live in its `navishell.completion` bundle
+under `dict.<command>` keys. `packages/lang-ja` is a template you can copy as is.
 
 ## Roadmap
 

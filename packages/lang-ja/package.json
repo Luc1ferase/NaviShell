@@ -1,0 +1,19 @@
+{
+  "name": "@navishell/lang-ja",
+  "version": "0.1.0",
+  "description": "NaviShell built-in language pack (ja)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@navishell/plugin-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.4"
+  }
+}

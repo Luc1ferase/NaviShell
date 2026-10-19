@@ -20,6 +20,7 @@ import type {
   ExecResult,
   HostError,
   JsonValue,
+  Locale,
   LocalizedText,
   PluginManifest,
   ServerInput,
@@ -68,7 +69,8 @@ export interface LocalShellSettings {
 
 export interface AppSettings {
   /** "system" follows the OS locale. */
-  locale: 'system' | 'en' | 'zh-CN';
+  /** `system` follows the OS; otherwise a built-in locale or one from a language pack. */
+  locale: 'system' | Locale;
   theme: 'dark' | 'light' | 'system';
   terminal: TerminalSettings;
   localShell: LocalShellSettings;

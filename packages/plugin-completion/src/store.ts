@@ -578,6 +578,7 @@ export class CompletionController {
       token,
       pathsRelativeToHome: paths.relativeToHome,
       locale: this.ctx.i18n.locale,
+      describe: this.describeCommand,
       maxItems: settings.maxItems,
       minChars: settings.minChars,
     });
@@ -605,6 +606,16 @@ export class CompletionController {
       integrationActive: this.stateFor(terminal.id).integrationActive,
     });
   }
+
+  /**
+   * A dictionary description contributed by a language pack (`dict.<command>` in this
+   * plugin's namespace). Commands may contain `.` and `:`, so i18next's separators are off.
+   */
+  private readonly describeCommand = (command: string): string | undefined => {
+    const key = `dict.${command}`;
+    const text = this.ctx.i18n.t(key, { keySeparator: false, nsSeparator: false });
+    return text === key ? undefined : text;
+  };
 
   // -- popup interaction ---------------------------------------------------
 

@@ -59,8 +59,11 @@ SFTP ファイルマネージャーとコマンド補完もプラグインであ
 - **アプリ内アップデート**：起動後（設定で無効化可能）および「設定 → このアプリについて」から
   最新の GitHub Release を確認し、確認後にダウンロード・インストール・再起動します。すべての
   バンドルには minisign 署名が付き、署名が一致しなければ必ず拒否されます。
-- **英語 / 中国語 UI**：システムの言語に追従し、手動で切り替えることもできます。プラグインは
-  独自の翻訳リソースを登録できます。
+- **多言語 UI**：英語と簡体字中国語は内蔵。日本語と繁體中文は **言語パックプラグイン** として
+  同梱されます（VS Code の言語パックと同様で、「設定 → プラグイン」から無効化できます）。UI
+  の言語はシステムに追従するか手動で選べます。どのプラグインも `ctx.i18n.registerLocale` で
+  言語を丸ごと提供でき、他のプラグインの文字列も翻訳できます。通常のプラグインは
+  `addResources` で自分の翻訳を登録します。
 - **UI テーマとターミナル配色は別々**：UI はダーク / ライト / システム追従の 3 択で、すべての
   色は 1 組の CSS 変数から生成され、プラグインも同じ変数を使います。ターミナルは内蔵の 16
   種類（One Half、Dracula、Nord、Gruvbox、Solarized、Catppuccin、Monokai、Campbell など）
@@ -228,7 +231,7 @@ externals 設定済み）。
 | `ctx.connections` | 接続一覧、ワンショットの `exec`、`sftp(connectionId)`、切断 |
 | `ctx.terminals` | ターミナルハンドル、入出力イベント、オーバーレイコンポーネント、キー割り込み |
 | `ctx.storage` | プラグイン専用の永続 KV（`<appData>/plugin-data/<pluginId>.json`） |
-| `ctx.i18n` | 翻訳リソースの登録、`t()`、現在のロケールとロケール変更イベント |
+| `ctx.i18n` | 翻訳リソースの登録、`t()`、現在のロケールとロケール変更イベント。`registerLocale()` で UI 言語全体（言語パック）を提供 |
 | `ctx.ui` | トースト、確認ダイアログ、入力ダイアログ、ファイル選択、保存ダイアログ、コンテキストメニュー |
 | `ctx.log` | アプリケーションログへの書き込み |
 | `ctx.subscriptions` | ここに入れた `Disposable` はプラグイン無効化時に自動で解放される |
@@ -276,6 +279,28 @@ export default definePlugin({
 これを `main.js` + `style.css` にビルドし、`plugin.json` と一緒に上記のプラグイン
 ディレクトリへ置けば完成です。完全な例は [`packages/plugin-sftp`](packages/plugin-sftp) と
 [`packages/plugin-completion`](packages/plugin-completion) を参照してください。
+
+### 言語パック
+
+UI の言語もプラグインです。日本語と繁體中文は内蔵の `navishell.lang-ja` と
+`navishell.lang-zh-tw` が提供しており、VS Code の言語パックと同じ考え方で、
+「設定 → プラグイン」から無効化できます。言語パックが `activate` で行うのはこれだけです：
+
+```ts
+ctx.i18n.registerLocale({
+  id: 'ja', // BCP 47 タグ
+  name: '日本語', // 言語メニューに表示する名前
+  matches: ['ja'], // システムに追従するときに一致させる OS 言語（小文字のプレフィックス）
+  fallback: 'en', // 文字列が無いときに en より先に試すロケール
+  host: {
+    /* ホストの文字列。構造は src/core/i18n/locales/en.json と同じ */
+  },
+  plugins: { 'navishell.sftp': { 'panel.title': 'ファイル' } }, // 他のプラグインをプラグイン id ごとに翻訳
+});
+```
+
+コマンド補完プラグインの辞書の説明は、`navishell.completion` のバンドル内に
+`dict.<コマンド>` というキーで置きます。`packages/lang-ja` をそのままテンプレートとして使えます。
 
 ## ロードマップ
 

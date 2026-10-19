@@ -1,0 +1,327 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "close": "閉じる",
+    "dismiss": "通知を閉じる"
+  },
+  "panel": {
+    "home": {
+      "title": "ようこそ"
+    },
+    "servers": {
+      "title": "サーバー"
+    },
+    "settings": {
+      "title": "設定"
+    },
+    "unavailable": "パネルを利用できません",
+    "unavailableHint": "対応するプラグインが読み込まれていない、無効、またはアクティブ化に失敗しました。"
+  },
+  "topbar": {
+    "quickConnect": "接続",
+    "newServer": "新しいサーバー",
+    "newLocalTerminal": "ローカル ターミナル",
+    "newLocalTerminalTooltip": "新しいローカル ターミナル (Ctrl+Shift+`)",
+    "settings": "設定",
+    "noServers": "サーバーがありません"
+  },
+  "status": {
+    "notConnected": "未接続",
+    "localShell": "ローカル シェル",
+    "terminals": "{{n}} 個のターミナル",
+    "plugins": "{{n}} 個のプラグイン",
+    "authMethodTooltip": "{{method}} で認証済み",
+    "viaUnknown": "閉じた踏み台サーバー",
+    "localeTooltip": "インターフェイスの言語",
+    "themeTooltip": "配色テーマ"
+  },
+  "settings": {
+    "title": "設定",
+    "general": "全般",
+    "terminal": "ターミナル",
+    "plugins": "プラグイン",
+    "about": "バージョン情報",
+    "localeLabel": "言語",
+    "themeLabel": "テーマ",
+    "locale": {
+      "system": "システムに従う"
+    },
+    "theme": {
+      "system": "システムに従う",
+      "dark": "ダーク",
+      "light": "ライト"
+    },
+    "closeWithLastTerminal": "接続の自動切断",
+    "closeWithLastTerminalHint": "接続の最後のターミナルを閉じたときに切断します",
+    "fontFamily": "フォント",
+    "fontSize": "フォント サイズ",
+    "lineHeight": "行の高さ",
+    "cursorStyle": "カーソルのスタイル",
+    "cursor": {
+      "block": "ブロック",
+      "underline": "下線",
+      "bar": "縦線"
+    },
+    "cursorBlink": "カーソルの点滅",
+    "cursorBlinkHint": "カーソルを点滅させます",
+    "scrollback": "スクロールバックの行数",
+    "webgl": "WebGL レンダラー",
+    "webglHint": "利用できない場合は DOM レンダリングに切り替わります",
+    "webglToggle": "WebGL を優先する",
+    "termType": "ターミナルの種類",
+    "localShell": {
+      "title": "ローカル シェル",
+      "program": "プログラム",
+      "programHint": "空の場合は Windows では PowerShell、それ以外では $SHELL を使用します",
+      "programPlaceholder": "自動",
+      "args": "引数",
+      "argsHint": "1 行に 1 つ",
+      "argsPlaceholder": "-NoLogo"
+    }
+  },
+  "plugins": {
+    "enabled": "有効",
+    "openFolder": "プラグイン フォルダーを開く",
+    "reload": "プラグインの再読み込み",
+    "reloaded": "プラグインを再読み込みしました",
+    "none": "プラグインが見つかりません",
+    "installed": "インストール済み",
+    "status": {
+      "active": "アクティブ",
+      "disabled": "無効",
+      "error": "エラー"
+    },
+    "source": {
+      "builtin": "組み込み",
+      "external": "外部"
+    },
+    "errors": {
+      "manifest": "plugin.json を読み取れませんでした: {{message}}",
+      "noExport": "このバンドルは NaviShell プラグインをエクスポートしていません",
+      "hostVersion": "NaviShell {{required}} 以降が必要です (現在は {{actual}})"
+    },
+    "install": {
+      "title": "プラグインのインストール",
+      "url": "プラグインの URL",
+      "urlHint": "plugin.json を含む zip アーカイブ",
+      "urlPlaceholder": "https://example.com/my-plugin.zip",
+      "sha256": "SHA-256",
+      "sha256Hint": "省略可能。アーカイブを展開する前に検証します",
+      "sha256Placeholder": "チェックサム (省略可能)",
+      "fromUrl": "URL からインストール",
+      "fromFile": "ファイルからインストール…",
+      "busy": "インストールしています…",
+      "pickFile": "プラグイン アーカイブの選択",
+      "zipFilter": "プラグイン アーカイブ",
+      "done": "{{name}} v{{version}} をインストールしました",
+      "replaceTitle": "プラグインの置き換え",
+      "replaceMessage": "このプラグインのバージョン {{version}} はインストール済みです。置き換えますか?",
+      "replaceMessageUnknown": "このプラグインはインストール済みです。置き換えますか?",
+      "replaceOk": "置き換える"
+    },
+    "market": {
+      "title": "マーケットプレース",
+      "refresh": "更新",
+      "loading": "レジストリを読み込んでいます…",
+      "notLoaded": "レジストリが読み込まれていません",
+      "untitled": "プラグイン レジストリ",
+      "updated": "{{date}} に更新",
+      "hint": "更新すると、インストールできるプラグインの一覧を読み込みます",
+      "empty": "レジストリにプラグインがありません",
+      "failed": "レジストリを読み込めませんでした: {{message}}",
+      "install": "インストール",
+      "update": "アップデート",
+      "installedVersion": "インストール済み v{{version}}",
+      "available": "v{{version}} が利用できます",
+      "requiresHost": "NaviShell {{version}} が必要です",
+      "homepage": "ホームページ",
+      "registryUrl": "レジストリの URL",
+      "registryUrlHint": "インストールできるプラグインの JSON インデックス。空の場合は公式のものを使用します",
+      "reset": "リセット"
+    },
+    "uninstall": {
+      "label": "アンインストール",
+      "title": "プラグインのアンインストール",
+      "message": "{{name}} をプラグイン フォルダーから削除しますか?",
+      "ok": "アンインストール",
+      "done": "{{name}} をアンインストールしました"
+    }
+  },
+  "updates": {
+    "title": "アップデート",
+    "checkOnStartup": "自動アップデート",
+    "checkOnStartupHint": "起動後に新しいバージョンを 1 回確認します",
+    "check": "アップデートの確認",
+    "checking": "確認しています…",
+    "upToDate": "NaviShell は最新の状態です",
+    "notChecked": "まだ確認していません",
+    "availableVersion": "バージョン {{version}} が利用できます",
+    "availableToast": "アップデート v{{version}} が利用できます",
+    "view": "表示",
+    "newVersion": "バージョン {{version}}",
+    "released": "{{date}} リリース",
+    "download": "ダウンロードしてインストール",
+    "downloading": "ダウンロードしています…",
+    "downloadingPercent": "ダウンロードしています… {{percent}}%",
+    "ready": "アップデートをインストールしました。再起動すると完了します",
+    "restart": "今すぐ再起動",
+    "restartHint": "NaviShell を終了して新しいバージョンを起動します。",
+    "checkFailed": "アップデートを確認できませんでした: {{message}}",
+    "checkFailedShort": "アップデートを確認できませんでした",
+    "installFailed": "アップデートに失敗しました: {{message}}",
+    "restartFailed": "再起動できませんでした: {{message}}",
+    "unavailable": "アップデートはパッケージ版のアプリでのみ利用できます"
+  },
+  "about": {
+    "version": "バージョン",
+    "platform": "プラットフォーム",
+    "appData": "アプリ データ",
+    "logs": "ログ",
+    "repository": "リポジトリ"
+  },
+  "servers": {
+    "searchPlaceholder": "サーバーの検索",
+    "add": "サーバーの追加",
+    "connect": "接続",
+    "empty": "サーバーがまだありません。+ を使って追加してください。",
+    "noMatches": "検索条件に一致するサーバーはありません。",
+    "ungrouped": "グループなし",
+    "saved": "{{name}} を保存しました",
+    "deleted": "{{name}} を削除しました",
+    "duplicateName": "{{name}} (コピー)",
+    "passwordCleared": "保存されたパスワードを削除しました",
+    "passphraseCleared": "保存されたパスフレーズを削除しました",
+    "via": "{{name}} 経由",
+    "auth": {
+      "password": "パスワード",
+      "key": "公開鍵",
+      "agent": "エージェント"
+    },
+    "delete": {
+      "title": "サーバーの削除",
+      "message": "{{name}} と保存されたパスワードを削除しますか?"
+    },
+    "menu": {
+      "connect": "接続",
+      "newTerminal": "新しいターミナル",
+      "edit": "編集",
+      "duplicate": "複製",
+      "delete": "削除"
+    },
+    "form": {
+      "createTitle": "新しいサーバー",
+      "editTitle": "サーバーの編集",
+      "name": "名前",
+      "host": "ホスト",
+      "port": "ポート",
+      "username": "ユーザー名",
+      "group": "グループ",
+      "authMethod": "認証",
+      "password": "パスワード",
+      "passwordStored": "パスワードはキーチェーンに保存されています",
+      "passwordEmpty": "接続時に確認します",
+      "passwordHint": "「キーチェーンに保存」をオンにした場合のみ保存されます。",
+      "saveToKeychain": "キーチェーンに保存",
+      "hasCredential": "パスワードを保存済み",
+      "clearCredential": "保存されたパスワードを削除",
+      "keyPath": "秘密鍵",
+      "keyPathPlaceholder": "~/.ssh/id_ed25519",
+      "keyPathHint": "このコンピューター上の OpenSSH 秘密鍵ファイル。",
+      "browse": "参照",
+      "pickKey": "秘密鍵の選択",
+      "passphrase": "パスフレーズ",
+      "passphraseStored": "パスフレーズはキーチェーンに保存されています",
+      "passphraseEmpty": "鍵が暗号化されている場合に確認します",
+      "passphraseHint": "暗号化された鍵の場合にのみ必要です。",
+      "savePassphraseToKeychain": "パスフレーズをキーチェーンに保存",
+      "hasPassphrase": "パスフレーズを保存済み",
+      "clearPassphrase": "保存されたパスフレーズを削除",
+      "agentHintWindows": "実行中の ssh-agent を使用します。Windows では「OpenSSH Authentication Agent」サービスを開始し、ssh-add で鍵を追加してください。",
+      "agentHintUnix": "SSH_AUTH_SOCK から参照できる ssh-agent を使用します。ssh-add で鍵を追加してください。",
+      "jumpServer": "踏み台サーバー",
+      "jumpServerDirect": "直接接続",
+      "jumpServerHint": "保存済みのこのサーバーを経由して接続します (ProxyJump)。",
+      "color": "色",
+      "noColor": "色なし"
+    }
+  },
+  "home": {
+    "title": "NaviShell",
+    "subtitle": "プラグインで拡張できる SSH ターミナル。ドッキングできるワークスペースを備えています。",
+    "quickConnect": "クイック接続",
+    "localShell": "ローカル シェル",
+    "newLocalTerminal": "新しいローカル ターミナル",
+    "newLocalTerminalHint": "このコンピューターでシェルを実行します ·",
+    "hints": "ヒント",
+    "addFirstServer": "最初のサーバーを追加",
+    "addFirstServerHint": "ホスト、ユーザー名、パスワードだけで登録できます",
+    "openSettings": "設定を開く",
+    "hint": {
+      "doubleClick": "サイドバーでサーバーをダブルクリックすると、ターミナルが開きます。",
+      "copyPaste": "コピーと貼り付けのキーは",
+      "rightClick": "ターミナルを右クリックすると貼り付け、選択範囲があるときはコピーします。",
+      "dock": "タブをドラッグするとワークスペースを分割できます。レイアウトは次回も復元されます。",
+      "plugins": "プラグインをプラグイン フォルダーに入れて、設定から再読み込みしてください。"
+    }
+  },
+  "terminal": {
+    "localTitle": "ローカル シェル",
+    "sessionEnded": "セッションが終了しました",
+    "connectionLost": "接続が閉じられました",
+    "reconnect": "再接続",
+    "reopen": "新しいローカル シェル",
+    "exitCode": "終了コード {{code}}",
+    "exitNotice": "[セッションが終了しました。終了コード {{code}}]",
+    "connectionLostNotice": "[接続が閉じられました]"
+  },
+  "dialog": {
+    "password": {
+      "title": "{{name}} のパスワード",
+      "connect": "接続",
+      "placeholder": "SSH パスワード",
+      "save": "キーチェーンに保存"
+    },
+    "passphrase": {
+      "title": "{{name}} の鍵のパスフレーズ",
+      "placeholder": "秘密鍵のパスフレーズ",
+      "save": "パスフレーズをキーチェーンに保存"
+    },
+    "authPrompt": {
+      "title": "{{name}} の追加認証",
+      "titleUnknown": "追加の認証が必要です",
+      "answer": "回答",
+      "submit": "送信"
+    },
+    "hostKey": {
+      "title": "ホスト鍵が変更されました",
+      "mismatch": "サーバーが提示したホスト鍵は、保存されているものと異なります。サーバーが再インストールされたか、接続が傍受されている可能性があります。",
+      "host": "ホスト",
+      "expected": "保存されているフィンガープリント",
+      "received": "受信したフィンガープリント",
+      "trust": "新しい鍵を信頼する"
+    }
+  },
+  "connect": {
+    "hostKeyNew": "{{host}} の新しいホスト鍵を信頼しました ({{fingerprint}})",
+    "authFailed": "{{name}} の認証に失敗しました",
+    "agentUnavailableWindows": "利用できる ssh-agent が見つかりません。「OpenSSH Authentication Agent」サービスを開始し、ssh-add で鍵を追加してください。",
+    "agentUnavailableUnix": "利用できる ssh-agent が見つかりません。SSH_AUTH_SOCK が設定されているか確認し、ssh-add で鍵を追加してください。",
+    "jumpCycle": "{{name}} の踏み台サーバーの設定がループしています。",
+    "cancelled": "接続をキャンセルしました"
+  },
+  "command": {
+    "openSettings": "設定を開く",
+    "newServer": "新しいサーバー",
+    "reloadPlugins": "プラグインの再読み込み",
+    "connect": "サーバーに接続",
+    "openTerminal": "ターミナルを開く",
+    "newLocalTerminal": "新しいローカル ターミナル",
+    "disconnect": "切断",
+    "openPanel": "パネルを開く",
+    "closePanel": "パネルを閉じる",
+    "togglePanel": "パネルの表示を切り替え"
+  }
+}

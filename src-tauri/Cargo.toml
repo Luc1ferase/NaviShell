@@ -1,6 +1,6 @@
 [package]
 name = "navishell"
-version = "0.2.0"
+version = "0.3.0"
 description = "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI"
 authors = ["Luciferase"]
 repository = "https://github.com/Luc1ferase/NaviShell"

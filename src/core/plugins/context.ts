@@ -18,7 +18,13 @@ import type {
 } from '@navishell/plugin-api';
 
 import { call } from '../ipc/client';
-import { addPluginResources, currentLocale, onDidChangeLocale, translatePlugin } from '../i18n';
+import {
+  addPluginResources,
+  currentLocale,
+  onDidChangeLocale,
+  registerLocalePack,
+  translatePlugin,
+} from '../i18n';
 import { connectToServer, disconnectConnection } from '../services/connect';
 import { closePanel, isPanelOpen, openPanel, togglePanel } from '../services/layout';
 import { createSftpClient } from '../services/sftp';
@@ -168,6 +174,9 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
       },
       t: (key, opts) => translatePlugin(pluginId, key, opts),
       onDidChangeLocale,
+      registerLocale(pack) {
+        return registerLocalePack(pack);
+      },
     },
 
     ui: {

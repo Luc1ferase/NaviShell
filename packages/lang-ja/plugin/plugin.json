@@ -1,0 +1,20 @@
+{
+  "id": "navishell.lang-ja",
+  "name": {
+    "en": "Japanese Language Pack",
+    "ja": "日本語言語パック",
+    "zh-CN": "日语语言包",
+    "zh-TW": "日文語言套件"
+  },
+  "version": "0.1.0",
+  "description": {
+    "en": "Japanese (日本語) translations for the NaviShell UI and the built-in plugins.",
+    "ja": "NaviShell の UI と内蔵プラグインの日本語翻訳。",
+    "zh-CN": "NaviShell 界面与内置插件的日语翻译。",
+    "zh-TW": "NaviShell 介面與內建外掛的日文翻譯。"
+  },
+  "author": "NaviShell",
+  "main": "main.js",
+  "icon": "Languages",
+  "minHostVersion": "0.3.0"
+}
