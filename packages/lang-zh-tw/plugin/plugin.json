@@ -1,0 +1,20 @@
+{
+  "id": "navishell.lang-zh-tw",
+  "name": {
+    "en": "Traditional Chinese Language Pack",
+    "zh-TW": "繁體中文語言套件",
+    "zh-CN": "繁体中文语言包",
+    "ja": "繁体字中国語言語パック"
+  },
+  "version": "0.1.0",
+  "description": {
+    "en": "Traditional Chinese (繁體中文) translations for the NaviShell UI and the built-in plugins.",
+    "zh-TW": "NaviShell 介面與內建外掛的繁體中文翻譯。",
+    "zh-CN": "NaviShell 界面与内置插件的繁体中文翻译。",
+    "ja": "NaviShell の UI と内蔵プラグインの繁体字中国語翻訳。"
+  },
+  "author": "NaviShell",
+  "main": "main.js",
+  "icon": "Languages",
+  "minHostVersion": "0.3.0"
+}

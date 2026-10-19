@@ -17,7 +17,8 @@ import { resolveLocalized, type Locale } from '@navishell/plugin-api';
 
 import type { ITheme } from '@xterm/xterm';
 
-import { useI18n } from '@/core/i18n/useI18n';
+import { fallbackChain } from '@/core/i18n';
+import { useAvailableLocales, useI18n } from '@/core/i18n/useI18n';
 import { call, errorMessage } from '@/core/ipc/client';
 import { DEFAULT_PLUGIN_REGISTRY_URL, type PluginRegistryEntry } from '@/core/ipc/contract';
 import { installPlugin, type InstallAttempt } from '@/core/plugins/install';
@@ -124,7 +125,7 @@ function PluginCard({ entry }: { entry: PluginEntry }) {
   const toast = useUiStore((state) => state.toast);
   const [busy, setBusy] = useState(false);
   const enabled = !disabled.includes(entry.id);
-  const name = resolveLocalized(entry.manifest.name, locale) || entry.id;
+  const name = resolveLocalized(entry.manifest.name, locale, fallbackChain(locale)) || entry.id;
 
   const statusClass =
     entry.status === 'error'
@@ -179,7 +180,7 @@ function PluginCard({ entry }: { entry: PluginEntry }) {
         </div>
         {entry.manifest.description ? (
           <div className="ns-plugin-card__desc">
-            {resolveLocalized(entry.manifest.description, locale)}
+            {resolveLocalized(entry.manifest.description, locale, fallbackChain(locale))}
           </div>
         ) : null}
         {entry.source === 'external' ? (
@@ -359,8 +360,8 @@ function MarketplaceCard({ entry }: { entry: PluginRegistryEntry }) {
   const [busy, setBusy] = useState(false);
 
   const action = marketplaceAction(entry, installed);
-  const name = resolveLocalized(entry.name, locale) || entry.id;
-  const description = resolveLocalized(entry.description, locale);
+  const name = resolveLocalized(entry.name, locale, fallbackChain(locale)) || entry.id;
+  const description = resolveLocalized(entry.description, locale, fallbackChain(locale));
   const homepage = entry.homepage;
   const minHostVersion = entry.minHostVersion;
   // Without `app_info` (the app running outside Tauri) there is nothing to compare
@@ -749,6 +750,7 @@ function LocalShellArgsField() {
 
 export function SettingsPanel() {
   const { t } = useI18n();
+  const locales = useAvailableLocales();
   const settings = useSettingsStore((state) => state.settings);
   const appInfo = useSettingsStore((state) => state.appInfo);
   const update = useSettingsStore((state) => state.update);
@@ -808,8 +810,16 @@ export function SettingsPanel() {
                 }
               >
                 <option value="system">{t('settings.locale.system')}</option>
-                <option value="zh-CN">简体中文</option>
-                <option value="en">English</option>
+                {locales.map((info) => (
+                  <option key={info.id} value={info.id}>
+                    {info.name}
+                  </option>
+                ))}
+                {settings.locale !== 'system' &&
+                !locales.some((info) => info.id === settings.locale) ? (
+                  // The chosen language pack is disabled or gone; keep the value visible.
+                  <option value={settings.locale}>{settings.locale}</option>
+                ) : null}
               </select>
             </Row>
             <Row label={t('settings.themeLabel')}>

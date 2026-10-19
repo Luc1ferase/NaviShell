@@ -1,0 +1,327 @@
+{
+  "common": {
+    "ok": "確定",
+    "cancel": "取消",
+    "save": "儲存",
+    "delete": "刪除",
+    "close": "關閉",
+    "dismiss": "關閉通知"
+  },
+  "panel": {
+    "home": {
+      "title": "歡迎"
+    },
+    "servers": {
+      "title": "伺服器"
+    },
+    "settings": {
+      "title": "設定"
+    },
+    "unavailable": "面板無法使用",
+    "unavailableHint": "對應的外掛未載入、已停用或啟動失敗。"
+  },
+  "topbar": {
+    "quickConnect": "連線",
+    "newServer": "新增伺服器",
+    "newLocalTerminal": "本機終端機",
+    "newLocalTerminalTooltip": "新增本機終端機（Ctrl+Shift+`）",
+    "settings": "設定",
+    "noServers": "尚無伺服器"
+  },
+  "status": {
+    "notConnected": "未連線",
+    "localShell": "本機 Shell",
+    "terminals": "{{n}} 個終端機",
+    "plugins": "{{n}} 個外掛",
+    "authMethodTooltip": "驗證方式：{{method}}",
+    "viaUnknown": "已關閉的跳板主機",
+    "localeTooltip": "介面語言",
+    "themeTooltip": "配色主題"
+  },
+  "settings": {
+    "title": "設定",
+    "general": "一般",
+    "terminal": "終端機",
+    "plugins": "外掛",
+    "about": "關於",
+    "localeLabel": "語言",
+    "themeLabel": "主題",
+    "locale": {
+      "system": "跟隨系統"
+    },
+    "theme": {
+      "system": "跟隨系統",
+      "dark": "深色",
+      "light": "淺色"
+    },
+    "closeWithLastTerminal": "自動中斷連線",
+    "closeWithLastTerminalHint": "關閉連線的最後一個終端機時中斷 SSH 連線",
+    "fontFamily": "字型",
+    "fontSize": "字型大小",
+    "lineHeight": "行高",
+    "cursorStyle": "游標樣式",
+    "cursor": {
+      "block": "方塊",
+      "underline": "底線",
+      "bar": "直線"
+    },
+    "cursorBlink": "游標閃爍",
+    "cursorBlinkHint": "讓游標閃爍",
+    "scrollback": "回捲行數",
+    "webgl": "WebGL 轉譯",
+    "webglHint": "無法使用時會改用 DOM 轉譯",
+    "webglToggle": "優先使用 WebGL",
+    "termType": "終端機類型",
+    "localShell": {
+      "title": "本機 Shell",
+      "program": "程式",
+      "programHint": "留空則在 Windows 使用 PowerShell，其他平台使用 $SHELL",
+      "programPlaceholder": "自動",
+      "args": "引數",
+      "argsHint": "一行一個",
+      "argsPlaceholder": "-NoLogo"
+    }
+  },
+  "plugins": {
+    "enabled": "啟用",
+    "openFolder": "開啟外掛資料夾",
+    "reload": "重新載入外掛",
+    "reloaded": "已重新載入外掛",
+    "none": "找不到外掛",
+    "installed": "已安裝",
+    "status": {
+      "active": "作用中",
+      "disabled": "已停用",
+      "error": "錯誤"
+    },
+    "source": {
+      "builtin": "內建",
+      "external": "外部"
+    },
+    "errors": {
+      "manifest": "無法讀取 plugin.json：{{message}}",
+      "noExport": "這個套件並未匯出 NaviShell 外掛",
+      "hostVersion": "需要 NaviShell {{required}} 或更新版本（目前是 {{actual}}）"
+    },
+    "install": {
+      "title": "安裝外掛",
+      "url": "外掛 URL",
+      "urlHint": "包含 plugin.json 的 zip 壓縮檔",
+      "urlPlaceholder": "https://example.com/my-plugin.zip",
+      "sha256": "SHA-256",
+      "sha256Hint": "選填；解壓縮前會先驗證",
+      "sha256Placeholder": "選填的總和檢查碼",
+      "fromUrl": "從 URL 安裝",
+      "fromFile": "從檔案安裝…",
+      "busy": "正在安裝…",
+      "pickFile": "選取外掛壓縮檔",
+      "zipFilter": "外掛壓縮檔",
+      "done": "已安裝 {{name}} v{{version}}",
+      "replaceTitle": "取代外掛",
+      "replaceMessage": "這個外掛的 {{version}} 版已經安裝，要取代它嗎？",
+      "replaceMessageUnknown": "這個外掛已經安裝，要取代它嗎？",
+      "replaceOk": "取代"
+    },
+    "market": {
+      "title": "外掛市集",
+      "refresh": "重新整理",
+      "loading": "正在載入索引…",
+      "notLoaded": "尚未載入索引",
+      "untitled": "外掛索引",
+      "updated": "{{date}} 更新",
+      "hint": "按下重新整理即可載入可安裝的外掛清單",
+      "empty": "索引中沒有任何外掛",
+      "failed": "無法載入索引：{{message}}",
+      "install": "安裝",
+      "update": "更新",
+      "installedVersion": "已安裝 v{{version}}",
+      "available": "可更新至 v{{version}}",
+      "requiresHost": "需要 NaviShell {{version}}",
+      "homepage": "首頁",
+      "registryUrl": "索引 URL",
+      "registryUrlHint": "列出可安裝外掛的 JSON 索引；留空則使用官方索引",
+      "reset": "重設"
+    },
+    "uninstall": {
+      "label": "解除安裝",
+      "title": "解除安裝外掛",
+      "message": "要從外掛資料夾刪除 {{name}} 嗎？",
+      "ok": "解除安裝",
+      "done": "已解除安裝 {{name}}"
+    }
+  },
+  "updates": {
+    "title": "更新",
+    "checkOnStartup": "自動更新",
+    "checkOnStartupHint": "啟動後檢查一次是否有新版本",
+    "check": "檢查更新",
+    "checking": "正在檢查…",
+    "upToDate": "NaviShell 已是最新版本",
+    "notChecked": "尚未檢查",
+    "availableVersion": "有新版本 {{version}}",
+    "availableToast": "有更新 v{{version}}",
+    "view": "檢視",
+    "newVersion": "版本 {{version}}",
+    "released": "{{date}} 發行",
+    "download": "下載並安裝",
+    "downloading": "正在下載…",
+    "downloadingPercent": "正在下載… {{percent}}%",
+    "ready": "更新已安裝，重新啟動後即可完成",
+    "restart": "立即重新啟動",
+    "restartHint": "NaviShell 會關閉並啟動新版本。",
+    "checkFailed": "無法檢查更新：{{message}}",
+    "checkFailedShort": "無法檢查更新",
+    "installFailed": "更新失敗：{{message}}",
+    "restartFailed": "無法重新啟動：{{message}}",
+    "unavailable": "只有封裝後的應用程式才能更新"
+  },
+  "about": {
+    "version": "版本",
+    "platform": "平台",
+    "appData": "應用程式資料",
+    "logs": "日誌",
+    "repository": "程式碼儲存庫"
+  },
+  "servers": {
+    "searchPlaceholder": "搜尋伺服器",
+    "add": "新增伺服器",
+    "connect": "連線",
+    "empty": "尚無伺服器，請使用 + 新增一台。",
+    "noMatches": "沒有符合搜尋條件的伺服器。",
+    "ungrouped": "未分組",
+    "saved": "已儲存 {{name}}",
+    "deleted": "已刪除 {{name}}",
+    "duplicateName": "{{name}}（複本）",
+    "passwordCleared": "已清除儲存的密碼",
+    "passphraseCleared": "已清除儲存的密碼片語",
+    "via": "經由 {{name}}",
+    "auth": {
+      "password": "密碼",
+      "key": "金鑰",
+      "agent": "代理程式"
+    },
+    "delete": {
+      "title": "刪除伺服器",
+      "message": "要刪除 {{name}} 和已儲存的密碼嗎？"
+    },
+    "menu": {
+      "connect": "連線",
+      "newTerminal": "新增終端機",
+      "edit": "編輯",
+      "duplicate": "複製",
+      "delete": "刪除"
+    },
+    "form": {
+      "createTitle": "新增伺服器",
+      "editTitle": "編輯伺服器",
+      "name": "名稱",
+      "host": "主機",
+      "port": "連接埠",
+      "username": "使用者名稱",
+      "group": "群組",
+      "authMethod": "驗證方式",
+      "password": "密碼",
+      "passwordStored": "鑰匙圈中已儲存密碼",
+      "passwordEmpty": "連線時詢問",
+      "passwordHint": "只有勾選「儲存到鑰匙圈」時才會寫入。",
+      "saveToKeychain": "儲存到鑰匙圈",
+      "hasCredential": "已儲存密碼",
+      "clearCredential": "清除已儲存的密碼",
+      "keyPath": "私密金鑰",
+      "keyPathPlaceholder": "~/.ssh/id_ed25519",
+      "keyPathHint": "本機上的 OpenSSH 私密金鑰檔案。",
+      "browse": "瀏覽",
+      "pickKey": "選取私密金鑰",
+      "passphrase": "密碼片語",
+      "passphraseStored": "鑰匙圈中已儲存密碼片語",
+      "passphraseEmpty": "金鑰已加密時詢問",
+      "passphraseHint": "只有加密的金鑰才需要填寫。",
+      "savePassphraseToKeychain": "將密碼片語儲存到鑰匙圈",
+      "hasPassphrase": "已儲存密碼片語",
+      "clearPassphrase": "清除已儲存的密碼片語",
+      "agentHintWindows": "使用正在執行的 ssh-agent。在 Windows 上請啟動「OpenSSH Authentication Agent」服務，並以 ssh-add 加入金鑰。",
+      "agentHintUnix": "使用 SSH_AUTH_SOCK 可連到的 ssh-agent。請先以 ssh-add 加入金鑰。",
+      "jumpServer": "跳板主機",
+      "jumpServerDirect": "直接連線",
+      "jumpServerHint": "先連線到這台已儲存的伺服器，再跳過去（ProxyJump）。",
+      "color": "顏色",
+      "noColor": "不使用顏色"
+    }
+  },
+  "home": {
+    "title": "NaviShell",
+    "subtitle": "可擴充外掛的 SSH 終端機，搭配可停駐的工作區。",
+    "quickConnect": "快速連線",
+    "localShell": "本機 Shell",
+    "newLocalTerminal": "新增本機終端機",
+    "newLocalTerminalHint": "在本機執行 Shell ·",
+    "hints": "使用提示",
+    "addFirstServer": "新增第一台伺服器",
+    "addFirstServerHint": "只需要主機、使用者名稱和密碼",
+    "openSettings": "開啟設定",
+    "hint": {
+      "doubleClick": "在側邊欄雙擊伺服器即可開啟終端機。",
+      "copyPaste": "複製與貼上的快速鍵",
+      "rightClick": "在終端機中按右鍵即可貼上；有選取內容時則會複製。",
+      "dock": "拖曳分頁可分割工作區，版面配置會在下次啟動時還原。",
+      "plugins": "把外掛放進外掛資料夾，然後在設定中重新載入。"
+    }
+  },
+  "terminal": {
+    "localTitle": "本機 Shell",
+    "sessionEnded": "工作階段已結束",
+    "connectionLost": "連線已關閉",
+    "reconnect": "重新連線",
+    "reopen": "新增本機 Shell",
+    "exitCode": "結束代碼 {{code}}",
+    "exitNotice": "[工作階段已結束，結束代碼 {{code}}]",
+    "connectionLostNotice": "[連線已關閉]"
+  },
+  "dialog": {
+    "password": {
+      "title": "{{name}} 的密碼",
+      "connect": "連線",
+      "placeholder": "SSH 密碼",
+      "save": "儲存到鑰匙圈"
+    },
+    "passphrase": {
+      "title": "{{name}} 的金鑰密碼片語",
+      "placeholder": "私密金鑰的密碼片語",
+      "save": "將密碼片語儲存到鑰匙圈"
+    },
+    "authPrompt": {
+      "title": "{{name}} 需要進一步驗證",
+      "titleUnknown": "需要進一步驗證",
+      "answer": "回答",
+      "submit": "傳送"
+    },
+    "hostKey": {
+      "title": "主機金鑰已變更",
+      "mismatch": "伺服器出示的主機金鑰與已儲存的不同。可能是伺服器重新安裝過，也可能是連線正被攔截。",
+      "host": "主機",
+      "expected": "已儲存的指紋",
+      "received": "收到的指紋",
+      "trust": "信任新的金鑰"
+    }
+  },
+  "connect": {
+    "hostKeyNew": "已信任 {{host}} 的新主機金鑰（{{fingerprint}}）",
+    "authFailed": "{{name}} 驗證失敗",
+    "agentUnavailableWindows": "找不到可用的 ssh-agent。請啟動「OpenSSH Authentication Agent」服務，並以 ssh-add 加入金鑰。",
+    "agentUnavailableUnix": "找不到可用的 ssh-agent。請確認已設定 SSH_AUTH_SOCK，並以 ssh-add 加入金鑰。",
+    "jumpCycle": "{{name}} 的跳板主機形成了迴圈。",
+    "cancelled": "已取消連線"
+  },
+  "command": {
+    "openSettings": "開啟設定",
+    "newServer": "新增伺服器",
+    "reloadPlugins": "重新載入外掛",
+    "connect": "連線到伺服器",
+    "openTerminal": "開啟終端機",
+    "newLocalTerminal": "新增本機終端機",
+    "disconnect": "中斷連線",
+    "openPanel": "開啟面板",
+    "closePanel": "關閉面板",
+    "togglePanel": "切換面板"
+  }
+}

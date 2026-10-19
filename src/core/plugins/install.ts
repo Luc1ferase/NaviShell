@@ -10,7 +10,7 @@ import { resolveLocalized } from '@navishell/plugin-api';
 
 import type { ExternalPluginInfo } from '../ipc/contract';
 import { errorMessage, toHostError } from '../ipc/client';
-import { currentLocale, t } from '../i18n';
+import { currentLocale, fallbackChain, t } from '../i18n';
 import { useUiStore } from '../stores/ui';
 import { reloadPlugins } from './loader';
 
@@ -63,7 +63,9 @@ export async function installPlugin(
       info = await attempt(true);
     }
     await reloadPlugins();
-    const name = resolveLocalized(info.manifest.name, currentLocale()) || info.manifest.id;
+    const name =
+      resolveLocalized(info.manifest.name, currentLocale(), fallbackChain(currentLocale())) ||
+      info.manifest.id;
     toast(t('plugins.install.done', { name, version: info.manifest.version }), 'success');
     return info;
   } catch (error) {

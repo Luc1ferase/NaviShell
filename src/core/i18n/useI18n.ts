@@ -1,7 +1,14 @@
 import { useSyncExternalStore } from 'react';
 import type { Locale } from '@navishell/plugin-api';
 
-import { currentLocale, onDidChangeLocale, t } from './index';
+import {
+  availableLocales,
+  currentLocale,
+  onDidChangeAvailableLocales,
+  onDidChangeLocale,
+  t,
+  type LocaleInfo,
+} from './index';
 
 export interface UseI18n {
   locale: Locale;
@@ -20,4 +27,14 @@ function subscribe(onStoreChange: () => void): () => void {
 export function useI18n(): UseI18n {
   const locale = useSyncExternalStore(subscribe, currentLocale, currentLocale);
   return { locale, t };
+}
+
+function subscribeAvailable(onStoreChange: () => void): () => void {
+  const subscription = onDidChangeAvailableLocales(() => onStoreChange());
+  return () => subscription.dispose();
+}
+
+/** The selectable UI languages (built-ins plus registered language packs). */
+export function useAvailableLocales(): readonly LocaleInfo[] {
+  return useSyncExternalStore(subscribeAvailable, availableLocales, availableLocales);
 }

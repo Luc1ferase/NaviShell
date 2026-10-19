@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import type { ConnectionInfo, MenuItem } from '@navishell/plugin-api';
 
-import { useI18n } from '@/core/i18n/useI18n';
+import { localeName } from '@/core/i18n';
+import { useAvailableLocales, useI18n } from '@/core/i18n/useI18n';
 import { useConnectionsStore } from '@/core/stores/connections';
 import { usePluginsStore } from '@/core/stores/plugins';
 import { useServersStore } from '@/core/stores/servers';
@@ -27,6 +28,7 @@ function shortFingerprint(fingerprint: string): string {
 
 export function StatusBar() {
   const { t, locale } = useI18n();
+  const locales = useAvailableLocales();
   const connections = useConnectionsStore((state) => state.connections);
   const servers = useServersStore((state) => state.servers);
   const records = useTerminalsStore((state) => state.records);
@@ -65,17 +67,14 @@ export function StatusBar() {
       label: t('settings.locale.system'),
       onClick: () => update((prev) => ({ ...prev, locale: 'system' })),
     },
-    {
-      id: 'zh-CN',
-      label: '简体中文',
-      onClick: () => update((prev) => ({ ...prev, locale: 'zh-CN' })),
-    },
-    {
-      id: 'en',
-      label: 'English',
-      onClick: () => update((prev) => ({ ...prev, locale: 'en' })),
-    },
+    ...locales.map((info) => ({
+      id: info.id,
+      label: info.name,
+      onClick: () => update((prev) => ({ ...prev, locale: info.id })),
+    })),
   ];
+  // Short label for the status bar; packs show their native name.
+  const localeLabel = locale === 'en' ? 'EN' : locale === 'zh-CN' ? '中文' : localeName(locale);
 
   const themeItems: MenuItem[] = (['system', 'dark', 'light'] as const).map((theme) => ({
     id: theme,
@@ -146,7 +145,7 @@ export function StatusBar() {
         title={t('status.localeTooltip')}
       >
         <Languages size={12} />
-        {locale === 'zh-CN' ? '中文' : 'EN'}
+        {localeLabel}
       </button>
 
       <button

@@ -51,6 +51,12 @@ export interface SuggestOptions {
   /** `true` when {@link paths} was listed under `~` because the remote cwd is unknown. */
   pathsRelativeToHome: boolean;
   locale: Locale;
+  /**
+   * Description of a dictionary command in the current locale from the plugin's i18n
+   * namespace (`dict.<command>`, filled by language packs); `undefined` falls back to the
+   * built-in en / zh-CN text.
+   */
+  describe?: (command: string) => string | undefined;
   maxItems: number;
   minChars: number;
 }
@@ -105,8 +111,13 @@ export function isSubsequence(query: string, value: string): boolean {
   return false;
 }
 
-function describe(entry: DictionaryEntry, locale: Locale): string {
-  return entry.description[locale] ?? entry.description.en;
+function describe(
+  entry: DictionaryEntry,
+  locale: Locale,
+  translate: SuggestOptions['describe'],
+): string {
+  const builtin = entry.description as Partial<Record<Locale, string>>;
+  return translate?.(entry.command) ?? builtin[locale] ?? entry.description.en;
 }
 
 // ---------------------------------------------------------------------------
@@ -335,7 +346,7 @@ export function suggest(options: SuggestOptions): Suggestion[] {
     (position) => (dictionary[position]?.sub === false ? 25 : 0),
     (position) => {
       const entry = dictionary[position];
-      return entry ? describe(entry, locale) : '';
+      return entry ? describe(entry, locale, options.describe) : '';
     },
   );
 

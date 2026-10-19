@@ -46,7 +46,10 @@ NaviShell 是一个跨平台 SSH 终端客户端：Rust（Tauri 2）负责连接
   会列出一个注册表索引里的插件，一键安装。
 - **应用内更新**：启动后（可在设置里关闭）以及「设置 → 关于」里检查最新 GitHub
   Release，确认后下载、安装并重启；安装包都带 minisign 签名，签名不匹配一律拒绝。
-- **中英双语**：界面语言跟随系统，可手动切换；插件可注册自己的翻译资源。
+- **多语言界面**：简体中文和 English 内置；日本語、繁體中文以**语言包插件**的形式随应用
+  附带（和 VS Code 的语言包一样，可在「设置 → 插件」里禁用）。界面语言跟随系统或手动
+  切换。任何插件都能通过 `ctx.i18n.registerLocale` 贡献一门新语言，连带翻译其他插件的
+  字符串；普通插件用 `addResources` 注册自己的翻译。
 - **深色 / 浅色主题与终端配色分开**：界面主题只有深色、浅色、跟随系统三档，所有颜色来自
   一组 CSS 变量，插件复用同一套。终端配色另选：内置 16 套常见方案（One Half、Dracula、
   Nord、Gruvbox、Solarized、Catppuccin、Monokai、Campbell 等），深色界面和浅色界面各记一套，
@@ -197,7 +200,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.connections` | 连接列表、一次性 `exec`、`sftp(connectionId)`、断开 |
 | `ctx.terminals` | 终端句柄、输入/输出事件、覆盖层组件、按键拦截 |
 | `ctx.storage` | 插件私有的持久化 KV（`<appData>/plugin-data/<pluginId>.json`） |
-| `ctx.i18n` | 注册翻译资源、`t()`、当前语言与语言变更事件 |
+| `ctx.i18n` | 注册翻译资源、`t()`、当前语言与语言变更事件；`registerLocale()` 贡献整门语言（语言包） |
 | `ctx.ui` | toast、确认框、输入框、文件选择、保存对话框、右键菜单 |
 | `ctx.log` | 写入应用日志 |
 | `ctx.subscriptions` | 放进去的 `Disposable` 会在插件停用时自动释放 |
@@ -245,6 +248,28 @@ export default definePlugin({
 把它构建成 `main.js` + `style.css`，和 `plugin.json` 一起放进上面的插件目录即可。
 完整示例可以直接读 [`packages/plugin-sftp`](packages/plugin-sftp) 和
 [`packages/plugin-completion`](packages/plugin-completion)。
+
+### 语言包
+
+界面语言也是插件：日本語和繁體中文由内置的 `navishell.lang-ja`、`navishell.lang-zh-tw`
+提供，和 VS Code 的语言包一个思路，可以在「设置 → 插件」里禁用。一个语言包只做一件事，
+在 `activate` 里调用：
+
+```ts
+ctx.i18n.registerLocale({
+  id: 'ja', // BCP 47 标签
+  name: '日本語', // 语言菜单里显示的名字
+  matches: ['ja'], // 跟随系统时匹配哪些系统语言（小写前缀）
+  fallback: 'en', // 缺字符串时先试哪个语言，再回退到 en
+  host: {
+    /* 宿主字符串，结构同 src/core/i18n/locales/en.json */
+  },
+  plugins: { 'navishell.sftp': { 'panel.title': 'ファイル' } }, // 按插件 id 翻译其他插件
+});
+```
+
+命令补全插件的词典描述以 `dict.<命令>` 为键放在 `navishell.completion` 的条目里。
+`packages/lang-ja` 就是一份可以直接照抄的模板。
 
 ## 路线图
 

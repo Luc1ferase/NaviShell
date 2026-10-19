@@ -32,10 +32,40 @@ export interface Disposable {
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
-export type Locale = 'en' | 'zh-CN';
+/**
+ * A UI language tag (BCP 47, e.g. `en`, `zh-CN`, `ja`). `en` and `zh-CN` are built into the
+ * host; language-pack plugins add more through {@link I18nApi.registerLocale}.
+ */
+export type Locale = string;
+
+/** The locales the host ships strings for itself. */
+export type BuiltinLocale = 'en' | 'zh-CN';
 
 /** Either a plain string or a per-locale map; the host picks the current locale. */
 export type LocalizedText = string | Partial<Record<Locale, string>>;
+
+/**
+ * A UI language contributed by a plugin (the VS Code language-pack model): strings for
+ * the host and, keyed by plugin id, for any other plugins. Registering it makes the locale
+ * selectable in Settings; disposing the registration removes it again.
+ */
+export interface LocalePack {
+  /** Locale tag, e.g. `ja` or `zh-TW`. A built-in id only adds strings to that locale. */
+  id: Locale;
+  /** Native display name shown in the language menu, e.g. `日本語`. */
+  name: string;
+  /**
+   * Lower-case OS language tags (or prefixes of them) that select this pack when the app
+   * follows the system language, e.g. `['zh-tw', 'zh-hk', 'zh-hant']`. Defaults to `[id]`.
+   */
+  matches?: string[];
+  /** Locale to try before `en` when a string is missing, e.g. `zh-CN` for `zh-TW`. */
+  fallback?: Locale;
+  /** Host UI strings; same (nested) shape as the host's `en.json`. */
+  host?: Record<string, unknown>;
+  /** Strings for other plugins, keyed by plugin id, in each plugin's own key space. */
+  plugins?: Record<string, Record<string, string>>;
+}
 
 // ---------------------------------------------------------------------------
 // Manifest & plugin entry
@@ -426,6 +456,8 @@ export interface I18nApi {
   /** Translate a key from the plugin's namespace; falls back to the key itself. */
   t(key: string, options?: Record<string, unknown>): string;
   onDidChangeLocale(cb: (locale: Locale) => void): Disposable;
+  /** Contribute a whole UI language (see {@link LocalePack}); dispose to remove it. */
+  registerLocale(pack: LocalePack): Disposable;
 }
 
 export type ToastKind = 'info' | 'success' | 'warning' | 'error';
@@ -537,8 +569,20 @@ export function disposeAll(items: Disposable[]): void {
   }
 }
 
-export function resolveLocalized(text: LocalizedText | undefined, locale: Locale): string {
+/**
+ * Pick the text for `locale`, then each of `fallbacks` in order, then `en`, then whatever
+ * is there.
+ */
+export function resolveLocalized(
+  text: LocalizedText | undefined,
+  locale: Locale,
+  fallbacks: readonly Locale[] = [],
+): string {
   if (text === undefined) return '';
   if (typeof text === 'string') return text;
-  return text[locale] ?? text.en ?? Object.values(text)[0] ?? '';
+  for (const candidate of [locale, ...fallbacks, 'en']) {
+    const value = text[candidate];
+    if (value) return value;
+  }
+  return Object.values(text).find((value) => value) ?? '';
 }

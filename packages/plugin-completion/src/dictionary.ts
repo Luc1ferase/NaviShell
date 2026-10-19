@@ -8,14 +8,15 @@
  * The data is stored as compact tuples and flattened once on first use.
  */
 
-import type { Locale } from '@navishell/plugin-api';
+import type { BuiltinLocale } from '@navishell/plugin-api';
 
 export interface DictionaryEntry {
   /** Full command text, e.g. `git commit`. */
   command: string;
   /** First word of {@link command}. */
   base: string;
-  description: Record<Locale, string>;
+  /** Built-in descriptions; other locales come from language packs as `dict.<command>`. */
+  description: Record<BuiltinLocale, string>;
   /** `true` for entries built from {@link SUBCOMMANDS}. */
   sub: boolean;
 }
