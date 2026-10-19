@@ -47,7 +47,9 @@ plugins that use exactly the same API as third-party ones.
   source. Path completion relies on the shell reporting its working directory (OSC 7); the
   optional **shell integration** toggle (off by default, "Enable/disable shell integration"
   in the command list) injects a one-line `PROMPT_COMMAND` / `precmd` hook into new SSH
-  terminals so bash and zsh report the directory after every prompt.
+  terminals so bash and zsh report the directory after every prompt. The popup never gets
+  in the way: Enter always runs the line as typed, Tab / → take the highlighted candidate,
+  and Enter only accepts a candidate once you picked one with ↑↓.
 - **Plugin installation**: besides dropping a directory into the plugins folder, Settings →
   Plugins installs from a zip URL (with an optional SHA-256 check) or a local zip file and
   uninstalls in place, all without a restart. A **marketplace** tab lists the plugins of a

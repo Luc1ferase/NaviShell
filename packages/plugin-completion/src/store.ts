@@ -74,6 +74,11 @@ export interface TerminalCompletionState {
   visible: boolean;
   suggestions: Suggestion[];
   selected: number;
+  /**
+   * The user moved the selection with the arrow keys. Until then the first candidate is
+   * only pre-selected: Enter runs the line as typed, and only Tab / → take the candidate.
+   */
+  navigated: boolean;
   cursor: CursorPixelPosition | null;
   container: { width: number; height: number };
   /** A shell integration is reporting in this terminal (an OSC 133/633 report arrived). */
@@ -93,6 +98,7 @@ const HIDDEN: TerminalCompletionState = {
   visible: false,
   suggestions: [],
   selected: 0,
+  navigated: false,
   cursor: null,
   container: { width: 0, height: 0 },
   integrationActive: false,
@@ -590,6 +596,7 @@ export class CompletionController {
       visible: true,
       suggestions,
       selected: 0,
+      navigated: false,
       cursor,
       container: {
         width: terminal.element.clientWidth,
@@ -604,17 +611,25 @@ export class CompletionController {
   hide(terminalId: string): void {
     const state = this.stateFor(terminalId);
     if (!state.visible) return;
-    this.setState(terminalId, { ...state, visible: false, suggestions: [], selected: 0 });
+    this.setState(terminalId, {
+      ...state,
+      visible: false,
+      suggestions: [],
+      selected: 0,
+      navigated: false,
+    });
   }
 
+  /** Keyboard navigation: from now on Enter accepts the selection instead of running. */
   move(terminalId: string, delta: number): void {
     const state = this.stateFor(terminalId);
     if (!state.visible || state.suggestions.length === 0) return;
     const count = state.suggestions.length;
     const selected = (state.selected + delta + count) % count;
-    this.setState(terminalId, { ...state, selected });
+    this.setState(terminalId, { ...state, selected, navigated: true });
   }
 
+  /** Mouse hover: moves the highlight only, so a stray hover never changes what Enter does. */
   select(terminalId: string, index: number): void {
     const state = this.stateFor(terminalId);
     if (!state.visible || index < 0 || index >= state.suggestions.length) return;
@@ -645,6 +660,10 @@ export class CompletionController {
    * Keyboard interception; `false` swallows the event. Never swallows while the popup is
    * hidden, and never for `keypress`/`keyup` (xterm passes those to custom handlers too).
    *
+   * The popup must never get in the way of running what was typed: Enter goes through to
+   * the shell unless the user explicitly picked a candidate with ↑/↓ (then it accepts, like
+   * VS Code's "partial" selection mode). Tab and → always accept the highlighted candidate.
+   *
    * Swallowed keys are also `preventDefault()`-ed: without it the browser would still emit
    * the `keypress` that follows a `keydown`, and xterm would send Enter to the shell -
    * accepting a candidate must never execute it.
@@ -667,7 +686,12 @@ export class CompletionController {
         return swallow();
       case 'Tab':
       case 'ArrowRight':
+        void this.accept(terminal.id);
+        return swallow();
       case 'Enter':
+        // Not navigated: let xterm send the Enter; `handleInput` then sees the carriage return, records
+        // the typed line and hides the popup.
+        if (!state.navigated) return true;
         void this.accept(terminal.id);
         return swallow();
       case 'Escape':

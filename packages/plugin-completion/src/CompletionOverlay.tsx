@@ -82,6 +82,13 @@ export function createOverlayComponent(
       >
         {state.suggestions.map((suggestion, index) => {
           const Icon = ICONS[suggestion.source];
+          // Pre-selected (Enter still runs the typed line) vs. picked with the arrow keys.
+          const highlight =
+            index !== state.selected
+              ? ''
+              : state.navigated
+                ? ' ns-completion-item-active'
+                : ' ns-completion-item-preselected';
           // A path listed under `~` is a guess: the shell never told us where it is.
           const guessed = suggestion.relativeToHome === true;
           return (
@@ -90,7 +97,7 @@ export function createOverlayComponent(
               key={suggestion.value}
               role="option"
               aria-selected={index === state.selected}
-              className={`ns-completion-item${index === state.selected ? ' ns-completion-item-active' : ''}`}
+              className={`ns-completion-item${highlight}`}
               onMouseDown={(event) => onPick(event, index)}
               onMouseEnter={() => controller.select(terminal.id, index)}
             >
@@ -115,6 +122,7 @@ export function createOverlayComponent(
         <div className="ns-completion-hints">
           <span>{ctx.i18n.t('hint.navigate')}</span>
           <span>{ctx.i18n.t('hint.accept')}</span>
+          <span>{ctx.i18n.t(state.navigated ? 'hint.enterAccept' : 'hint.enterRun')}</span>
           <span>{ctx.i18n.t('hint.dismiss')}</span>
           {/* The shell is reporting its cwd and the commands it runs, so both are exact. */}
           {state.integrationActive ? (
