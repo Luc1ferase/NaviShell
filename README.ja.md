@@ -115,41 +115,9 @@ cargo check
 > `tauri::generate_context!()` はコンパイル時に `dist/` の存在を必要とするため、
 > `cargo check` の前に一度 `pnpm build` を実行してください（CI も同じ手順です）。
 
-### リリース
-
-ローカルではパッケージングを行わず、インストーラーは常に GitHub Actions が生成します：
-
-1. 3 か所のバージョンを同時に更新します：`package.json`、`src-tauri/tauri.conf.json`、
-   `src-tauri/Cargo.toml`。
-2. コミット後、タグを打ってプッシュします：
-
-   ```bash
-   git tag v0.2.0 && git push origin v0.2.0
-   ```
-
-3. `.github/workflows/release.yml` が Windows x64、macOS（Intel + Apple Silicon）、
-   Linux x64 + arm64 でそれぞれビルドし、インストーラー、各インストーラーの `.sig` 署名、
-   更新マニフェスト `latest.json` を 1 つの **ドラフト（draft）Release** にアップロードします。
-4. アセットを確認してから公開します。**必ず実際に公開してください（ドラフトのまま残さず、
-   pre-release にもチェックを入れない）。** そうしないとアップデーターには見えません。クライアント
-   は `releases/latest/download/latest.json` を読み、GitHub の `latest` は公開済みかつ
-   pre-release でない Release だけを指すためです。
-
-更新の署名にはリポジトリの Secret が 2 つ必要で、どちらか欠けるとビルドは失敗します：
-
-| Secret | 内容 |
-| ------ | ---- |
-| `TAURI_SIGNING_PRIVATE_KEY` | `pnpm tauri signer generate` で生成した minisign 秘密鍵 |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | 生成時に設定した秘密鍵のパスワード |
-
-公開鍵は `src-tauri/tauri.conf.json` の `plugins.updater.pubkey` に書かれています。**鍵ペアを
-入れ替えることは、インストール済みの旧バージョンをすべて見捨てることと同じです**。古い
-クライアントは自分に組み込まれた公開鍵しか信頼せず、手動での再インストールが必要になるため、
-秘密鍵は別途バックアップしてください。
-
-`master` への push と各 PR は `.github/workflows/ci.yml` を起動します：フロントエンドの型
-チェック、lint、ビルドに加え、3 つのデスクトップ OS での `cargo fmt` / `clippy` /
-`cargo check` を実行します。
+ローカルではパッケージングを行いません。インストーラーは GitHub Actions がビルドし、
+[Releases](https://github.com/Luc1ferase/NaviShell/releases) に公開されます。CI とリリース手順の
+メンテナー向け説明は [docs/RELEASING.md](docs/RELEASING.md) を参照してください。
 
 ## プラグイン開発
 

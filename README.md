@@ -97,38 +97,9 @@ cargo check
 > `tauri::generate_context!()` 在编译期需要 `dist/` 存在，所以执行 `cargo check` 之前
 > 先跑一次 `pnpm build`（CI 里也是这么做的）。
 
-### 发版
-
-本地不做打包，安装包一律由 GitHub Actions 产出：
-
-1. 同步修改三处版本号：`package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`。
-2. 提交后打 tag 并推送：
-
-   ```bash
-   git tag v0.2.0 && git push origin v0.2.0
-   ```
-
-3. `.github/workflows/release.yml` 会在 Windows x64、macOS（Intel + Apple Silicon）、
-   Linux x64 + arm64 上分别构建，并把安装包、每个安装包的 `.sig` 签名以及更新清单
-   `latest.json` 上传到同一个 **草稿（draft）Release**。
-4. 人工检查资产后再点击发布。**必须真正发布（而不是留在草稿、也不要勾选 pre-release）**，
-   否则自动更新看不到它：客户端读取的地址是
-   `releases/latest/download/latest.json`，而 GitHub 的 `latest` 只会指向已发布且非
-   pre-release 的 Release。
-
-更新签名需要两个仓库 Secret，缺一个构建就会失败：
-
-| Secret | 内容 |
-| ------ | ---- |
-| `TAURI_SIGNING_PRIVATE_KEY` | `pnpm tauri signer generate` 生成的 minisign 私钥 |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | 生成时设置的私钥密码 |
-
-私钥的公钥部分写在 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey` 里。**换
-密钥对就等于放弃所有已安装的旧版本**：老客户端只信任自己编译进去的那个公钥，只能让用户
-手动重装，所以私钥要单独备份好。
-
-每次 push 到 `master` 和每个 PR 都会触发 `.github/workflows/ci.yml`：前端类型检查、
-lint、构建，以及三大平台的 `cargo fmt` / `clippy` / `cargo check`。
+安装包不在本地打包，一律由 GitHub Actions 产出并发布到
+[Releases](https://github.com/Luc1ferase/NaviShell/releases)。CI 与发版的维护者说明见
+[docs/RELEASING.md](docs/RELEASING.md)。
 
 ## 插件开发
 
