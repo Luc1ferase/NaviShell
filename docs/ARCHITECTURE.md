@@ -11,18 +11,20 @@ option that keeps the contracts intact and note it in your report.
 ## 1. Scope
 
 v1 shipped password login only. Everything marked *(post-v1)* was added afterwards on
-`feat/auth-methods-local-terminal` (issues #1, #2, #3, #4, #6, #8) and goes out with the
-next release; only #5 and #7 are still open.
+`feat/auth-methods-local-terminal` (issues #1, #2, #3, #4, #6, #8) and on
+`feat/updater-plugin-install` (issues #5 and #7); all of it goes out with the next
+release, and no issue is left open.
 
 | Area                | Shipped                                                                | Deferred (GitHub issues) |
 | ------------------- | ---------------------------------------------------------------------- | ------------------------ |
 | Login               | username + password; private key with passphrase, ssh-agent, keyboard-interactive fallback and ProxyJump *(post-v1)* | – |
 | Core features       | server records, connect, terminal, one-shot exec, SFTP primitives; local shell terminals *(post-v1)* | – |
 | Built-in plugins    | SFTP file manager, command completion (history + dictionary; remote `PATH`, directory listings and cwd tracking *(post-v1)*) | – |
-| Plugin sources      | built-in + `<appData>/plugins/<id>/`                                   | install from URL (#7)    |
+| Plugin sources      | built-in + `<appData>/plugins/<id>/`; install from a zip URL or a local zip, and uninstall, from Settings *(post-v1)* | – |
 | Credentials         | OS keychain (`keyring` crate, service `dev.navishell`, account `<serverId>`, or `<serverId>:passphrase` for a key passphrase) | – |
 | UI language         | zh-CN + en (i18next), default follows system                           | –                        |
-| Release             | GitHub Release via tauri-action; Win x64, macOS x64+arm64, Linux x64+arm64 | auto-updater (#5)    |
+| Release             | GitHub Release via tauri-action; Win x64, macOS x64+arm64, Linux x64+arm64; signed updater artifacts + `latest.json` *(post-v1)* | – |
+| Updates             | in-app check against the latest GitHub Release, download, install and restart *(post-v1)* | – |
 
 Nothing is compiled locally beyond `cargo check`/`clippy`, `tsc` and `vite build`.
 Packaging only happens in GitHub Actions.
@@ -67,7 +69,7 @@ NaviShell/
 │     ├─ known_hosts.rs       known_hosts.json (TOFU store)
 │     ├─ local_pty.rs         term_open_local (local shells through portable-pty)
 │     ├─ ssh/{mod,connection,terminal,exec,sftp}.rs
-│     └─ plugins.rs           plugins_list_external, plugins_read_file, plugin_storage_*
+│     └─ plugins.rs           plugins_list_external/read_file/install_*/uninstall, plugin_storage_*
 └─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release)
 ```
 
@@ -129,8 +131,31 @@ Changing a contract means updating both sides; prefer additive changes.
   `Unknown | Match | Mismatch { expected }` back to `ssh_connect` which decides per contract.
 - When the session dies (handler `disconnected` or channel task error), emit
   `connection:closed` and drop all terminals of that connection (each emits `terminal:exit`).
+- **Plugin installation** (`plugins.rs`): `plugins_install_from_url` streams an http(s)
+  zip into `<appData>/tmp/install-*/` (60 s deadline, 50 MiB cap enforced against both
+  `Content-Length` and the running total), optionally checks a hex SHA-256, and hands over
+  to the same path as `plugins_install_from_file`. Unpacking runs in `spawn_blocking` and
+  accepts an entry only when `zip`'s `enclosed_name()` does (that one call covers `..`,
+  absolute paths and Windows drive/UNC prefixes); symlink entries are skipped. The
+  manifest is read from the archive root or from its single top-level directory, and `id`,
+  `version` and `main` are validated before anything moves — `id` must match the plugin
+  API's shape and must not start with `navishell.`. Only then is the staged directory
+  *renamed* into `<appData>/plugins/<id>`, so a half-installed plugin is never visible to
+  `plugins_list_external`; when replacing, the old directory is parked in the scratch
+  space first and restored if the rename fails. The scratch directory is a `TempDir`, so
+  every error path cleans up, and `<appData>/tmp` is emptied again on startup.
+  `plugins_uninstall` removes the directory (never following a symlink in its place) and
+  `plugin-data/<id>.json` with it.
+- **Updates** (issue #5): `tauri-plugin-updater` + `tauri-plugin-process`, registered
+  under `#[cfg(desktop)]`. `plugins.updater` in `tauri.conf.json` holds the minisign
+  public key and the single endpoint
+  `https://github.com/Luc1ferase/NaviShell/releases/latest/download/latest.json`;
+  `bundle.createUpdaterArtifacts` makes the release build sign every bundle. The whole
+  flow lives on the JS side (`@tauri-apps/plugin-updater` `check()` → `downloadAndInstall()`
+  → `relaunch()` from `@tauri-apps/plugin-process`); the Rust core adds no command of its
+  own, which is why no `update_*` entry exists in the IPC contract.
 - Files in app data dir: `servers.json`, `settings.json`, `layout.json`, `known_hosts.json`,
-  `plugin-data/<pluginId>.json`, `plugins/<id>/…`, `logs/`.
+  `plugin-data/<pluginId>.json`, `plugins/<id>/…`, `logs/`, `tmp/`.
 - Errors: `AppError` is `Serialize` as `{ code, message, data? }` with codes from
   `HostErrorCode`. Never panic across the IPC boundary.
 
@@ -145,6 +170,20 @@ Changing a contract means updating both sides; prefer additive changes.
   where `require` resolves only the host-provided modules listed in the plugin API docs,
   then call `activate(ctx)`. Disabled plugins (settings) are skipped. Activation errors are
   caught, logged and shown in Settings > Plugins; they never break the host.
+- **Installing plugins**: Settings > Plugins offers "install from URL" (optionally with an
+  expected SHA-256) and "install from file", both calling `plugins_install_*`, plus
+  uninstall. On `InvalidArgument` carrying `data.exists` the UI asks whether to replace
+  the installed version (`data.version`, `null` when its manifest is unreadable) and
+  retries with `replace: true`. After any of those, the plugin list is reloaded in place —
+  no restart.
+- **Update check**: with `settings.updates.checkOnStartup` the host runs `check()` from
+  `@tauri-apps/plugin-updater` once after mount and offers the new version in a toast.
+  Accepting runs `downloadAndInstall()` with progress, then `relaunch()` from
+  `@tauri-apps/plugin-process`. The startup check is silent in every outcome - no update,
+  `null`, or a rejection are all only logged - so a release that is still a draft is a
+  no-op rather than an error on every launch. The same check sits in Settings > About,
+  where it is explicit and does report a failure; outside a packaged app it says so
+  instead of calling the plugin.
 - **Panels**: one registry for core panels (`core:servers`, `core:settings`) and plugin panels
   (`<pluginId>:<panelId>`). Dockview uses a single generic `panel` component whose params are
   `{ panelId }`; it looks the definition up in the registry and renders it (or a

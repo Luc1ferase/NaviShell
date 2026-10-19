@@ -37,6 +37,10 @@ NaviShell 是一个跨平台 SSH 终端客户端：Rust（Tauri 2）负责连接
   路径补全依赖 shell 上报的当前目录（OSC 7）；可选的 **shell 集成** 开关（默认关闭，
   命令面板里的「开启/关闭 shell 集成」）会给新建的 SSH 终端注入一行
   `PROMPT_COMMAND` / `precmd` 钩子，让 bash 与 zsh 在每个提示符后上报目录。
+- **插件安装**：除了手动把目录丢进插件目录，也可以在「设置 → 插件」里从 zip 的 URL
+  （可选填 SHA-256 校验）或本地 zip 文件安装，并就地卸载，装完无需重启。
+- **应用内更新**：启动后（可在设置里关闭）以及「设置 → 关于」里检查最新 GitHub
+  Release，确认后下载、安装并重启；安装包都带 minisign 签名，签名不匹配一律拒绝。
 - **中英双语**：界面语言跟随系统，可手动切换；插件可注册自己的翻译资源。
 - **深色优先的主题**：所有颜色来自一组 CSS 变量，插件复用同一套变量。
 
@@ -102,8 +106,23 @@ cargo check
    ```
 
 3. `.github/workflows/release.yml` 会在 Windows x64、macOS（Intel + Apple Silicon）、
-   Linux x64 + arm64 上分别构建，并把安装包上传到同一个 **草稿（draft）Release**。
-4. 人工检查资产后再点击发布。
+   Linux x64 + arm64 上分别构建，并把安装包、每个安装包的 `.sig` 签名以及更新清单
+   `latest.json` 上传到同一个 **草稿（draft）Release**。
+4. 人工检查资产后再点击发布。**必须真正发布（而不是留在草稿、也不要勾选 pre-release）**，
+   否则自动更新看不到它：客户端读取的地址是
+   `releases/latest/download/latest.json`，而 GitHub 的 `latest` 只会指向已发布且非
+   pre-release 的 Release。
+
+更新签名需要两个仓库 Secret，缺一个构建就会失败：
+
+| Secret | 内容 |
+| ------ | ---- |
+| `TAURI_SIGNING_PRIVATE_KEY` | `pnpm tauri signer generate` 生成的 minisign 私钥 |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | 生成时设置的私钥密码 |
+
+私钥的公钥部分写在 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey` 里。**换
+密钥对就等于放弃所有已安装的旧版本**：老客户端只信任自己编译进去的那个公钥，只能让用户
+手动重装，所以私钥要单独备份好。
 
 每次 push 到 `master` 和每个 PR 都会触发 `.github/workflows/ci.yml`：前端类型检查、
 lint、构建，以及三大平台的 `cargo fmt` / `clippy` / `cargo check`。
@@ -121,6 +140,18 @@ lint、构建，以及三大平台的 `cargo fmt` / `clippy` / `cargo check`。
 | Windows | `%APPDATA%\dev.navishell.app\plugins\<id>\` |
 | macOS | `~/Library/Application Support/dev.navishell.app/plugins/<id>/` |
 | Linux | `~/.local/share/dev.navishell.app/plugins/<id>/` |
+
+也可以在「设置 → 插件」里直接从 zip 安装，省掉手动复制：
+
+- 分发的 zip 里，`plugin.json` 放在压缩包根目录，或者放在**唯一**一个顶层目录下
+  （`git archive` 和 GitHub 的「Download ZIP」就是后一种形状）。
+- `plugin.json` 的 `id` 必须符合 `^[a-z0-9][a-z0-9._-]*$`，且不能以 `navishell.`
+  开头（那是内置插件的前缀）；`main` 指向的文件必须真的在包里。
+- 压缩包上限 50 MiB，下载超时 60 秒，只接受 http / https。可以填一个 SHA-256
+  （十六进制，大小写都行）让核心在解压前校验下载内容。
+- 带绝对路径、`..`、Windows 盘符前缀的条目会被拒绝，符号链接条目直接跳过。
+- id 已经装过时需要确认覆盖；覆盖是整目录替换，旧目录先挪到暂存区，替换失败会放回去。
+- 卸载会同时删掉该插件的存储文件 `plugin-data/<id>.json`。
 
 ### 清单 `plugin.json`
 
@@ -235,10 +266,12 @@ v1 之后的方向（欢迎在对应 issue 下讨论）。标为「下个版本�
 | [#2](../../issues/2) | ssh-agent 支持 | 下个版本 |
 | [#3](../../issues/3) | ProxyJump / 跳板机 | 下个版本 |
 | [#4](../../issues/4) | keyboard-interactive（含 2FA） | 下个版本 |
-| [#5](../../issues/5) | 应用内自动更新 | 计划中 |
+| [#5](../../issues/5) | 应用内自动更新 | 下个版本 |
 | [#6](../../issues/6) | 本地终端（不经过 SSH） | 下个版本 |
-| [#7](../../issues/7) | 从 URL 安装插件 | 计划中 |
+| [#7](../../issues/7) | 从 URL 安装插件 | 下个版本 |
 | [#8](../../issues/8) | 感知远端环境的命令补全（真实补全而非词典） | 下个版本 |
+
+插件市场（#7 里提到的注册表索引 JSON）还没做，目前只能自己给 URL。
 
 ## 许可
 
@@ -261,7 +294,9 @@ both overridable in the settings); TOFU host-key verification; an SFTP file mana
 upload, download, rename, delete, transfer progress and cancel); command completion from
 history, the remote `PATH`, remote directory listings and a 275-command dictionary, with an
 opt-in shell-integration toggle that teaches bash and zsh to report their working directory
-through OSC 7; and an English / Chinese UI.
+through OSC 7; plugin installation from a zip URL or a local zip file (with an optional
+SHA-256 check) and uninstallation, both without a restart; in-app updates against the
+latest GitHub Release, signed with minisign; and an English / Chinese UI.
 
 **Development**
 
@@ -276,12 +311,20 @@ cd src-tauri && cargo check    # needs dist/ to exist first
 Nothing is packaged locally. To release, bump the version in `package.json`,
 `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, then push a `vX.Y.Z` tag: GitHub
 Actions builds Windows x64, macOS (Intel + Apple silicon) and Linux x64 + arm64 bundles and
-uploads them to a **draft** release for a human to publish.
+uploads them, their `.sig` signatures and `latest.json` to a **draft** release for a human
+to publish. Signing needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (`pnpm tauri signer generate`); the matching public
+key is `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`. The draft has to be
+published and not flagged as a prerelease, because the updater reads
+`releases/latest/download/latest.json` and GitHub's `latest` skips both.
 
 **Writing a plugin** — ship a directory with `plugin.json` and a CommonJS `main.js` into
 `%APPDATA%\dev.navishell.app\plugins\<id>\` (Windows),
 `~/Library/Application Support/dev.navishell.app/plugins/<id>/` (macOS) or
-`~/.local/share/dev.navishell.app/plugins/<id>/` (Linux). `react`, `react/jsx-runtime`,
+`~/.local/share/dev.navishell.app/plugins/<id>/` (Linux), or zip it up and point Settings
+> Plugins at the file or at an http(s) URL. In a zip, `plugin.json` goes at the root or
+inside a single top-level directory; the archive may not exceed 50 MiB, and entries with
+absolute paths or `..` are rejected. `react`, `react/jsx-runtime`,
 `react-dom`, `react-dom/client`, `@navishell/plugin-api` and `lucide-react` are provided by
 the host and must stay external; everything else is bundled. Plugins only ever talk to the
 host through `PluginContext` (`panels`, `commands`, `servers`, `connections`, `terminals`,

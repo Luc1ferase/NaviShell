@@ -1,8 +1,9 @@
 //! NaviShell core (Rust side).
 //!
 //! The core deliberately stays small: server records, credentials, SSH connections,
-//! terminals (PTY channels), command execution, SFTP primitives, plugin discovery and
-//! plugin storage. Everything user-facing beyond that lives in frontend plugins.
+//! terminals (PTY channels), command execution, SFTP primitives, plugin discovery,
+//! installation and storage. Everything user-facing beyond that lives in frontend
+//! plugins.
 //!
 //! The command surface is specified in `src/core/ipc/contract.ts` (frontend repo root);
 //! every command registered below appears there, and every error is an [`error::AppError`]
@@ -41,9 +42,19 @@ fn init_tracing() {
 pub fn run() {
     init_tracing();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init());
+
+    // In-app updates (issue #5). Both plugins are desktop-only: the updater replaces the
+    // installed bundle, and `process` restarts into it once the user accepts. The feed is
+    // configured under `plugins.updater` in tauri.conf.json.
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+
+    builder
         .setup(|app| {
             let handle = app.handle().clone();
             storage::ensure_layout(&handle)?;
@@ -97,6 +108,9 @@ pub fn run() {
             // plugins
             plugins::plugins_list_external,
             plugins::plugins_read_file,
+            plugins::plugins_install_from_url,
+            plugins::plugins_install_from_file,
+            plugins::plugins_uninstall,
             plugins::plugin_storage_get,
             plugins::plugin_storage_set,
             plugins::plugin_storage_remove,

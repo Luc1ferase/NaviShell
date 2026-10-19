@@ -4,6 +4,11 @@
 # src-tauri/tauri.conf.json and src-tauri/Cargo.toml first) or manually from the Actions tab.
 # Every matrix leg uploads its installers to the same *draft* release, which a human then
 # reviews and publishes.
+#
+# Requires two repository secrets for the update signatures: `TAURI_SIGNING_PRIVATE_KEY`
+# and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. The draft release MUST be published for the
+# in-app updater to see it, since `releases/latest/download/latest.json` only resolves
+# once a release is published and not marked as a prerelease.
 
 name: Release
 
@@ -102,10 +107,16 @@ jobs:
       - name: Build frontend
         run: pnpm build
 
+      # `TAURI_SIGNING_PRIVATE_KEY` / `..._PASSWORD` are the minisign key pair generated
+      # with `pnpm tauri signer generate`; its public half is `plugins.updater.pubkey` in
+      # tauri.conf.json. Without them the build fails, because `createUpdaterArtifacts`
+      # asks for a signature for every bundle.
       - name: Build and upload bundles
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: NaviShell v__VERSION__
@@ -119,6 +130,13 @@ jobs:
             Built from ${{ github.sha }}.
           releaseDraft: true
           prerelease: false
-          uploadUpdaterJson: false
+          # The in-app updater reads
+          # `releases/latest/download/latest.json`, which GitHub only resolves for a
+          # published, non-prerelease release. Publishing the draft created here is
+          # therefore what actually hands the update to existing installs.
+          uploadUpdaterJson: true
+          # Windows ships both an .msi and an NSIS setup.exe; the NSIS one is what
+          # `installMode: passive` is configured for.
+          updaterJsonPreferNsis: true
           retryAttempts: 2
           args: ${{ matrix.args }}

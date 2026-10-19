@@ -11,6 +11,9 @@ import { call } from '../ipc/client';
 import { debounce } from '../util/fn';
 import { createEmitter } from '../util/events';
 
+/** The `updates` block of {@link AppSettings} (the contract declares it inline). */
+export type UpdateSettings = AppSettings['updates'];
+
 const settingsChanged = createEmitter<AppSettings>();
 export const onDidChangeSettings = settingsChanged.event;
 
@@ -26,6 +29,7 @@ export function mergeSettings(raw: Partial<AppSettings> | null | undefined): App
     theme: raw?.theme ?? DEFAULT_SETTINGS.theme,
     terminal,
     localShell,
+    updates: { ...DEFAULT_SETTINGS.updates, ...(raw?.updates ?? {}) },
     plugins: {
       disabled: raw?.plugins?.disabled ?? [],
       seenPanels: raw?.plugins?.seenPanels ?? [],
@@ -51,6 +55,7 @@ export interface SettingsStore {
   update(mutate: (prev: AppSettings) => AppSettings): void;
   updateTerminal(partial: Partial<TerminalSettings>): void;
   updateLocalShell(partial: Partial<LocalShellSettings>): void;
+  updateUpdates(partial: Partial<UpdateSettings>): void;
   markPanelSeen(panelId: string): void;
 }
 
@@ -75,6 +80,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
   updateLocalShell(partial) {
     get().update((prev) => ({ ...prev, localShell: { ...prev.localShell, ...partial } }));
+  },
+  updateUpdates(partial) {
+    get().update((prev) => ({ ...prev, updates: { ...prev.updates, ...partial } }));
   },
   markPanelSeen(panelId) {
     const { settings } = get();

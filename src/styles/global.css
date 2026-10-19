@@ -738,6 +738,38 @@ body {
   border-radius: var(--ns-radius-sm);
 }
 
+.ns-settings__subtitle {
+  margin: 16px 0 6px;
+  font-size: var(--ns-font-size-sm);
+  font-weight: 600;
+  color: var(--ns-fg-muted);
+}
+
+.ns-plugin-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.ns-plugin-card__path {
+  margin-top: 2px;
+  color: var(--ns-fg-subtle);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-font-size-xs);
+  word-break: break-all;
+}
+
+.ns-plugin-install {
+  padding: 2px 0 6px;
+}
+
+.ns-plugin-install__actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 2px;
+}
+
 .ns-about-row {
   display: flex;
   gap: 8px;
@@ -768,6 +800,131 @@ body {
   font-family: var(--ns-font-mono);
   font-size: var(--ns-font-size-xs);
   word-break: break-all;
+}
+
+/* --- updates -------------------------------------------------------------- */
+
+.ns-update {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ns-update__status {
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-sm);
+  word-break: break-word;
+}
+
+.ns-update__status--error {
+  color: var(--ns-danger);
+}
+
+.ns-update-card {
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  background: var(--ns-bg-elevated);
+  border: 1px solid var(--ns-border-strong);
+  border-radius: var(--ns-radius);
+}
+
+.ns-update-card__head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.ns-update-card__date {
+  color: var(--ns-fg-subtle);
+  font-size: var(--ns-font-size-xs);
+}
+
+.ns-update-notes {
+  margin-top: 8px;
+  padding: 8px 10px;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--ns-font-size-sm);
+  color: var(--ns-fg-muted);
+  background: var(--ns-bg-inset);
+  border-radius: var(--ns-radius-sm);
+}
+
+.ns-update-card__progress {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.ns-update-card__bytes {
+  color: var(--ns-fg-muted);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-font-size-xs);
+  white-space: nowrap;
+}
+
+.ns-update-card__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.ns-update-card__hint {
+  color: var(--ns-fg-subtle);
+  font-size: var(--ns-font-size-xs);
+}
+
+.ns-progress {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  background: var(--ns-bg-inset);
+  border: 1px solid var(--ns-border);
+  border-radius: 999px;
+}
+
+.ns-progress__bar {
+  height: 100%;
+  background: var(--ns-accent);
+  transition: width 120ms linear;
+}
+
+/* No content length: a filled bar that pulses instead of a bogus percentage. */
+.ns-progress__bar--idle {
+  opacity: 0.45;
+  animation: ns-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ns-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.ns-spin {
+  animation: ns-spin 900ms linear infinite;
+}
+
+@keyframes ns-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ns-spin,
+  .ns-progress__bar--idle {
+    animation: none;
+  }
 }
 
 /* --- terminal ------------------------------------------------------------ */
@@ -959,6 +1116,12 @@ body {
 .ns-toast__message {
   flex: 1;
   word-break: break-word;
+}
+
+.ns-toast__action {
+  flex: none;
+  align-self: center;
+  white-space: nowrap;
 }
 
 .ns-toast--info {
