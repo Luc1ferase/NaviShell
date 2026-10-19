@@ -61,6 +61,10 @@ export interface AppSettings {
   theme: 'dark' | 'light' | 'system';
   terminal: TerminalSettings;
   localShell: LocalShellSettings;
+  updates: {
+    /** Check GitHub Releases for a newer version once after startup. */
+    checkOnStartup: boolean;
+  };
   plugins: {
     /** Plugin ids the user disabled. */
     disabled: string[];
@@ -85,6 +89,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     termType: 'xterm-256color',
   },
   localShell: { program: null, args: [] },
+  updates: { checkOnStartup: true },
   plugins: { disabled: [], seenPanels: [] },
   closeConnectionWithLastTerminal: true,
 };
@@ -273,6 +278,29 @@ export interface Commands {
   plugins_list_external: { args: Record<string, never>; result: ExternalPluginInfo[] };
   /** Reads a UTF-8 file inside an external plugin dir; rejects paths escaping the dir. */
   plugins_read_file: { args: { pluginId: string; relPath: string }; result: string };
+  /**
+   * Installs an external plugin from a zip archive at an http(s) URL (issue #7).
+   * - Downloads to a temp file (max 50 MiB, 60 s), verifies `sha256` (hex) when given
+   *   (`InvalidArgument` on mismatch), unpacks it rejecting absolute paths / `..`.
+   * - The archive must contain `plugin.json` at its root or inside a single top-level
+   *   directory; its `id` must match `^[a-z0-9][a-z0-9._-]*$` and must not be a built-in
+   *   (`navishell.*`) id. Installed into `<pluginsDir>/<id>/`.
+   * - An existing plugin with the same id is replaced only when `replace` is true,
+   *   otherwise `InvalidArgument` with `data: { exists: true, version }`.
+   * Network/HTTP failures => `Io` with the status/message. Nothing is loaded; the host
+   * reloads plugins afterwards.
+   */
+  plugins_install_from_url: {
+    args: { url: string; sha256?: string; replace?: boolean };
+    result: ExternalPluginInfo;
+  };
+  /** Same as `plugins_install_from_url` but from a local zip file path. */
+  plugins_install_from_file: {
+    args: { path: string; replace?: boolean };
+    result: ExternalPluginInfo;
+  };
+  /** Deletes `<pluginsDir>/<id>/` (external plugins only; `NotFound` otherwise). */
+  plugins_uninstall: { args: { pluginId: string }; result: void };
   plugin_storage_get: { args: { pluginId: string; key: string }; result: JsonValue | null };
   plugin_storage_set: { args: { pluginId: string; key: string; value: JsonValue }; result: void };
   plugin_storage_remove: { args: { pluginId: string; key: string }; result: void };
