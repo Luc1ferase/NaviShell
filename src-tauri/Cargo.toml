@@ -1,6 +1,6 @@
 [package]
 name = "navishell"
-version = "0.1.0"
+version = "0.2.0"
 description = "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI"
 authors = ["Luciferase"]
 repository = "https://github.com/Luc1ferase/NaviShell"
@@ -19,6 +19,10 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2.12", features = [] }
 tauri-plugin-opener = "2.7"
 tauri-plugin-dialog = "2.8"
+# Keep every `tauri-plugin-*` crate on the same minor as its npm package, see
+# docs/DEPENDENCY-NOTES.md. Both default to `rustls` with the `ring` provider.
+tauri-plugin-updater = "2.14"
+tauri-plugin-process = "2.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "io-util", "fs", "net"] }
@@ -36,6 +40,19 @@ base64 = "0.23"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3"
+# Plugin installation from a URL (`plugins_install_from_url`). This is the reqwest major
+# `tauri` and `tauri-plugin-updater` already pull in, so nothing is duplicated.
+# `rustls-no-provider` leaves the crypto provider to us: `rustls`'s own default is
+# `aws-lc-rs`, which needs NASM and a C toolchain on Windows, so the `ring` provider is
+# selected below and installed before the first client is built - the same choice
+# `tauri-plugin-updater` makes.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+sha2 = "0.10"
+# Reading only, so `deflate-flate2` (flate2's pure-Rust miniz_oxide backend) is enough;
+# the `deflate` feature would additionally pull in the zopfli *compressor*.
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
+tempfile = "3"
 
 [profile.release]
 codegen-units = 1

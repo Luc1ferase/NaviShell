@@ -1,14 +1,19 @@
-import { useState, type ReactNode } from 'react';
-import { FolderOpen, RefreshCw } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Download, FolderOpen, PackagePlus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
-import { resolveLocalized } from '@navishell/plugin-api';
+import { resolveLocalized, type Locale } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
-import { errorMessage } from '@/core/ipc/client';
-import { reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
+import { call, errorMessage, toHostError } from '@/core/ipc/client';
+import type { ExternalPluginInfo } from '@/core/ipc/contract';
+import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
+import { checkForUpdates, downloadAndInstall, restartApp } from '@/core/services/updater';
 import { useSettingsStore } from '@/core/stores/settings';
 import { usePluginsStore, type PluginEntry } from '@/core/stores/plugins';
 import { useUiStore } from '@/core/stores/ui';
+import { useUpdaterStore } from '@/core/stores/updater';
+import { formatBytes } from '@/core/util/fn';
 import { Icon } from '@/app/components/Icon';
 
 /** Project repository shown in the About section. */
@@ -26,11 +31,31 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
+// ---------------------------------------------------------------------------
+// Plugins
+// ---------------------------------------------------------------------------
+
+/**
+ * `plugins_install_from_*` rejects with `InvalidArgument` and
+ * `data: { exists: true, version }` when that id is installed and `replace` was not set.
+ */
+function existingInstall(error: unknown): { version: string | null } | null {
+  const host = toHostError(error);
+  if (host.code !== 'InvalidArgument') return null;
+  const data = host.data;
+  if (!data || data.exists !== true) return null;
+  // `version` is null when the installed plugin.json could not be read.
+  return { version: typeof data.version === 'string' ? data.version : null };
+}
+
 function PluginCard({ entry }: { entry: PluginEntry }) {
   const { t, locale } = useI18n();
   const disabled = useSettingsStore((state) => state.settings.plugins.disabled);
+  const confirm = useUiStore((state) => state.confirm);
+  const toast = useUiStore((state) => state.toast);
   const [busy, setBusy] = useState(false);
   const enabled = !disabled.includes(entry.id);
+  const name = resolveLocalized(entry.manifest.name, locale) || entry.id;
 
   const statusClass =
     entry.status === 'error'
@@ -48,12 +73,34 @@ function PluginCard({ entry }: { entry: PluginEntry }) {
     }
   };
 
+  const uninstall = async () => {
+    const confirmed = await confirm({
+      title: t('plugins.uninstall.title'),
+      message: t('plugins.uninstall.message', { name }),
+      okLabel: t('plugins.uninstall.ok'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      // Tear the plugin down before its files disappear, then rediscover what is left.
+      if (entry.status === 'active') await deactivatePlugin(entry.id);
+      await call('plugins_uninstall', { pluginId: entry.id });
+      await reloadPlugins();
+      toast(t('plugins.uninstall.done', { name }), 'success');
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="ns-plugin-card">
       <Icon name={entry.manifest.icon ?? 'Plug'} size={16} />
       <div className="ns-plugin-card__body">
         <div className="ns-plugin-card__name">
-          {resolveLocalized(entry.manifest.name, locale) || entry.id}
+          {name}
           <span className={statusClass}>{t(`plugins.status.${entry.status}`)}</span>
         </div>
         <div className="ns-plugin-card__meta">
@@ -66,18 +113,311 @@ function PluginCard({ entry }: { entry: PluginEntry }) {
             {resolveLocalized(entry.manifest.description, locale)}
           </div>
         ) : null}
+        {entry.source === 'external' ? (
+          <div className="ns-plugin-card__path">{entry.dir}</div>
+        ) : null}
         {entry.error ? <div className="ns-plugin-card__error">{entry.error}</div> : null}
       </div>
-      <label className="ns-check">
-        <input
-          type="checkbox"
-          checked={enabled}
-          disabled={busy}
-          onChange={(event) => void toggle(event.target.checked)}
-        />
-        {t('plugins.enabled')}
-      </label>
+      <div className="ns-plugin-card__actions">
+        <label className="ns-check">
+          <input
+            type="checkbox"
+            checked={enabled}
+            disabled={busy}
+            onChange={(event) => void toggle(event.target.checked)}
+          />
+          {t('plugins.enabled')}
+        </label>
+        {entry.source === 'external' ? (
+          <button
+            type="button"
+            className="ns-btn ns-btn--sm ns-btn--danger"
+            disabled={busy}
+            onClick={() => void uninstall()}
+          >
+            <Trash2 size={13} />
+            {t('plugins.uninstall.label')}
+          </button>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+/** URL / local-zip install form for external plugins (issue #7). */
+function PluginInstaller() {
+  const { t, locale } = useI18n();
+  const confirm = useUiStore((state) => state.confirm);
+  const toast = useUiStore((state) => state.toast);
+  const [url, setUrl] = useState('');
+  const [sha256, setSha256] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  /**
+   * Runs one install attempt; when that id is already installed, asks whether to replace
+   * it and retries once with `replace: true`. A successful install reloads the plugins, so
+   * the new one appears (and activates) without a restart.
+   */
+  const install = async (
+    attempt: (replace: boolean) => Promise<ExternalPluginInfo>,
+  ): Promise<ExternalPluginInfo | null> => {
+    setBusy(true);
+    try {
+      let info: ExternalPluginInfo;
+      try {
+        info = await attempt(false);
+      } catch (error) {
+        const existing = existingInstall(error);
+        if (!existing) throw error;
+        const replace = await confirm({
+          title: t('plugins.install.replaceTitle'),
+          message: existing.version
+            ? t('plugins.install.replaceMessage', { version: existing.version })
+            : t('plugins.install.replaceMessageUnknown'),
+          okLabel: t('plugins.install.replaceOk'),
+        });
+        if (!replace) return null;
+        info = await attempt(true);
+      }
+      await reloadPlugins();
+      const name = resolveLocalized(info.manifest.name, locale) || info.manifest.id;
+      toast(t('plugins.install.done', { name, version: info.manifest.version }), 'success');
+      return info;
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const installFromUrl = async () => {
+    const target = url.trim();
+    if (!target) return;
+    const checksum = sha256.trim();
+    const info = await install((replace) =>
+      call('plugins_install_from_url', {
+        url: target,
+        ...(checksum ? { sha256: checksum } : {}),
+        ...(replace ? { replace: true } : {}),
+      }),
+    );
+    if (info) {
+      setUrl('');
+      setSha256('');
+    }
+  };
+
+  const installFromFile = async () => {
+    let path: string | null;
+    try {
+      // The return type of `open` is conditional on literal option values, which a
+      // runtime-built options object cannot express.
+      const selection = (await openFileDialog({
+        title: t('plugins.install.pickFile'),
+        multiple: false,
+        directory: false,
+        filters: [{ name: t('plugins.install.zipFilter'), extensions: ['zip'] }],
+      })) as string | string[] | null;
+      path = Array.isArray(selection) ? (selection[0] ?? null) : selection;
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+      return;
+    }
+    if (!path) return;
+    const chosen = path;
+    await install((replace) =>
+      call('plugins_install_from_file', { path: chosen, ...(replace ? { replace: true } : {}) }),
+    );
+  };
+
+  return (
+    <div className="ns-plugin-install">
+      <Row label={t('plugins.install.url')} hint={t('plugins.install.urlHint')}>
+        <input
+          className="ns-input ns-input--mono"
+          spellCheck={false}
+          placeholder={t('plugins.install.urlPlaceholder')}
+          value={url}
+          disabled={busy}
+          onChange={(event) => setUrl(event.target.value)}
+        />
+      </Row>
+      <Row label={t('plugins.install.sha256')} hint={t('plugins.install.sha256Hint')}>
+        <input
+          className="ns-input ns-input--mono"
+          spellCheck={false}
+          placeholder={t('plugins.install.sha256Placeholder')}
+          value={sha256}
+          disabled={busy}
+          onChange={(event) => setSha256(event.target.value)}
+        />
+      </Row>
+      <div className="ns-plugin-install__actions">
+        <button
+          type="button"
+          className="ns-btn ns-btn--primary"
+          disabled={busy || url.trim().length === 0}
+          onClick={() => void installFromUrl()}
+        >
+          <Download size={14} />
+          {busy ? t('plugins.install.busy') : t('plugins.install.fromUrl')}
+        </button>
+        <button
+          type="button"
+          className="ns-btn"
+          disabled={busy}
+          onClick={() => void installFromFile()}
+        >
+          <PackagePlus size={14} />
+          {t('plugins.install.fromFile')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Updates
+// ---------------------------------------------------------------------------
+
+/** Publish dates are RFC 3339; anything else is shown as the server sent it. */
+function formatUpdateDate(raw: string | null, locale: Locale): string | null {
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return parsed.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** "Check for updates" plus the announced release, its notes and the download progress. */
+function UpdateSection() {
+  const { t, locale } = useI18n();
+  const status = useUpdaterStore((state) => state.status);
+  const version = useUpdaterStore((state) => state.version);
+  const date = useUpdaterStore((state) => state.date);
+  const body = useUpdaterStore((state) => state.body);
+  const downloaded = useUpdaterStore((state) => state.downloaded);
+  const contentLength = useUpdaterStore((state) => state.contentLength);
+  const error = useUpdaterStore((state) => state.error);
+  const update = useUpdaterStore((state) => state.update);
+
+  const busy = status === 'checking' || status === 'downloading';
+  const percent =
+    contentLength && contentLength > 0
+      ? Math.min(100, Math.round((downloaded / contentLength) * 100))
+      : null;
+
+  let statusLine: string;
+  switch (status) {
+    case 'checking':
+      statusLine = t('updates.checking');
+      break;
+    case 'upToDate':
+      statusLine = t('updates.upToDate');
+      break;
+    case 'available':
+      statusLine = t('updates.availableVersion', { version: version ?? '' });
+      break;
+    case 'downloading':
+      statusLine =
+        percent === null ? t('updates.downloading') : t('updates.downloadingPercent', { percent });
+      break;
+    case 'ready':
+      statusLine = t('updates.ready');
+      break;
+    case 'error':
+      statusLine = error ?? t('updates.checkFailedShort');
+      break;
+    default:
+      statusLine = t('updates.notChecked');
+  }
+
+  const released = formatUpdateDate(date, locale);
+  const showRelease = status === 'available' || status === 'downloading' || status === 'ready';
+
+  return (
+    <>
+      <div className="ns-about-row">
+        <span>{t('updates.title')}</span>
+        <span className="ns-update">
+          <button
+            type="button"
+            className="ns-btn ns-btn--sm"
+            disabled={busy}
+            onClick={() => void checkForUpdates({ silent: false })}
+          >
+            <RefreshCw size={13} className={status === 'checking' ? 'ns-spin' : undefined} />
+            {t('updates.check')}
+          </button>
+          <span
+            className={
+              status === 'error'
+                ? 'ns-update__status ns-update__status--error'
+                : 'ns-update__status'
+            }
+          >
+            {statusLine}
+          </span>
+        </span>
+      </div>
+      {showRelease ? (
+        <div className="ns-update-card">
+          <div className="ns-update-card__head">
+            <strong>{t('updates.newVersion', { version: version ?? '' })}</strong>
+            {released ? (
+              <span className="ns-update-card__date">
+                {t('updates.released', { date: released })}
+              </span>
+            ) : null}
+          </div>
+          {body ? <div className="ns-update-notes">{body}</div> : null}
+          {status === 'downloading' ? (
+            <div className="ns-update-card__progress">
+              <div className="ns-progress">
+                <div
+                  className={
+                    percent === null
+                      ? 'ns-progress__bar ns-progress__bar--idle'
+                      : 'ns-progress__bar'
+                  }
+                  style={{ width: percent === null ? '100%' : `${percent}%` }}
+                />
+              </div>
+              <span className="ns-update-card__bytes">
+                {contentLength
+                  ? `${formatBytes(downloaded)} / ${formatBytes(contentLength)}`
+                  : formatBytes(downloaded)}
+              </span>
+            </div>
+          ) : null}
+          <div className="ns-update-card__actions">
+            {status === 'available' && update ? (
+              <button
+                type="button"
+                className="ns-btn ns-btn--primary"
+                onClick={() => void downloadAndInstall(update)}
+              >
+                <Download size={14} />
+                {t('updates.download')}
+              </button>
+            ) : null}
+            {status === 'ready' ? (
+              <>
+                <button
+                  type="button"
+                  className="ns-btn ns-btn--primary"
+                  onClick={() => void restartApp()}
+                >
+                  <RotateCcw size={14} />
+                  {t('updates.restart')}
+                </button>
+                <span className="ns-update-card__hint">{t('updates.restartHint')}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -121,9 +461,20 @@ export function SettingsPanel() {
   const update = useSettingsStore((state) => state.update);
   const updateTerminal = useSettingsStore((state) => state.updateTerminal);
   const updateLocalShell = useSettingsStore((state) => state.updateLocalShell);
+  const updateUpdates = useSettingsStore((state) => state.updateUpdates);
   const plugins = usePluginsStore((state) => state.entries);
   const toast = useUiStore((state) => state.toast);
+  const requestedSection = useUiStore((state) => state.settingsSection);
+  const clearSection = useUiStore((state) => state.clearSettingsSection);
+  const aboutRef = useRef<HTMLElement>(null);
   const [reloading, setReloading] = useState(false);
+
+  // The update toast asks for the About section, which is usually scrolled out of view.
+  useEffect(() => {
+    if (requestedSection !== 'about') return;
+    aboutRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    clearSection();
+  }, [requestedSection, clearSection]);
 
   const openPluginsFolder = async () => {
     if (!appInfo) return;
@@ -194,6 +545,16 @@ export function SettingsPanel() {
                   }
                 />
                 {t('settings.closeWithLastTerminalHint')}
+              </label>
+            </Row>
+            <Row label={t('updates.checkOnStartup')}>
+              <label className="ns-check">
+                <input
+                  type="checkbox"
+                  checked={settings.updates.checkOnStartup}
+                  onChange={(event) => updateUpdates({ checkOnStartup: event.target.checked })}
+                />
+                {t('updates.checkOnStartupHint')}
               </label>
             </Row>
           </section>
@@ -330,6 +691,11 @@ export function SettingsPanel() {
               </button>
             </div>
             {appInfo ? <div className="ns-mono">{appInfo.paths.pluginsDir}</div> : null}
+
+            <h4 className="ns-settings__subtitle">{t('plugins.install.title')}</h4>
+            <PluginInstaller />
+
+            <h4 className="ns-settings__subtitle">{t('plugins.installed')}</h4>
             {plugins.length === 0 ? (
               <div className="ns-empty">{t('plugins.none')}</div>
             ) : (
@@ -337,12 +703,13 @@ export function SettingsPanel() {
             )}
           </section>
 
-          <section className="ns-settings__section">
+          <section className="ns-settings__section" ref={aboutRef}>
             <h3>{t('settings.about')}</h3>
             <div className="ns-about-row">
               <span>{t('about.version')}</span>
               <span>{appInfo?.version ?? '—'}</span>
             </div>
+            <UpdateSection />
             <div className="ns-about-row">
               <span>{t('about.platform')}</span>
               <span>{appInfo ? `${appInfo.platform} · ${appInfo.arch}` : '—'}</span>

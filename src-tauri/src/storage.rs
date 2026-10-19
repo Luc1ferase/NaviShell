@@ -10,6 +10,7 @@
 //! <appData>/plugin-data/<pluginId>.json
 //! <appData>/plugins/<pluginId>/...
 //! <appData>/logs/
+//! <appData>/tmp/            (scratch space, emptied on startup)
 //! ```
 //!
 //! Writes go through [`write_json`], which serialises to a temporary file in the same
@@ -38,6 +39,11 @@ pub const PLUGINS_DIR: &str = "plugins";
 pub const PLUGIN_DATA_DIR: &str = "plugin-data";
 /// Directory for log files.
 pub const LOGS_DIR: &str = "logs";
+/// Scratch directory for downloads and half-unpacked plugin archives.
+///
+/// It deliberately lives next to [`PLUGINS_DIR`] rather than in the OS temp directory, so
+/// that moving a staged plugin into place is a rename on the same filesystem.
+pub const TMP_DIR: &str = "tmp";
 
 /// Absolute paths reported to the frontend by `app_info`.
 #[derive(Debug, Clone, Serialize)]
@@ -73,6 +79,11 @@ pub fn logs_dir(app: &AppHandle) -> AppResult<PathBuf> {
     Ok(app_data_dir(app)?.join(LOGS_DIR))
 }
 
+/// `<appData>/tmp`
+pub fn tmp_dir(app: &AppHandle) -> AppResult<PathBuf> {
+    Ok(app_data_dir(app)?.join(TMP_DIR))
+}
+
 /// Path of a top-level state file such as [`SERVERS_FILE`].
 pub fn data_file(app: &AppHandle, name: &str) -> AppResult<PathBuf> {
     Ok(app_data_dir(app)?.join(name))
@@ -106,13 +117,22 @@ pub async fn ensure_dir(path: &Path) -> AppResult<()> {
 /// Creates every directory the core expects to exist.
 ///
 /// Called from `setup`, which runs before the async runtime has anything to do, hence the
-/// blocking filesystem calls.
+/// blocking filesystem calls. Nothing can be in flight at that point, so this is also
+/// where [`TMP_DIR`] is emptied of whatever a previous crash left behind.
 pub fn ensure_layout(app: &AppHandle) -> AppResult<()> {
+    let tmp = tmp_dir(app)?;
+    if let Err(e) = std::fs::remove_dir_all(&tmp)
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        tracing::warn!(path = %tmp.display(), error = %e, "could not clear the scratch directory");
+    }
+
     for dir in [
         app_data_dir(app)?,
         plugins_dir(app)?,
         plugin_data_dir(app)?,
         logs_dir(app)?,
+        tmp,
     ] {
         std::fs::create_dir_all(&dir).map_err(|e| {
             AppError::io(format!("could not create directory {}: {e}", dir.display()))

@@ -1,7 +1,7 @@
 {
   "name": "navishell",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI",
   "type": "module",
   "scripts": {
@@ -20,6 +20,8 @@
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.3",
     "@tauri-apps/plugin-opener": "^2.7.2",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.14.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-unicode11": "^0.9.0",

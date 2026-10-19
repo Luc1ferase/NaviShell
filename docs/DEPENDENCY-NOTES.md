@@ -1,7 +1,25 @@
-# Dependency notes (verified against docs on 2026-10-18)
+# Dependency notes (verified against docs on 2026-10-18, updated 2026-10-19)
 
 Versions pinned in this repo are newer than most training data. These notes record the
 API facts that were verified from docs.rs / official docs so nobody has to guess.
+
+## Tauri plugin version pairing
+
+**A `tauri-plugin-*` crate must be on the same minor as its `@tauri-apps/plugin-*` npm
+package.** The two halves of a plugin share one IPC surface and are released together, so
+a mismatch shows up at runtime as "command not found" or a deserialisation failure, not at
+compile time. Current pairs:
+
+| npm package                    | version | crate                  | version |
+| ------------------------------ | ------- | ---------------------- | ------- |
+| `@tauri-apps/plugin-opener`    | 2.7     | `tauri-plugin-opener`  | 2.7     |
+| `@tauri-apps/plugin-dialog`    | 2.8     | `tauri-plugin-dialog`  | 2.8     |
+| `@tauri-apps/plugin-updater`   | 2.14    | `tauri-plugin-updater` | 2.14    |
+| `@tauri-apps/plugin-process`   | 2.4     | `tauri-plugin-process` | 2.4     |
+
+Bumping one side means bumping the other in the same commit. `3.0.0-alpha.*` of these
+crates exists on crates.io and is what `cargo add` / `cargo info` resolve to by default —
+do not take it.
 
 ## Rust
 
@@ -21,6 +39,95 @@ API facts that were verified from docs.rs / official docs so nobody has to guess
 - State: `app.manage(AppState::default())`, commands take `state: tauri::State<'_, AppState>`.
   Async commands returning `Result<T, E>` need `E: Serialize`. Tauri runs on its own tokio
   runtime; `tokio::spawn` works inside async commands.
+
+### tauri-plugin-updater 2.14 + tauri-plugin-process 2.4
+
+```rust
+// Desktop only; both are no-ops to register on mobile and have no mobile permissions.
+#[cfg(desktop)]
+let builder = builder
+    .plugin(tauri_plugin_updater::Builder::new().build())   // TauriPlugin<R, Config>
+    .plugin(tauri_plugin_process::init());                  // TauriPlugin<R>
+```
+
+- Config comes from `plugins.updater` in `tauri.conf.json`: `pubkey` (the minisign public
+  key, base64 of the whole `.pub` file), `endpoints` (array of URLs; `{{target}}`,
+  `{{arch}}`, `{{current_version}}` and `{{bundle_type}}` are substituted),
+  `windows.installMode` (`"passive"` default, `"basicUi"`, `"quiet"`), plus
+  `requireSignedVersion`, `allowDowngrades` and three `dangerous*` escape hatches.
+- Capability permissions: `updater:default` = `allow-check`, `allow-download`,
+  `allow-install`, `allow-download-and-install`. `process:default` = `allow-exit`,
+  `allow-restart`. Both are in `capabilities/default.json`.
+- Default crate features are `rustls-tls` + `system-proxy` + `zip`. `rustls-tls` means
+  `reqwest/rustls-no-provider` plus `rustls` with the **`ring`** provider, so no
+  `aws-lc-rs` and therefore no NASM on Windows — keep it that way.
+- `bundle.createUpdaterArtifacts: true` makes `tauri build` emit the signed
+  `*.sig` next to each bundle; the build then *requires* `TAURI_SIGNING_PRIVATE_KEY` and
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in the environment.
+
+### reqwest 0.13
+
+The feature names changed from 0.12 and there is no `rustls-tls` any more:
+
+| want                             | feature              |
+| -------------------------------- | -------------------- |
+| rustls with the aws-lc-rs backend | `rustls`             |
+| rustls, caller installs the provider | `rustls-no-provider` |
+| `Response::bytes_stream()`        | `stream`             |
+
+`default` is `default-tls` + `charset` + `http2` + `system-proxy`, and `default-tls` is
+`rustls` — i.e. **the default pulls in aws-lc-rs**, which needs NASM and a C compiler on
+Windows. This repo therefore uses `default-features = false` with `rustls-no-provider`
+and installs the provider itself, exactly as `tauri-plugin-updater` does:
+
+```rust
+if rustls::crypto::CryptoProvider::get_default().is_none() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+```
+
+With `__rustls` on and `__native-tls` off, `TlsBackend::default()` is rustls, so a plain
+`Client::builder()` already speaks https; `use_rustls_tls()` is not needed.
+`ClientBuilder::{timeout, read_timeout, connect_timeout, user_agent}` are unchanged.
+`Response::chunk() -> Result<Option<Bytes>>` streams a body without the `stream` feature
+(`bytes_stream()` is the one that needs it). `reqwest::Url` is re-exported, so URL
+parsing needs no separate `url` dependency. `tauri` itself depends on reqwest 0.13, so
+staying on that major adds no second copy.
+
+### zip 9 (zip-rs/zip2)
+
+Reading is blocking, so call it from `spawn_blocking`.
+
+```rust
+let mut zip = zip::ZipArchive::new(BufReader::new(File::open(path)?))?;  // ZipResult
+for i in 0..zip.len() {
+    let mut entry = zip.by_index(i)?;              // ZipFile<'_, R>: Read
+    entry.name()      -> ZipResult<Cow<'_, str>>   // NOT &str as in 0.6/1.x
+    entry.name_raw()  -> &[u8]
+    entry.enclosed_name() -> Option<PathBuf>       // None = unsafe name
+    entry.is_dir(); entry.is_symlink(); entry.is_file(); entry.size(); entry.unix_mode();
+}
+```
+
+`enclosed_name()` is the whole path-traversal defence in one call: entry names are parsed
+as Windows paths on *every* host, so it rejects `..` that escapes, absolute paths, drive
+and UNC prefixes, verbatim (`\\?\`) prefixes and components containing a separator.
+Symlink entries still need handling separately (this repo skips them) because the danger
+is in their *target*, not their name.
+
+Features: `default` is a large set including compressors. For reading deflate archives,
+`default-features = false, features = ["deflate-flate2"]` is enough and keeps the
+pure-Rust `miniz_oxide` backend; the `deflate` feature additionally pulls in the zopfli
+compressor and `zlib-rs`. `ZipError` variants: `Io`, `InvalidArchive(Cow<'static, str>)`,
+`UnsupportedArchive(&'static str)`, `FileNotFound`, `InvalidPassword`,
+`CompressionMethodNotSupported(u16)`.
+
+### sha2 0.10
+
+`use sha2::{Digest, Sha256};` then `let mut h = Sha256::new(); h.update(bytes);
+h.finalize()` (a `GenericArray<u8, U32>`). 0.11 is out but is a different `digest` major;
+0.10 is what the rest of the tree already uses. There is no `hex` crate in this repo —
+`write!(s, "{byte:02x}")` over the digest is the formatting used by `plugins.rs`.
 
 ### russh 0.64
 
@@ -160,7 +267,15 @@ calls return `Error::NoDefaultStore` / platform errors – surface as `Keyring` 
 
 - Use `tauri-apps/tauri-action@v1` (v1.0.0 released 2026-06-29).
 - Inputs: `tagName`, `releaseName`, `releaseBody`, `releaseDraft`, `prerelease`, `args`,
-  `projectPath`, `uploadUpdaterJson` (set `false`: no updater in v1), `retryAttempts`.
+  `projectPath`, `retryAttempts`, `uploadUpdaterJson` (default `true`; generates and
+  uploads `latest.json` from the signed bundles), `updaterJsonPreferNsis` (default
+  `false`; set it so the Windows entry points at the NSIS `setup.exe` rather than the
+  `.msi`).
+- Signing secrets go in the step's `env`, not its `with`: `TAURI_SIGNING_PRIVATE_KEY` and
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- `latest.json` is uploaded as a release asset, so the URL in `plugins.updater.endpoints`
+  only resolves once the release is **published** and not flagged as a prerelease —
+  `releases/latest/download/…` skips drafts and prereleases.
 - Ubuntu 22.04 deps: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils`
   (plus `build-essential curl wget file libssl-dev libxdo-dev libayatana-appindicator3-dev`).
 - macOS: run on `macos-latest` with `--target aarch64-apple-darwin` and

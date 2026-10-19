@@ -10,10 +10,17 @@ import type {
 import type { AuthPromptItem, CredentialKind } from '../ipc/contract';
 import { uuid } from '../util/fn';
 
+/** Optional button shown inside a toast, e.g. "view" on an update notice. */
+export interface ToastAction {
+  label: string;
+  run(): void;
+}
+
 export interface Toast {
   id: string;
   message: string;
   kind: ToastKind;
+  action?: ToastAction;
 }
 
 export interface PasswordRequest {
@@ -72,6 +79,9 @@ export type DialogRequest =
       resolve: (value: string[] | null) => void;
     };
 
+/** Section of the settings panel a caller wants to bring into view. */
+export type SettingsSection = 'general' | 'terminal' | 'localShell' | 'plugins' | 'about';
+
 export interface ContextMenuState {
   items: MenuItem[];
   position: { x: number; y: number };
@@ -89,8 +99,10 @@ export interface UiStore {
   dialogs: DialogRequest[];
   contextMenu: ContextMenuState | null;
   serverForm: ServerFormState | null;
+  /** Pending scroll request for the settings panel; cleared once it is honoured. */
+  settingsSection: SettingsSection | null;
 
-  toast(message: string, kind?: ToastKind): void;
+  toast(message: string, kind?: ToastKind, action?: ToastAction): void;
   dismissToast(id: string): void;
 
   confirm(options: ConfirmOptions): Promise<boolean>;
@@ -107,20 +119,26 @@ export interface UiStore {
 
   openServerForm(state?: ServerFormState): void;
   closeServerForm(): void;
+
+  focusSettingsSection(section: SettingsSection): void;
+  clearSettingsSection(): void;
 }
 
 const TOAST_TIMEOUT = 5000;
+/** Toasts carrying an action stay around longer, so the button is clickable. */
+const TOAST_ACTION_TIMEOUT = 12000;
 
 export const useUiStore = create<UiStore>((set, get) => ({
   toasts: [],
   dialogs: [],
   contextMenu: null,
   serverForm: null,
+  settingsSection: null,
 
-  toast(message, kind = 'info') {
+  toast(message, kind = 'info', action) {
     const id = uuid();
-    set({ toasts: [...get().toasts, { id, message, kind }] });
-    setTimeout(() => get().dismissToast(id), TOAST_TIMEOUT);
+    set({ toasts: [...get().toasts, { id, message, kind, action }] });
+    setTimeout(() => get().dismissToast(id), action ? TOAST_ACTION_TIMEOUT : TOAST_TIMEOUT);
   },
   dismissToast(id) {
     set({ toasts: get().toasts.filter((toast) => toast.id !== id) });
@@ -189,8 +207,15 @@ export const useUiStore = create<UiStore>((set, get) => ({
   closeServerForm() {
     set({ serverForm: null });
   },
+
+  focusSettingsSection(section) {
+    set({ settingsSection: section });
+  },
+  clearSettingsSection() {
+    set({ settingsSection: null });
+  },
 }));
 
-export function toast(message: string, kind?: ToastKind): void {
-  useUiStore.getState().toast(message, kind);
+export function toast(message: string, kind?: ToastKind, action?: ToastAction): void {
+  useUiStore.getState().toast(message, kind, action);
 }

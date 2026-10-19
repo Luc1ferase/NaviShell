@@ -20,20 +20,35 @@ export function Toasts() {
 
   return (
     <div className="ns-toasts" role="status" aria-live="polite">
-      {toasts.map((toast) => (
-        <div key={toast.id} className={`ns-toast ns-toast--${toast.kind}`}>
-          <Icon name={TOAST_ICON[toast.kind]} size={15} />
-          <span className="ns-toast__message">{toast.message}</span>
-          <button
-            type="button"
-            className="ns-btn ns-btn--icon ns-btn--sm"
-            aria-label={t('common.dismiss')}
-            onClick={() => dismiss(toast.id)}
-          >
-            <X size={13} />
-          </button>
-        </div>
-      ))}
+      {toasts.map((toast) => {
+        const action = toast.action;
+        return (
+          <div key={toast.id} className={`ns-toast ns-toast--${toast.kind}`}>
+            <Icon name={TOAST_ICON[toast.kind]} size={15} />
+            <span className="ns-toast__message">{toast.message}</span>
+            {action ? (
+              <button
+                type="button"
+                className="ns-btn ns-btn--sm ns-toast__action"
+                onClick={() => {
+                  dismiss(toast.id);
+                  action.run();
+                }}
+              >
+                {action.label}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="ns-btn ns-btn--icon ns-btn--sm"
+              aria-label={t('common.dismiss')}
+              onClick={() => dismiss(toast.id)}
+            >
+              <X size={13} />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
