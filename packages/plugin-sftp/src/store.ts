@@ -12,6 +12,7 @@ import type {
   PluginContext,
   SftpClient,
   SftpEntry,
+  TerminalHandle,
   TransferHandle,
   TransferProgress,
 } from '@navishell/plugin-api';
@@ -98,6 +99,22 @@ function isCancellation(error: unknown): boolean {
   return isHostError(error) && error.code === 'Cancelled';
 }
 
+/** The connection a terminal binds the panel to. */
+interface TerminalBinding {
+  connectionId: string;
+  serverId: string | null;
+}
+
+/**
+ * What the panel should follow for a given terminal, or `null` when it should not follow
+ * it at all: local shell terminals have no SSH connection, so they leave the panel on
+ * whatever the connection dropdown selected instead of emptying it.
+ */
+function terminalBinding(terminal: TerminalHandle | undefined): TerminalBinding | null {
+  if (!terminal || terminal.kind !== 'ssh' || terminal.connectionId === null) return null;
+  return { connectionId: terminal.connectionId, serverId: terminal.serverId };
+}
+
 export class SftpController {
   private state: SftpState = INITIAL_STATE;
   private readonly listeners = new Set<() => void>();
@@ -150,7 +167,8 @@ export class SftpController {
     const { ctx } = this;
     ctx.subscriptions.push(
       ctx.terminals.onDidChangeActive((terminal) => {
-        if (terminal) this.bind(terminal.connectionId, terminal.serverId, true);
+        const binding = terminalBinding(terminal);
+        if (binding) this.bind(binding.connectionId, binding.serverId, true);
         else this.syncConnections(ctx.connections.list());
       }),
     );
@@ -165,8 +183,8 @@ export class SftpController {
   async start(): Promise<void> {
     const showHidden = await this.ctx.storage.get<boolean>('showHidden', false);
     this.patch({ showHidden });
-    const active = this.ctx.terminals.getActive();
-    if (active) this.bind(active.connectionId, active.serverId, true);
+    const binding = terminalBinding(this.ctx.terminals.getActive());
+    if (binding) this.bind(binding.connectionId, binding.serverId, true);
     else this.syncConnections(this.ctx.connections.list());
   }
 
@@ -181,10 +199,10 @@ export class SftpController {
   // -- connection binding --------------------------------------------------
 
   private syncConnections(connections: ConnectionInfo[]): void {
-    const active = this.ctx.terminals.getActive();
-    if (active) {
+    const binding = terminalBinding(this.ctx.terminals.getActive());
+    if (binding) {
       this.patch({ connections });
-      this.bind(active.connectionId, active.serverId, true);
+      this.bind(binding.connectionId, binding.serverId, true);
       return;
     }
     const current = connections.find((c) => c.id === this.state.connectionId);

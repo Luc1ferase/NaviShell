@@ -4,7 +4,7 @@
  */
 
 import type { DockviewApi, DockviewGroupPanel, SerializedDockview } from 'dockview-react';
-import type { JsonValue, PanelPosition } from '@navishell/plugin-api';
+import type { JsonValue, PanelPosition, TerminalKind } from '@navishell/plugin-api';
 
 import { call } from '../ipc/client';
 import { t, translatePlugin } from '../i18n';
@@ -20,6 +20,9 @@ export const TERMINAL_PANEL_PREFIX = 'terminal:';
 
 /** Tab component id used for panels that must not show a close button. */
 export const FIXED_TAB_COMPONENT = 'fixedTab';
+
+/** Tab component id used for terminal tabs (adds a tooltip describing the session). */
+export const TERMINAL_TAB_COMPONENT = 'terminalTab';
 
 let dockApi: DockviewApi | null = null;
 let restoring = false;
@@ -136,8 +139,18 @@ export function openSettingsPanel(): void {
 
 export interface TerminalPanelParams {
   terminalId: string;
-  serverId: string;
+  /** `local` shells have no server; layouts saved before local terminals omit this. */
+  kind: TerminalKind;
+  /** `null` for local terminals. */
+  serverId: string | null;
   serverName: string;
+}
+
+/** Tab title of a terminal panel (the local label is translated on every locale change). */
+export function terminalPanelTitle(
+  params: Pick<TerminalPanelParams, 'kind' | 'serverName'>,
+): string {
+  return params.kind === 'local' ? t('terminal.localTitle') : params.serverName;
 }
 
 export function addTerminalPanel(params: TerminalPanelParams): void {
@@ -153,7 +166,8 @@ export function addTerminalPanel(params: TerminalPanelParams): void {
   api.addPanel({
     id,
     component: 'terminal',
-    title: params.serverName,
+    tabComponent: TERMINAL_TAB_COMPONENT,
+    title: terminalPanelTitle(params),
     renderer: 'always',
     params: { ...params },
     ...(group ? { position: { referenceGroup: group, direction: 'within' } } : {}),
@@ -268,4 +282,9 @@ export function refreshPanelTitles(): void {
     if (panel) panel.api.setTitle(panelTitle(entry));
   }
   api.getPanel(CORE_HOME_PANEL)?.api.setTitle(t('panel.home.title'));
+  for (const panel of api.panels) {
+    if (!panel.id.startsWith(TERMINAL_PANEL_PREFIX)) continue;
+    const params = panel.params as Partial<TerminalPanelParams> | undefined;
+    if (params?.kind === 'local') panel.api.setTitle(t('terminal.localTitle'));
+  }
 }

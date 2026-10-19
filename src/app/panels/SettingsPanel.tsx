@@ -81,12 +81,46 @@ function PluginCard({ entry }: { entry: PluginEntry }) {
   );
 }
 
+/** One argument per line, so an argument may contain spaces. */
+function parseShellArgs(text: string): string[] {
+  return text
+    .split('\n')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+/**
+ * The raw text is kept locally so a trailing newline (or a space between two words)
+ * survives while the parsed argv is already persisted.
+ */
+function LocalShellArgsField() {
+  const { t } = useI18n();
+  const args = useSettingsStore((state) => state.settings.localShell.args);
+  const updateLocalShell = useSettingsStore((state) => state.updateLocalShell);
+  const [text, setText] = useState(() => args.join('\n'));
+
+  return (
+    <textarea
+      className="ns-textarea ns-input--mono"
+      rows={3}
+      spellCheck={false}
+      placeholder={t('settings.localShell.argsPlaceholder')}
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value);
+        updateLocalShell({ args: parseShellArgs(event.target.value) });
+      }}
+    />
+  );
+}
+
 export function SettingsPanel() {
   const { t } = useI18n();
   const settings = useSettingsStore((state) => state.settings);
   const appInfo = useSettingsStore((state) => state.appInfo);
   const update = useSettingsStore((state) => state.update);
   const updateTerminal = useSettingsStore((state) => state.updateTerminal);
+  const updateLocalShell = useSettingsStore((state) => state.updateLocalShell);
   const plugins = usePluginsStore((state) => state.entries);
   const toast = useUiStore((state) => state.toast);
   const [reloading, setReloading] = useState(false);
@@ -250,6 +284,26 @@ export function SettingsPanel() {
                 value={settings.terminal.termType}
                 onChange={(event) => updateTerminal({ termType: event.target.value })}
               />
+            </Row>
+          </section>
+
+          <section className="ns-settings__section">
+            <h3>{t('settings.localShell.title')}</h3>
+            <Row
+              label={t('settings.localShell.program')}
+              hint={t('settings.localShell.programHint')}
+            >
+              <input
+                className="ns-input ns-input--mono"
+                placeholder={t('settings.localShell.programPlaceholder')}
+                value={settings.localShell.program ?? ''}
+                onChange={(event) =>
+                  updateLocalShell({ program: event.target.value.trim() || null })
+                }
+              />
+            </Row>
+            <Row label={t('settings.localShell.args')} hint={t('settings.localShell.argsHint')}>
+              <LocalShellArgsField />
             </Row>
           </section>
 

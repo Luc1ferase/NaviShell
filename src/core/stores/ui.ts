@@ -7,6 +7,7 @@ import type {
   ToastKind,
 } from '@navishell/plugin-api';
 
+import type { AuthPromptItem, CredentialKind } from '../ipc/contract';
 import { uuid } from '../util/fn';
 
 export interface Toast {
@@ -18,6 +19,8 @@ export interface Toast {
 export interface PasswordRequest {
   title: string;
   message?: string;
+  /** Selects the labels: an account password or a private-key passphrase. */
+  kind?: CredentialKind;
   /** Pre-ticked state of the "save to keychain" checkbox. */
   offerSave: boolean;
 }
@@ -25,6 +28,16 @@ export interface PasswordRequest {
 export interface PasswordResult {
   password: string;
   savePassword: boolean;
+}
+
+/** One keyboard-interactive round (`auth:prompt`), waiting for `ssh_auth_respond`. */
+export interface AuthPromptRequest {
+  title: string;
+  /** Server-supplied heading; may be empty. */
+  name: string;
+  /** Server-supplied explanation; may be empty. */
+  instructions: string;
+  prompts: AuthPromptItem[];
 }
 
 export interface HostKeyRequest {
@@ -51,6 +64,12 @@ export type DialogRequest =
       kind: 'hostKey';
       options: HostKeyRequest;
       resolve: (value: boolean) => void;
+    }
+  | {
+      id: string;
+      kind: 'authPrompt';
+      options: AuthPromptRequest;
+      resolve: (value: string[] | null) => void;
     };
 
 export interface ContextMenuState {
@@ -78,6 +97,8 @@ export interface UiStore {
   prompt(options: PromptOptions): Promise<string | null>;
   askPassword(options: PasswordRequest): Promise<PasswordResult | null>;
   askHostKey(options: HostKeyRequest): Promise<boolean>;
+  /** Resolves to one answer per prompt, or `null` when the user cancelled. */
+  askAuthPrompt(options: AuthPromptRequest): Promise<string[] | null>;
   /** Resolve (and remove) the front dialog. */
   settleDialog(id: string, value: unknown): void;
 
@@ -125,6 +146,11 @@ export const useUiStore = create<UiStore>((set, get) => ({
       set({ dialogs: [...get().dialogs, { id: uuid(), kind: 'hostKey', options, resolve }] });
     });
   },
+  askAuthPrompt(options) {
+    return new Promise<string[] | null>((resolve) => {
+      set({ dialogs: [...get().dialogs, { id: uuid(), kind: 'authPrompt', options, resolve }] });
+    });
+  },
   settleDialog(id, value) {
     const dialog = get().dialogs.find((d) => d.id === id);
     set({ dialogs: get().dialogs.filter((d) => d.id !== id) });
@@ -141,6 +167,11 @@ export const useUiStore = create<UiStore>((set, get) => ({
         break;
       case 'hostKey':
         dialog.resolve(value === true);
+        break;
+      case 'authPrompt':
+        dialog.resolve(
+          Array.isArray(value) && value.every((entry) => typeof entry === 'string') ? value : null,
+        );
         break;
     }
   },

@@ -2,7 +2,8 @@
  * navishell.sftp - right-docked SFTP file manager.
  *
  * The panel follows the active terminal's connection and falls back to a dropdown of open
- * connections. All remote work goes through `ctx.connections.sftp(connectionId)`.
+ * connections. Local shell terminals have no connection, so they are ignored and leave the
+ * panel where it was. All remote work goes through `ctx.connections.sftp(connectionId)`.
  */
 
 import { definePlugin } from '@navishell/plugin-api';

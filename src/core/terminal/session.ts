@@ -1,5 +1,5 @@
 /**
- * xterm.js session bound to one remote PTY.
+ * xterm.js session bound to one PTY: a remote SSH shell or a local shell.
  *
  * The DOM (container + overlay layer) is created up front and lives independently of
  * React: `TerminalPanel` only adopts `session.element` on mount and releases it on
@@ -12,7 +12,12 @@ import { SearchAddon } from '@xterm/addon-search';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import type { CursorPixelPosition, Disposable, TerminalHandle } from '@navishell/plugin-api';
+import type {
+  CursorPixelPosition,
+  Disposable,
+  TerminalHandle,
+  TerminalKind,
+} from '@navishell/plugin-api';
 
 import { Channel, call } from '../ipc/client';
 import type { TerminalSettings } from '../ipc/contract';
@@ -21,9 +26,14 @@ import { debounce } from '../util/fn';
 import { terminalTheme } from './theme';
 
 export interface TerminalSessionOptions {
-  serverId: string;
+  /** `ssh` terminals belong to a connection; `local` ones run a shell on this machine. */
+  kind: TerminalKind;
+  /** `null` for local terminals. */
+  serverId: string | null;
+  /** Tab label: the server name for SSH terminals, the local shell label otherwise. */
   serverName: string;
-  connectionId: string;
+  /** `null` for local terminals. */
+  connectionId: string | null;
   settings: TerminalSettings;
   theme: 'dark' | 'light';
   /** Runs before xterm sees a key event; returning `false` swallows it. */
@@ -34,14 +44,15 @@ const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
 
 export class TerminalSession implements TerminalHandle {
-  readonly serverId: string;
+  readonly kind: TerminalKind;
+  readonly serverId: string | null;
   readonly serverName: string;
-  readonly connectionId: string;
+  readonly connectionId: string | null;
 
   readonly xterm: Terminal;
   readonly element: HTMLElement;
   readonly overlayElement: HTMLElement;
-  /** Passed to `term_open` as the `onData` extra argument. */
+  /** Passed to `term_open` / `term_open_local` as the `onData` extra argument. */
   readonly channel: Channel<ArrayBuffer>;
   readonly search: SearchAddon;
 
@@ -66,6 +77,7 @@ export class TerminalSession implements TerminalHandle {
 
   constructor(options: TerminalSessionOptions) {
     this.options = options;
+    this.kind = options.kind;
     this.serverId = options.serverId;
     this.serverName = options.serverName;
     this.connectionId = options.connectionId;

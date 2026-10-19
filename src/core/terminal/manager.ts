@@ -1,6 +1,7 @@
 /**
- * Terminal lifecycle: opening PTYs, closing them, reacting to `terminal:exit` /
- * `connection:closed`, and keeping the terminals store in sync.
+ * Terminal lifecycle: opening PTYs (remote shells and local ones), closing them,
+ * reacting to `terminal:exit` / `connection:closed`, and keeping the terminals store in
+ * sync.
  */
 
 import type { TerminalHandle } from '@navishell/plugin-api';
@@ -76,6 +77,7 @@ export async function openTerminalForServer(serverId: string): Promise<TerminalS
   const settings = getSettings();
 
   const session = new TerminalSession({
+    kind: 'ssh',
     serverId,
     serverName,
     connectionId: connection.id,
@@ -101,6 +103,7 @@ export async function openTerminalForServer(serverId: string): Promise<TerminalS
   session.assignId(terminalId);
   useTerminalsStore.getState().add({
     id: terminalId,
+    kind: 'ssh',
     serverId,
     serverName,
     connectionId: connection.id,
@@ -108,7 +111,60 @@ export async function openTerminalForServer(serverId: string): Promise<TerminalS
     exited: null,
   });
 
-  addTerminalPanel({ terminalId, serverId, serverName });
+  addTerminalPanel({ terminalId, kind: 'ssh', serverId, serverName });
+  setActiveTerminal(terminalId);
+  openedEmitter.fire(session);
+  return session;
+}
+
+/** Open a shell on this machine; program and arguments come from `settings.localShell`. */
+export async function openLocalTerminal(options: { cwd?: string } = {}): Promise<TerminalSession> {
+  const settings = getSettings();
+  const serverName = t('terminal.localTitle');
+
+  const session = new TerminalSession({
+    kind: 'local',
+    serverId: null,
+    serverName,
+    connectionId: null,
+    settings: settings.terminal,
+    theme: currentTheme(),
+    onKeyEvent: runKeyHandlers,
+  });
+
+  const { cols, rows } = session.size;
+  let terminalId: string;
+  try {
+    const result = await call(
+      'term_open_local',
+      {
+        cols,
+        rows,
+        term: settings.terminal.termType,
+        program: settings.localShell.program,
+        args: settings.localShell.args,
+        cwd: options.cwd ?? null,
+      },
+      { onData: session.channel },
+    );
+    terminalId = result.terminalId;
+  } catch (error) {
+    session.dispose();
+    throw toHostError(error);
+  }
+
+  session.assignId(terminalId);
+  useTerminalsStore.getState().add({
+    id: terminalId,
+    kind: 'local',
+    serverId: null,
+    serverName,
+    connectionId: null,
+    session,
+    exited: null,
+  });
+
+  addTerminalPanel({ terminalId, kind: 'local', serverId: null, serverName });
   setActiveTerminal(terminalId);
   openedEmitter.fire(session);
   return session;
@@ -151,12 +207,15 @@ export async function closeTerminal(terminalId: string): Promise<void> {
   closedEmitter.fire(record.session);
   record.session.dispose();
 
-  const remaining = terminalsForConnection(record.connectionId);
-  if (getSettings().closeConnectionWithLastTerminal && remaining.length === 0) {
-    try {
-      await disconnectConnection(record.connectionId);
-    } catch (error) {
-      console.warn('[navishell] ssh_disconnect failed', error);
+  // Local terminals have no connection, so they never close one.
+  const { connectionId } = record;
+  if (connectionId && getSettings().closeConnectionWithLastTerminal) {
+    if (terminalsForConnection(connectionId).length === 0) {
+      try {
+        await disconnectConnection(connectionId);
+      } catch (error) {
+        console.warn('[navishell] ssh_disconnect failed', error);
+      }
     }
   }
 
@@ -177,6 +236,12 @@ export function requestCloseTerminalPanel(terminalId: string): void {
 export async function reconnectTerminal(serverId: string, deadTerminalId?: string): Promise<void> {
   if (deadTerminalId) requestCloseTerminalPanel(deadTerminalId);
   await openTerminalForServer(serverId);
+}
+
+/** Open a fresh local shell and drop the dead panel. */
+export async function reopenLocalTerminal(deadTerminalId?: string): Promise<void> {
+  if (deadTerminalId) requestCloseTerminalPanel(deadTerminalId);
+  await openLocalTerminal();
 }
 
 // ---------------------------------------------------------------------------

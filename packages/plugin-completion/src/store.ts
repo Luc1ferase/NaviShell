@@ -5,6 +5,10 @@
  * the current input line from `terminal.onInput` and gives up (clears the line and hides the
  * popup) whenever something happens that could desynchronise it: escape sequences, Tab,
  * Ctrl-C/Ctrl-U or multi-line remote output.
+ *
+ * History is grouped per server for SSH terminals and under a single `local` key for local
+ * shells, which have no server to belong to. Remote-only work (executables on `PATH`, cwd
+ * tracking, directory listings) lives in `./remote` and is skipped for local terminals.
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
@@ -15,24 +19,37 @@ import type {
   TerminalHandle,
 } from '@navishell/plugin-api';
 import { dictionary } from './dictionary';
-import { parseRemoteHistory, pushHistory, suggest } from './engine';
+import { analyzeToken, parseRemoteHistory, pushHistory, suggest } from './engine';
 import type { Suggestion } from './engine';
+import { RemoteIndex } from './remote';
 
 export interface CompletionSettings {
   enabled: boolean;
   /** Minimum tracked-line length before suggestions appear. */
   minChars: number;
   maxItems: number;
+  /**
+   * Opt-in: inject a `PROMPT_COMMAND`/`precmd` hook into new SSH shells so they report
+   * their working directory (OSC 7), which is what makes path completion exact.
+   */
+  shellIntegration: boolean;
 }
 
-export const DEFAULT_SETTINGS: CompletionSettings = { enabled: true, minChars: 2, maxItems: 8 };
+export const DEFAULT_SETTINGS: CompletionSettings = {
+  enabled: true,
+  minChars: 2,
+  maxItems: 8,
+  shellIntegration: false,
+};
 
-/** Hard cap of stored history entries per server. */
+/** Hard cap of stored history entries per history key. */
 const HISTORY_CAP = 2000;
 /** Remote seeding command; failures are ignored. */
 const SEED_COMMAND =
   'tail -n 500 ~/.bash_history 2>/dev/null; tail -n 500 ~/.zsh_history 2>/dev/null';
 const PERSIST_DEBOUNCE_MS = 400;
+/** History key shared by every local shell terminal. */
+const LOCAL_HISTORY_KEY = 'local';
 
 export interface TerminalCompletionState {
   /** Our reconstruction of the current input line. */
@@ -56,7 +73,8 @@ const HIDDEN: TerminalCompletionState = {
 /** State shared by the overlay and the history panel. */
 export interface SharedState {
   settings: CompletionSettings;
-  activeServerId: string | null;
+  /** History bucket of the active terminal: a server id, or `local`. */
+  activeHistoryKey: string | null;
   activeTerminalId: string | null;
   /** Bumped whenever any history list changes, so subscribers re-render. */
   revision: number;
@@ -69,10 +87,16 @@ function isPrintable(char: string): boolean {
   return code >= 0x20 && code !== 0x7f;
 }
 
+/** Which history bucket a terminal records into. Local shells share one bucket. */
+function historyKey(terminal: TerminalHandle): string {
+  if (terminal.kind === 'local') return LOCAL_HISTORY_KEY;
+  return terminal.serverId ?? 'unknown';
+}
+
 export class CompletionController {
   private shared: SharedState = {
     settings: DEFAULT_SETTINGS,
-    activeServerId: null,
+    activeHistoryKey: null,
     activeTerminalId: null,
     revision: 0,
   };
@@ -82,11 +106,15 @@ export class CompletionController {
   private readonly tracked = new Map<string, (() => void)[]>();
   private readonly loaded = new Set<string>();
   private readonly seeded = new Set<string>();
+  private readonly started = new Set<string>();
   private readonly persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly listeners = new Set<() => void>();
+  private readonly remote: RemoteIndex;
   private disposed = false;
 
-  constructor(private readonly ctx: PluginContext) {}
+  constructor(private readonly ctx: PluginContext) {
+    this.remote = new RemoteIndex(ctx, this.onRemoteData);
+  }
 
   // -- store plumbing ------------------------------------------------------
 
@@ -121,10 +149,10 @@ export class CompletionController {
     this.emit();
   }
 
-  /** Stable snapshot of one server's history, most recent first. */
-  readonly historyFor = (serverId: string | null): readonly string[] => {
-    if (serverId === null) return EMPTY_HISTORY;
-    return this.histories.get(serverId) ?? EMPTY_HISTORY;
+  /** Stable snapshot of one history bucket, most recent first. */
+  readonly historyFor = (key: string | null): readonly string[] => {
+    if (key === null) return EMPTY_HISTORY;
+    return this.histories.get(key) ?? EMPTY_HISTORY;
   };
 
   get settings(): CompletionSettings {
@@ -138,7 +166,10 @@ export class CompletionController {
     for (const terminal of ctx.terminals.list()) this.trackTerminal(terminal);
     const active = ctx.terminals.getActive();
     if (active) {
-      this.patchShared({ activeTerminalId: active.id, activeServerId: active.serverId });
+      this.patchShared({
+        activeTerminalId: active.id,
+        activeHistoryKey: historyKey(active),
+      });
     }
     ctx.subscriptions.push(ctx.terminals.onDidOpen((terminal) => this.trackTerminal(terminal)));
     ctx.subscriptions.push(
@@ -148,8 +179,14 @@ export class CompletionController {
       ctx.terminals.onDidChangeActive((terminal) => {
         this.patchShared({
           activeTerminalId: terminal?.id ?? null,
-          activeServerId: terminal?.serverId ?? null,
+          activeHistoryKey: terminal ? historyKey(terminal) : null,
         });
+      }),
+    );
+    // A closed connection takes its executables and directory listings with it.
+    ctx.subscriptions.push(
+      ctx.connections.onDidChange((connections) => {
+        this.remote.retainConnections(connections.map((connection) => connection.id));
       }),
     );
   }
@@ -158,19 +195,23 @@ export class CompletionController {
     const stored = await this.ctx.storage.get('settings');
     if (stored === null || typeof stored !== 'object' || Array.isArray(stored)) return;
     const record: Record<string, JsonValue | undefined> = stored;
-    this.patchShared({
-      settings: {
-        enabled: typeof record.enabled === 'boolean' ? record.enabled : DEFAULT_SETTINGS.enabled,
-        minChars:
-          typeof record.minChars === 'number'
-            ? Math.max(1, Math.trunc(record.minChars))
-            : DEFAULT_SETTINGS.minChars,
-        maxItems:
-          typeof record.maxItems === 'number'
-            ? Math.max(1, Math.trunc(record.maxItems))
-            : DEFAULT_SETTINGS.maxItems,
-      },
-    });
+    const settings: CompletionSettings = {
+      enabled: typeof record.enabled === 'boolean' ? record.enabled : DEFAULT_SETTINGS.enabled,
+      minChars:
+        typeof record.minChars === 'number'
+          ? Math.max(1, Math.trunc(record.minChars))
+          : DEFAULT_SETTINGS.minChars,
+      maxItems:
+        typeof record.maxItems === 'number'
+          ? Math.max(1, Math.trunc(record.maxItems))
+          : DEFAULT_SETTINGS.maxItems,
+      shellIntegration:
+        typeof record.shellIntegration === 'boolean'
+          ? record.shellIntegration
+          : DEFAULT_SETTINGS.shellIntegration,
+    };
+    this.remote.setShellIntegration(settings.shellIntegration);
+    this.patchShared({ settings });
   }
 
   dispose(): void {
@@ -178,6 +219,7 @@ export class CompletionController {
     for (const timer of this.persistTimers.values()) clearTimeout(timer);
     this.persistTimers.clear();
     for (const id of [...this.tracked.keys()]) this.untrackTerminal(id);
+    this.remote.dispose();
     this.states.clear();
     this.terminals.clear();
     this.listeners.clear();
@@ -189,8 +231,24 @@ export class CompletionController {
     if (!settings.enabled) {
       for (const id of this.states.keys()) this.setState(id, HIDDEN);
     }
-    await this.ctx.storage.set('settings', { ...settings });
+    await this.persistSettings(settings);
     return settings.enabled;
+  }
+
+  /**
+   * Turns the cwd hook on or off. Enabling it only affects terminals opened from now on:
+   * the snippet is injected right after a shell's first prompt.
+   */
+  async toggleShellIntegration(): Promise<boolean> {
+    const settings = { ...this.settings, shellIntegration: !this.settings.shellIntegration };
+    this.remote.setShellIntegration(settings.shellIntegration);
+    this.patchShared({ settings });
+    await this.persistSettings(settings);
+    return settings.shellIntegration;
+  }
+
+  private async persistSettings(settings: CompletionSettings): Promise<void> {
+    await this.ctx.storage.set('settings', { ...settings });
   }
 
   // -- terminal wiring -----------------------------------------------------
@@ -203,12 +261,13 @@ export class CompletionController {
       terminal.onInput((data) => this.handleInput(terminal, data)),
       terminal.onOutput((data) => this.handleOutput(terminal, data)),
       terminal.onDidDispose(() => this.untrackTerminal(terminal.id)),
+      ...this.remote.trackTerminal(terminal),
     ];
     this.tracked.set(
       terminal.id,
       subscriptions.map((subscription) => () => subscription.dispose()),
     );
-    void this.ensureHistory(terminal.serverId, terminal.connectionId);
+    void this.ensureHistory(terminal);
   }
 
   private untrackTerminal(terminalId: string): void {
@@ -217,52 +276,58 @@ export class CompletionController {
     this.tracked.delete(terminalId);
     this.terminals.delete(terminalId);
     this.states.delete(terminalId);
+    this.started.delete(terminalId);
+    this.remote.forgetTerminal(terminalId);
     this.emit();
   }
 
   // -- history -------------------------------------------------------------
 
-  private setHistory(serverId: string, history: readonly string[]): void {
-    this.histories.set(serverId, history);
+  private setHistory(key: string, history: readonly string[]): void {
+    this.histories.set(key, history);
     this.patchShared({ revision: this.shared.revision + 1 });
-    this.schedulePersist(serverId);
+    this.schedulePersist(key);
   }
 
-  private schedulePersist(serverId: string): void {
-    const existing = this.persistTimers.get(serverId);
+  private schedulePersist(key: string): void {
+    const existing = this.persistTimers.get(key);
     if (existing) clearTimeout(existing);
     const timer = setTimeout(() => {
-      this.persistTimers.delete(serverId);
-      const history = this.histories.get(serverId);
+      this.persistTimers.delete(key);
+      const history = this.histories.get(key);
       if (!history) return;
       void this.ctx.storage
-        .set(`history:${serverId}`, [...history])
+        .set(`history:${key}`, [...history])
         .catch((error: unknown) => this.ctx.log.warn('[completion] persist failed', error));
     }, PERSIST_DEBOUNCE_MS);
-    this.persistTimers.set(serverId, timer);
+    this.persistTimers.set(key, timer);
   }
 
-  private async ensureHistory(serverId: string, connectionId: string): Promise<void> {
-    if (!this.loaded.has(serverId)) {
-      this.loaded.add(serverId);
+  /** Loads the stored history of a terminal's bucket and, for SSH, seeds it from the host. */
+  private async ensureHistory(terminal: TerminalHandle): Promise<void> {
+    const key = historyKey(terminal);
+    if (!this.loaded.has(key)) {
+      this.loaded.add(key);
       try {
-        const stored = await this.ctx.storage.get<string[]>(`history:${serverId}`, []);
+        const stored = await this.ctx.storage.get<string[]>(`history:${key}`, []);
         if (this.disposed) return;
-        if (stored.length > 0 && !this.histories.has(serverId)) {
-          this.histories.set(serverId, stored);
+        if (stored.length > 0 && !this.histories.has(key)) {
+          this.histories.set(key, stored);
           this.patchShared({ revision: this.shared.revision + 1 });
         }
       } catch (error) {
         this.ctx.log.warn('[completion] history load failed', error);
       }
     }
-    if (this.seeded.has(serverId)) return;
-    this.seeded.add(serverId);
-    void this.seedFromRemote(serverId, connectionId);
+    // Local shells have no remote history files to read, and no connection to read them on.
+    const { connectionId } = terminal;
+    if (terminal.kind !== 'ssh' || connectionId === null || this.seeded.has(key)) return;
+    this.seeded.add(key);
+    void this.seedFromRemote(key, connectionId);
   }
 
   /** Fire-and-forget seeding from the remote shell history files. Errors are ignored. */
-  private async seedFromRemote(serverId: string, connectionId: string): Promise<void> {
+  private async seedFromRemote(key: string, connectionId: string): Promise<void> {
     try {
       const result = await this.ctx.connections.exec(connectionId, SEED_COMMAND, {
         timeoutMs: 15_000,
@@ -270,7 +335,7 @@ export class CompletionController {
       if (this.disposed) return;
       const remote = parseRemoteHistory(result.stdout);
       if (remote.length === 0) return;
-      const existing = this.histories.get(serverId) ?? EMPTY_HISTORY;
+      const existing = this.histories.get(key) ?? EMPTY_HISTORY;
       const seen = new Set(existing);
       const merged = [...existing];
       for (const command of remote) {
@@ -278,19 +343,19 @@ export class CompletionController {
         seen.add(command);
         merged.push(command);
       }
-      this.setHistory(serverId, merged.slice(0, HISTORY_CAP));
-      this.ctx.log.debug(`[completion] seeded ${remote.length} commands for ${serverId}`);
+      this.setHistory(key, merged.slice(0, HISTORY_CAP));
+      this.ctx.log.debug(`[completion] seeded ${remote.length} commands for ${key}`);
     } catch (error) {
       this.ctx.log.debug('[completion] history seeding skipped', error);
     }
   }
 
-  private record(serverId: string, command: string): void {
+  private record(key: string, command: string): void {
     const trimmed = command.trim();
     // Mirror HISTCONTROL=ignorespace and skip single characters.
     if (trimmed.length < 2 || command.startsWith(' ')) return;
-    const history = this.histories.get(serverId) ?? EMPTY_HISTORY;
-    this.setHistory(serverId, pushHistory(history, trimmed, HISTORY_CAP));
+    const history = this.histories.get(key) ?? EMPTY_HISTORY;
+    this.setHistory(key, pushHistory(history, trimmed, HISTORY_CAP));
   }
 
   // -- input tracking ------------------------------------------------------
@@ -300,7 +365,7 @@ export class CompletionController {
     let abort = false;
     for (const char of data) {
       if (char === '\r' || char === '\n') {
-        if (line.trim() !== '') this.record(terminal.serverId, line);
+        if (line.trim() !== '') this.record(historyKey(terminal), line);
         line = '';
         continue;
       }
@@ -330,12 +395,33 @@ export class CompletionController {
   }
 
   private handleOutput(terminal: TerminalHandle, data: Uint8Array): void {
+    // The first output of a terminal is as close to "the prompt is up" as we can detect,
+    // which is when the (opt-in) cwd hook can be installed.
+    if (!this.started.has(terminal.id)) {
+      this.started.add(terminal.id);
+      this.remote.injectShellIntegration(terminal);
+    }
     const state = this.stateFor(terminal.id);
     if (!state.visible) return;
     // Remote output that spans lines means the shell redrew: the popup position and our
     // tracked line are no longer trustworthy.
     if (data.includes(0x0a)) this.setState(terminal.id, { ...state, visible: false });
   }
+
+  /**
+   * Remote data landed (executables, a directory listing). Recompute the terminals that
+   * have something on their prompt; the tracked lines are untouched.
+   *
+   * A terminal the user is navigating with ↑/↓ is left alone: a recomputed list would
+   * reset the selection under their fingers.
+   */
+  private readonly onRemoteData = (): void => {
+    if (this.disposed) return;
+    for (const [id, state] of [...this.states]) {
+      const terminal = this.terminals.get(id);
+      if (terminal && state.line !== '' && state.selected === 0) this.refresh(terminal, state.line);
+    }
+  };
 
   /** Recompute suggestions for a (possibly unchanged) line. */
   private refresh(terminal: TerminalHandle, line: string): void {
@@ -344,10 +430,17 @@ export class CompletionController {
       this.setState(terminal.id, { ...HIDDEN, line });
       return;
     }
+    const token = analyzeToken(line);
+    // Both lookups are cache reads that may start a background fetch; neither waits.
+    const paths = this.remote.paths(terminal.connectionId, terminal.id, token);
     const suggestions = suggest({
       line,
-      history: this.historyFor(terminal.serverId),
+      history: this.historyFor(historyKey(terminal)),
+      remote: this.remote.executables(terminal.connectionId),
       dictionary: dictionary(),
+      paths: paths.entries,
+      token,
+      pathsRelativeToHome: paths.relativeToHome,
       locale: this.ctx.i18n.locale,
       maxItems: settings.maxItems,
       minChars: settings.minChars,

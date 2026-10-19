@@ -7,7 +7,7 @@ import { errorMessage } from '@/core/ipc/client';
 import { openSettingsPanel } from '@/core/services/layout';
 import { useServersStore } from '@/core/stores/servers';
 import { useUiStore } from '@/core/stores/ui';
-import { revealOrOpenTerminal } from '@/core/terminal/manager';
+import { openLocalTerminal, revealOrOpenTerminal } from '@/core/terminal/manager';
 
 export function TopBar() {
   const { t } = useI18n();
@@ -18,6 +18,12 @@ export function TopBar() {
 
   const connect = (serverId: string) => {
     void revealOrOpenTerminal(serverId).catch((error) => {
+      if (errorMessage(error)) toast(errorMessage(error), 'error');
+    });
+  };
+
+  const newLocalTerminal = () => {
+    void openLocalTerminal().catch((error) => {
       if (errorMessage(error)) toast(errorMessage(error), 'error');
     });
   };
@@ -51,6 +57,16 @@ export function TopBar() {
       >
         <ChevronRight size={14} />
         {t('topbar.quickConnect')}
+      </button>
+
+      <button
+        type="button"
+        className="ns-btn ns-btn--ghost"
+        onClick={newLocalTerminal}
+        title={t('topbar.newLocalTerminalTooltip')}
+      >
+        <SquareTerminal size={14} />
+        {t('topbar.newLocalTerminal')}
       </button>
 
       <div className="ns-topbar__spacer" />

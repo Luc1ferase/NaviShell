@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Server } from 'lucide-react';
-import type { ServerRecord } from '@navishell/plugin-api';
+import { FolderOpen, Server } from 'lucide-react';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
+import type { AuthMethod, AuthMethodType, ServerRecord } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
@@ -10,6 +11,8 @@ import {
   saveServer,
   setCredential,
 } from '@/core/services/servers';
+import { useServersStore } from '@/core/stores/servers';
+import { useSettingsStore } from '@/core/stores/settings';
 import { useUiStore, type ServerFormState } from '@/core/stores/ui';
 import { DialogShell } from './Dialogs';
 
@@ -24,6 +27,8 @@ const COLORS = [
   '#94a3b8',
 ];
 
+const AUTH_TYPES: AuthMethodType[] = ['password', 'key', 'agent'];
+
 interface FormValues {
   name: string;
   host: string;
@@ -31,12 +36,19 @@ interface FormValues {
   username: string;
   group: string;
   color: string;
+  authType: AuthMethodType;
+  keyPath: string;
   password: string;
   savePassword: boolean;
+  passphrase: string;
+  savePassphrase: boolean;
+  /** Empty string = direct connection. */
+  jumpServerId: string;
 }
 
 function initialValues(state: ServerFormState): FormValues {
   const source = state.server ?? state.draft;
+  const auth = source?.auth;
   return {
     name: source?.name ?? '',
     host: source?.host ?? '',
@@ -44,8 +56,13 @@ function initialValues(state: ServerFormState): FormValues {
     username: source?.username ?? '',
     group: source?.group ?? '',
     color: source?.color ?? '',
+    authType: auth?.type ?? 'password',
+    keyPath: auth?.type === 'key' ? auth.keyPath : '',
     password: '',
     savePassword: true,
+    passphrase: '',
+    savePassphrase: true,
+    jumpServerId: source?.jumpServerId ?? '',
   };
 }
 
@@ -53,8 +70,11 @@ function ServerForm({ state }: { state: ServerFormState }) {
   const { t } = useI18n();
   const close = useUiStore((store) => store.closeServerForm);
   const toast = useUiStore((store) => store.toast);
+  const servers = useServersStore((store) => store.servers);
+  const platform = useSettingsStore((store) => store.appInfo?.platform);
   const [values, setValues] = useState<FormValues>(() => initialValues(state));
   const [hasStoredPassword, setHasStoredPassword] = useState(false);
+  const [hasStoredPassphrase, setHasStoredPassphrase] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const editing: ServerRecord | undefined = state.server;
@@ -62,9 +82,14 @@ function ServerForm({ state }: { state: ServerFormState }) {
   useEffect(() => {
     if (!editing) return;
     let cancelled = false;
-    void credentialExists(editing.id)
+    void credentialExists(editing.id, 'password')
       .then((exists) => {
         if (!cancelled) setHasStoredPassword(exists);
+      })
+      .catch(() => undefined);
+    void credentialExists(editing.id, 'passphrase')
+      .then((exists) => {
+        if (!cancelled) setHasStoredPassphrase(exists);
       })
       .catch(() => undefined);
     return () => {
@@ -79,7 +104,19 @@ function ServerForm({ state }: { state: ServerFormState }) {
     values.name.trim().length > 0 &&
     values.host.trim().length > 0 &&
     values.username.trim().length > 0 &&
+    (values.authType !== 'key' || values.keyPath.trim().length > 0) &&
     !busy;
+
+  const buildAuth = (): AuthMethod => {
+    switch (values.authType) {
+      case 'key':
+        return { type: 'key', keyPath: values.keyPath.trim() };
+      case 'agent':
+        return { type: 'agent' };
+      default:
+        return { type: 'password' };
+    }
+  };
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -95,10 +132,14 @@ function ServerForm({ state }: { state: ServerFormState }) {
         group: values.group.trim() || undefined,
         color: values.color || undefined,
         tags: editing?.tags,
-        auth: { type: 'password' },
+        auth: buildAuth(),
+        jumpServerId: values.jumpServerId || null,
       });
-      if (values.password && values.savePassword) {
-        await setCredential(saved.id, values.password);
+      if (values.authType === 'password' && values.password && values.savePassword) {
+        await setCredential(saved.id, values.password, 'password');
+      }
+      if (values.authType === 'key' && values.passphrase && values.savePassphrase) {
+        await setCredential(saved.id, values.passphrase, 'passphrase');
       }
       toast(t('servers.saved', { name: saved.name }), 'success');
       close();
@@ -109,16 +150,38 @@ function ServerForm({ state }: { state: ServerFormState }) {
     }
   };
 
-  const clearStoredPassword = async () => {
+  const clearStored = async (kind: 'password' | 'passphrase') => {
     if (!editing) return;
     try {
-      await deleteCredential(editing.id);
-      setHasStoredPassword(false);
-      toast(t('servers.passwordCleared'), 'success');
+      await deleteCredential(editing.id, kind);
+      if (kind === 'password') setHasStoredPassword(false);
+      else setHasStoredPassphrase(false);
+      toast(
+        kind === 'password' ? t('servers.passwordCleared') : t('servers.passphraseCleared'),
+        'success',
+      );
     } catch (error) {
       toast(errorMessage(error), 'error');
     }
   };
+
+  const browseKey = async () => {
+    try {
+      // `open` types its result from the literal option values, which a runtime-built
+      // options object cannot express.
+      const selection = (await openFileDialog({
+        title: t('servers.form.pickKey'),
+        multiple: false,
+        directory: false,
+      })) as string | string[] | null;
+      const path = Array.isArray(selection) ? selection[0] : selection;
+      if (path) set('keyPath', path);
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
+  };
+
+  const jumpCandidates = servers.filter((candidate) => candidate.id !== editing?.id);
 
   return (
     <DialogShell
@@ -188,41 +251,147 @@ function ServerForm({ state }: { state: ServerFormState }) {
       </div>
 
       <label className="ns-field">
-        <span className="ns-field__label">{t('servers.form.password')}</span>
-        <input
-          className="ns-input"
-          type="password"
-          autoComplete="new-password"
-          placeholder={
-            hasStoredPassword ? t('servers.form.passwordStored') : t('servers.form.passwordEmpty')
-          }
-          value={values.password}
-          onChange={(event) => set('password', event.target.value)}
-        />
-        <span className="ns-field__hint">{t('servers.form.passwordHint')}</span>
+        <span className="ns-field__label">{t('servers.form.authMethod')}</span>
+        <select
+          className="ns-select"
+          value={values.authType}
+          onChange={(event) => set('authType', event.target.value as AuthMethodType)}
+        >
+          {AUTH_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {t(`servers.auth.${type}`)}
+            </option>
+          ))}
+        </select>
       </label>
 
-      <label className="ns-check">
-        <input
-          type="checkbox"
-          checked={values.savePassword}
-          onChange={(event) => set('savePassword', event.target.checked)}
-        />
-        {t('servers.form.saveToKeychain')}
-      </label>
+      {values.authType === 'password' ? (
+        <>
+          <label className="ns-field">
+            <span className="ns-field__label">{t('servers.form.password')}</span>
+            <input
+              className="ns-input"
+              type="password"
+              autoComplete="new-password"
+              placeholder={
+                hasStoredPassword
+                  ? t('servers.form.passwordStored')
+                  : t('servers.form.passwordEmpty')
+              }
+              value={values.password}
+              onChange={(event) => set('password', event.target.value)}
+            />
+            <span className="ns-field__hint">{t('servers.form.passwordHint')}</span>
+          </label>
 
-      {hasStoredPassword ? (
-        <div className="ns-about-row">
-          <span className="ns-badge ns-badge--accent">{t('servers.form.hasCredential')}</span>
-          <button
-            type="button"
-            className="ns-btn ns-btn--sm ns-btn--danger"
-            onClick={() => void clearStoredPassword()}
-          >
-            {t('servers.form.clearCredential')}
-          </button>
-        </div>
+          <label className="ns-check">
+            <input
+              type="checkbox"
+              checked={values.savePassword}
+              onChange={(event) => set('savePassword', event.target.checked)}
+            />
+            {t('servers.form.saveToKeychain')}
+          </label>
+
+          {hasStoredPassword ? (
+            <div className="ns-about-row">
+              <span className="ns-badge ns-badge--accent">{t('servers.form.hasCredential')}</span>
+              <button
+                type="button"
+                className="ns-btn ns-btn--sm ns-btn--danger"
+                onClick={() => void clearStored('password')}
+              >
+                {t('servers.form.clearCredential')}
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
+
+      {values.authType === 'key' ? (
+        <>
+          <div className="ns-field">
+            <span className="ns-field__label">{t('servers.form.keyPath')}</span>
+            <div className="ns-input-row">
+              <input
+                className="ns-input ns-input--mono"
+                placeholder={t('servers.form.keyPathPlaceholder')}
+                value={values.keyPath}
+                onChange={(event) => set('keyPath', event.target.value)}
+              />
+              <button type="button" className="ns-btn" onClick={() => void browseKey()}>
+                <FolderOpen size={14} />
+                {t('servers.form.browse')}
+              </button>
+            </div>
+            <span className="ns-field__hint">{t('servers.form.keyPathHint')}</span>
+          </div>
+
+          <label className="ns-field">
+            <span className="ns-field__label">{t('servers.form.passphrase')}</span>
+            <input
+              className="ns-input"
+              type="password"
+              autoComplete="new-password"
+              placeholder={
+                hasStoredPassphrase
+                  ? t('servers.form.passphraseStored')
+                  : t('servers.form.passphraseEmpty')
+              }
+              value={values.passphrase}
+              onChange={(event) => set('passphrase', event.target.value)}
+            />
+            <span className="ns-field__hint">{t('servers.form.passphraseHint')}</span>
+          </label>
+
+          <label className="ns-check">
+            <input
+              type="checkbox"
+              checked={values.savePassphrase}
+              onChange={(event) => set('savePassphrase', event.target.checked)}
+            />
+            {t('servers.form.savePassphraseToKeychain')}
+          </label>
+
+          {hasStoredPassphrase ? (
+            <div className="ns-about-row">
+              <span className="ns-badge ns-badge--accent">{t('servers.form.hasPassphrase')}</span>
+              <button
+                type="button"
+                className="ns-btn ns-btn--sm ns-btn--danger"
+                onClick={() => void clearStored('passphrase')}
+              >
+                {t('servers.form.clearPassphrase')}
+              </button>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {values.authType === 'agent' ? (
+        <p className="ns-dialog__message">
+          {platform === 'windows'
+            ? t('servers.form.agentHintWindows')
+            : t('servers.form.agentHintUnix')}
+        </p>
+      ) : null}
+
+      <label className="ns-field">
+        <span className="ns-field__label">{t('servers.form.jumpServer')}</span>
+        <select
+          className="ns-select"
+          value={values.jumpServerId}
+          onChange={(event) => set('jumpServerId', event.target.value)}
+        >
+          <option value="">{t('servers.form.jumpServerDirect')}</option>
+          {jumpCandidates.map((candidate) => (
+            <option key={candidate.id} value={candidate.id}>
+              {candidate.name} — {candidate.username}@{candidate.host}:{candidate.port}
+            </option>
+          ))}
+        </select>
+        <span className="ns-field__hint">{t('servers.form.jumpServerHint')}</span>
+      </label>
 
       <div className="ns-field">
         <span className="ns-field__label">{t('servers.form.color')}</span>

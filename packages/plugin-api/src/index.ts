@@ -29,7 +29,8 @@ export interface Disposable {
   dispose(): void;
 }
 
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export type Locale = 'en' | 'zh-CN';
 
@@ -81,7 +82,8 @@ export function definePlugin(plugin: NaviShellPlugin): NaviShellPlugin {
  * Keyboard-interactive (OTP / 2FA) is not a method of its own: the host falls back to it
  * automatically when the server requires it and asks the user through a prompt dialog.
  */
-export type AuthMethod = { type: 'password' } | { type: 'key'; keyPath: string } | { type: 'agent' };
+export type AuthMethod =
+  { type: 'password' } | { type: 'key'; keyPath: string } | { type: 'agent' };
 
 export type AuthMethodType = AuthMethod['type'];
 
@@ -324,7 +326,11 @@ export interface ConnectionsApi {
   get(id: string): ConnectionInfo | undefined;
   onDidChange(cb: (connections: ConnectionInfo[]) => void): Disposable;
   /** Run a one-shot command on a separate exec channel (does not touch any terminal). */
-  exec(connectionId: string, command: string, options?: { timeoutMs?: number }): Promise<ExecResult>;
+  exec(
+    connectionId: string,
+    command: string,
+    options?: { timeoutMs?: number },
+  ): Promise<ExecResult>;
   /** Lazily opens an SFTP session on the connection and returns a client bound to it. */
   sftp(connectionId: string): SftpClient;
   disconnect(connectionId: string): Promise<void>;
@@ -395,7 +401,9 @@ export interface TerminalsApi {
    * Intercept keyboard events on every terminal before xterm handles them.
    * Return `false` to swallow the event (xterm will not see it).
    */
-  registerKeyHandler(handler: (terminal: TerminalHandle, event: KeyboardEvent) => boolean): Disposable;
+  registerKeyHandler(
+    handler: (terminal: TerminalHandle, event: KeyboardEvent) => boolean,
+  ): Disposable;
 }
 
 // ---------------------------------------------------------------------------

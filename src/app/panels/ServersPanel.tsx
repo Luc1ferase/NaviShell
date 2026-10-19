@@ -159,47 +159,58 @@ export function ServersPanel() {
           groups.map(([group, entries]) => (
             <div key={group || '__ungrouped__'}>
               <div className="ns-panel__section-title">{group || t('servers.ungrouped')}</div>
-              {entries.map((server) => (
-                <div
-                  key={server.id}
-                  className="ns-server-row"
-                  role="option"
-                  tabIndex={0}
-                  aria-selected={selected === server.id}
-                  onClick={() => setSelected(server.id)}
-                  onDoubleClick={() => connect(server.id)}
-                  onContextMenu={(event) => openMenu(event, server)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      connect(server.id);
-                    }
-                  }}
-                >
-                  <span
-                    className="ns-server-row__dot"
-                    style={{ color: server.color ?? 'var(--ns-fg-subtle)' }}
-                  />
-                  <span className="ns-server-row__text">
-                    <span className="ns-server-row__name">{server.name}</span>
-                    <span className="ns-server-row__addr">
-                      {server.username}@{server.host}:{server.port}
-                    </span>
-                  </span>
-                  <span className="ns-server-row__actions">
-                    <button
-                      type="button"
-                      className="ns-btn ns-btn--sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
+              {entries.map((server) => {
+                const jump = server.jumpServerId
+                  ? servers.find((candidate) => candidate.id === server.jumpServerId)
+                  : undefined;
+                return (
+                  <div
+                    key={server.id}
+                    className="ns-server-row"
+                    role="option"
+                    tabIndex={0}
+                    aria-selected={selected === server.id}
+                    onClick={() => setSelected(server.id)}
+                    onDoubleClick={() => connect(server.id)}
+                    onContextMenu={(event) => openMenu(event, server)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
                         connect(server.id);
-                      }}
-                    >
-                      {t('servers.connect')}
-                    </button>
-                  </span>
-                </div>
-              ))}
+                      }
+                    }}
+                  >
+                    <span
+                      className="ns-server-row__dot"
+                      style={{ color: server.color ?? 'var(--ns-fg-subtle)' }}
+                    />
+                    <span className="ns-server-row__text">
+                      <span className="ns-server-row__name">
+                        <span className="ns-server-row__name-text">{server.name}</span>
+                        <span className="ns-badge ns-badge--xs">
+                          {t(`servers.auth.${server.auth.type}`)}
+                        </span>
+                      </span>
+                      <span className="ns-server-row__addr">
+                        {server.username}@{server.host}:{server.port}
+                        {jump ? ` · ${t('servers.via', { name: jump.name })}` : ''}
+                      </span>
+                    </span>
+                    <span className="ns-server-row__actions">
+                      <button
+                        type="button"
+                        className="ns-btn ns-btn--sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          connect(server.id);
+                        }}
+                      >
+                        {t('servers.connect')}
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           ))
         )}

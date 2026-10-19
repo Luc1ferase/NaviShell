@@ -8,7 +8,7 @@ import { reloadPlugins } from '@/core/plugins/loader';
 import { connectToServer, disconnectConnection } from '@/core/services/connect';
 import { closePanel, openPanel, openSettingsPanel, togglePanel } from '@/core/services/layout';
 import { useUiStore } from '@/core/stores/ui';
-import { openTerminalForServer } from '@/core/terminal/manager';
+import { openLocalTerminal, openTerminalForServer } from '@/core/terminal/manager';
 
 function firstString(args: unknown[]): string | undefined {
   const value = args[0];
@@ -41,6 +41,10 @@ export function registerHostCommands(): void {
     const serverId = firstString(args);
     if (!serverId) throw new Error('host:openTerminal requires a serverId');
     return openTerminalForServer(serverId);
+  });
+  register('host:newLocalTerminal', 'command.newLocalTerminal', 'SquareTerminal', (...args) => {
+    const cwd = firstString(args);
+    return openLocalTerminal(cwd ? { cwd } : {});
   });
   register('host:disconnect', 'command.disconnect', 'Power', (...args) => {
     const connectionId = firstString(args);

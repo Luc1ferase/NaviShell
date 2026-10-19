@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   type AppInfo,
   type AppSettings,
+  type LocalShellSettings,
   type TerminalSettings,
 } from '../ipc/contract';
 import { call } from '../ipc/client';
@@ -16,10 +17,15 @@ export const onDidChangeSettings = settingsChanged.event;
 /** Fill in anything a stored settings file is missing (forward/backward compatibility). */
 export function mergeSettings(raw: Partial<AppSettings> | null | undefined): AppSettings {
   const terminal: TerminalSettings = { ...DEFAULT_SETTINGS.terminal, ...(raw?.terminal ?? {}) };
+  const localShell: LocalShellSettings = {
+    program: raw?.localShell?.program ?? DEFAULT_SETTINGS.localShell.program,
+    args: raw?.localShell?.args ?? [...DEFAULT_SETTINGS.localShell.args],
+  };
   return {
     locale: raw?.locale ?? DEFAULT_SETTINGS.locale,
     theme: raw?.theme ?? DEFAULT_SETTINGS.theme,
     terminal,
+    localShell,
     plugins: {
       disabled: raw?.plugins?.disabled ?? [],
       seenPanels: raw?.plugins?.seenPanels ?? [],
@@ -44,6 +50,7 @@ export interface SettingsStore {
   /** Apply a change and persist it. */
   update(mutate: (prev: AppSettings) => AppSettings): void;
   updateTerminal(partial: Partial<TerminalSettings>): void;
+  updateLocalShell(partial: Partial<LocalShellSettings>): void;
   markPanelSeen(panelId: string): void;
 }
 
@@ -65,6 +72,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
   updateTerminal(partial) {
     get().update((prev) => ({ ...prev, terminal: { ...prev.terminal, ...partial } }));
+  },
+  updateLocalShell(partial) {
+    get().update((prev) => ({ ...prev, localShell: { ...prev.localShell, ...partial } }));
   },
   markPanelSeen(panelId) {
     const { settings } = get();

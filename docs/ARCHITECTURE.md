@@ -8,17 +8,21 @@ Decisions below were confirmed with the project owner on 2026-10-18 and are not 
 re-discussion inside a task. If something is genuinely unspecified, pick the simplest
 option that keeps the contracts intact and note it in your report.
 
-## 1. Scope of v1
+## 1. Scope
 
-| Area                | In v1                                                                  | Deferred (GitHub issues) |
+v1 shipped password login only. Everything marked *(post-v1)* was added afterwards on
+`feat/auth-methods-local-terminal` (issues #1, #2, #3, #4, #6, #8) and goes out with the
+next release; only #5 and #7 are still open.
+
+| Area                | Shipped                                                                | Deferred (GitHub issues) |
 | ------------------- | ---------------------------------------------------------------------- | ------------------------ |
-| Login               | username + password                                                    | private key, ssh-agent, ProxyJump, keyboard-interactive |
-| Core features       | server records, connect, terminal, one-shot exec, SFTP primitives      | local shell              |
-| Built-in plugins    | SFTP file manager, command completion (history + dictionary)           | remote-aware completion  |
-| Plugin sources      | built-in + `<appData>/plugins/<id>/`                                   | install from URL         |
-| Credentials         | OS keychain (`keyring` crate, service `dev.navishell`, account = serverId) | –                    |
+| Login               | username + password; private key with passphrase, ssh-agent, keyboard-interactive fallback and ProxyJump *(post-v1)* | – |
+| Core features       | server records, connect, terminal, one-shot exec, SFTP primitives; local shell terminals *(post-v1)* | – |
+| Built-in plugins    | SFTP file manager, command completion (history + dictionary; remote `PATH`, directory listings and cwd tracking *(post-v1)*) | – |
+| Plugin sources      | built-in + `<appData>/plugins/<id>/`                                   | install from URL (#7)    |
+| Credentials         | OS keychain (`keyring` crate, service `dev.navishell`, account `<serverId>`, or `<serverId>:passphrase` for a key passphrase) | – |
 | UI language         | zh-CN + en (i18next), default follows system                           | –                        |
-| Release             | GitHub Release via tauri-action; Win x64, macOS x64+arm64, Linux x64+arm64 | auto-updater         |
+| Release             | GitHub Release via tauri-action; Win x64, macOS x64+arm64, Linux x64+arm64 | auto-updater (#5)    |
 
 Nothing is compiled locally beyond `cargo check`/`clippy`, `tsc` and `vite build`.
 Packaging only happens in GitHub Actions.
@@ -61,6 +65,7 @@ NaviShell/
 │     ├─ servers.rs           servers_* commands (servers.json)
 │     ├─ secrets.rs           credential_* (keyring)
 │     ├─ known_hosts.rs       known_hosts.json (TOFU store)
+│     ├─ local_pty.rs         term_open_local (local shells through portable-pty)
 │     ├─ ssh/{mod,connection,terminal,exec,sftp}.rs
 │     └─ plugins.rs           plugins_list_external, plugins_read_file, plugin_storage_*
 └─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release)
@@ -82,11 +87,38 @@ Changing a contract means updating both sides; prefer additive changes.
 
 - One `Connection` per `ssh_connect` call: a `russh::client::Handle` plus metadata.
   Multiple terminals and one lazily-opened SFTP session share a connection.
+- **Authentication** follows the server record's `auth` method and is decided entirely in
+  `ssh/connection.rs`: `password` (arg, else keychain, else reject `PasswordRequired`),
+  `key` (OpenSSH key file; passphrase from the arg, else keychain account
+  `<serverId>:passphrase`, else reject `PassphraseRequired`), `agent` (Windows OpenSSH
+  named pipe, `SSH_AUTH_SOCK` elsewhere; `AgentUnavailable` when no agent answers).
+- **Keyboard-interactive** is a fallback, never a method of its own: when the chosen method
+  is rejected or not offered and the server offers it, the core emits `auth:prompt`
+  (`requestId`, prompts with their echo flags) and parks on a oneshot channel in `AppState`
+  until `ssh_auth_respond` arrives with the same `requestId` (max 180 s; `responses: null`
+  cancels). A single hidden prompt that mentions "password" is answered automatically with
+  the password already at hand, once, before the user is asked.
+- **ProxyJump**: the caller connects to the jump host first and passes its `connectionId`
+  as `viaConnectionId`. The target session is carried over a direct-tcpip channel of that
+  connection, and `ConnectionInfo.viaConnectionId` records the link so closing the jump
+  connection also closes everything tunnelled through it.
 - `term_open` opens a session channel, requests a PTY (`term`, cols, rows) and a shell,
   then spawns a tokio task that `select!`s between `channel.wait()` (remote -> JS via
   `Channel<tauri::ipc::Response>` raw bytes) and an mpsc receiver of outgoing commands
   (`Write(Vec<u8>)`, `Resize(cols, rows)`, `Close`). On `Eof`/`Close`/`ExitStatus` the task
   emits `terminal:exit` once and removes the terminal.
+- `term_open_local` (`local_pty.rs`) is the same contract without a connection: a
+  `portable-pty` pty, a shell spawned into it, and three OS threads for its lifetime - one
+  draining the master into the same `Channel<Response>`, one receiving the same `TermCmd`s
+  (`Resize` calls `master.resize`, `Close` kills the child), and one parked on
+  `child.wait()`, which is the single place that emits `terminal:exit`. Because
+  `TerminalEntry.connection_id` is `Option<String>` (`None` for local shells),
+  `term_write` / `term_resize` / `term_close` work unchanged and `take_terminals_of` never
+  touches a local terminal when a connection dies. Program resolution: the `program`
+  argument (the host passes `settings.localShell`), else `pwsh.exe` when it is on `PATH`
+  and `powershell.exe` otherwise on Windows, else `$SHELL`, `/bin/bash`, `/bin/sh` on unix.
+  `cwd` falls back to the home directory; the environment is inherited plus `TERM` and
+  `COLORTERM=truecolor`.
 - `ssh_exec` opens a fresh channel, `exec(true, cmd)`, collects stdout/stderr until close,
   with a timeout (default 30 s).
 - SFTP: `request_subsystem(true, "sftp")`, `SftpSession::new(channel.into_stream())`, cached
@@ -124,10 +156,22 @@ Changing a contract means updating both sides; prefer additive changes.
   panels whose session no longer exists render a "session ended / reconnect" placeholder.
   If `fromJSON` throws, fall back to the default layout.
 - **Connect flow** (`servers.connect`): if a connection for the server exists, reuse it.
-  Otherwise `ssh_connect({ serverId })`; on `PasswordRequired` show the password dialog
-  (with "save to keychain" checkbox) and retry with `password`/`savePassword`; on
+  When the record has a `jumpServerId`, connect that server first (recursively) and pass
+  its id as `viaConnectionId`. Then `ssh_connect({ serverId })`; on `PasswordRequired` show
+  the password dialog (with "save to keychain" checkbox) and retry with
+  `password`/`savePassword`; on `PassphraseRequired` the same with the key passphrase and
+  `savePassphrase`; `AgentUnavailable` and `AuthFailed` surface as errors; on
   `HostKeyMismatch` show the fingerprint dialog and retry with `trustHostKey: true` if the
   user accepts; `hostKeyStatus: 'new'` shows an info toast with the fingerprint.
+- **Keyboard-interactive prompts**: a global `auth:prompt` listener opens a dialog with one
+  field per prompt (hidden when `echo` is false) and answers with
+  `ssh_auth_respond({ requestId, responses })`, or `responses: null` when the user cancels.
+  The dialog is not tied to the connect call, so it works for a retry in the middle of a
+  multi-step authentication.
+- **Local terminals**: `terminals.openLocal()` / the "new local terminal" action calls
+  `term_open_local` with `settings.localShell.program` and `args`; the terminal tab is the
+  same component with `kind: 'local'` and no `serverId`/`connectionId`, and it reports its
+  end through the same `terminal:exit` event.
 - **Terminal**: xterm 6 (`@xterm/xterm`), fit addon, web-links, unicode11, WebGL addon when
   enabled (fallback to DOM renderer on failure; the canvas renderer no longer exists).
   `onData` -> `term_write`; `Channel<ArrayBuffer>` -> `xterm.write(new Uint8Array(buf))`;
@@ -138,19 +182,32 @@ Changing a contract means updating both sides; prefer additive changes.
 
 ### Plugins
 
-- `navishell.sftp`: right-docked panel bound to the active terminal's connection. Path bar,
+- `navishell.sftp`: right-docked panel bound to the active terminal's connection (a local
+  terminal has none, so it is ignored and the panel keeps whatever the dropdown selected).
+  Path bar,
   entry list (name/size/mtime/perms), navigation, new folder, rename, delete (confirm),
   upload (file picker), download (save dialog), drag-and-drop upload (when the WebView
   provides file paths), transfer list with progress and cancel. Quick text edit for small
   files is optional.
 - `navishell.completion`: terminal overlay. Tracks the current input line per terminal from
   `onInput` (handles printable chars, backspace, Ctrl-U/Ctrl-C, Enter; resets on cursor
-  keys/Tab), records executed commands into per-server history (`storage`), seeds history
-  from `~/.bash_history` / `~/.zsh_history` via `connections.exec` on first open, merges
-  with a built-in dictionary of common commands (+ subcommands for git/docker/systemctl…),
-  shows a popup under the cursor after ≥2 chars, navigates with ↑/↓, accepts with Tab/→
-  by sending Ctrl-U + full command, dismisses on Esc. Must never swallow keys when the
-  popup is hidden.
+  keys/Tab), records executed commands into history keyed by server id (or `local` for
+  local shells) in `storage`, seeds history from `~/.bash_history` / `~/.zsh_history` via
+  `connections.exec` on first open, shows a popup under the cursor after ≥2 chars,
+  navigates with ↑/↓, accepts with Tab/→ by sending Ctrl-U + full command, dismisses on
+  Esc. Must never swallow keys when the popup is hidden.
+  Four candidate sources, each badged in the popup and ranked in this order: `path` (entries
+  of the remote directory the current token points at), `history`, `remote` (executables on
+  the remote `PATH` from `compgen -c`, fetched once per connection and dropped when the
+  connection closes) and `dict` (the built-in command dictionary). The engine stays pure and
+  synchronous: every remote lookup is a cache read that may *start* a background `exec`, and
+  a cold cache simply means fewer candidates.
+  Path completion needs the shell's cwd, which the plugin learns from OSC 7 (and OSC 133/633
+  `P;Cwd=`) through `terminal.xterm.parser.registerOscHandler`. Until a shell reports one,
+  relative tokens are resolved against `$HOME` and the popup badge says so (`path ~`). The
+  opt-in `toggleShellIntegration` command (stored in plugin storage, default off) writes a
+  one-line `PROMPT_COMMAND`/`precmd` hook into each new SSH shell, 500 ms after its first
+  output, so bash and zsh emit OSC 7 after every prompt.
 
 ## 5. Conventions
 

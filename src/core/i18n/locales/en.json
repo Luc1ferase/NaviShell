@@ -17,13 +17,18 @@
   "topbar": {
     "quickConnect": "Connect",
     "newServer": "New server",
+    "newLocalTerminal": "Local terminal",
+    "newLocalTerminalTooltip": "New local terminal (Ctrl+Shift+`)",
     "settings": "Settings",
     "noServers": "No servers yet"
   },
   "status": {
     "notConnected": "Not connected",
+    "localShell": "Local shell",
     "terminals": "{{n}} terminals",
     "plugins": "{{n}} plugins",
+    "authMethodTooltip": "Authenticated with {{method}}",
+    "viaUnknown": "a closed jump host",
     "localeTooltip": "Interface language",
     "themeTooltip": "Colour theme"
   },
@@ -50,7 +55,16 @@
     "webgl": "WebGL renderer",
     "webglHint": "Falls back to DOM rendering when unavailable",
     "webglToggle": "Prefer WebGL",
-    "termType": "Terminal type"
+    "termType": "Terminal type",
+    "localShell": {
+      "title": "Local shell",
+      "program": "Program",
+      "programHint": "Empty = PowerShell on Windows, $SHELL elsewhere",
+      "programPlaceholder": "auto",
+      "args": "Arguments",
+      "argsHint": "One per line",
+      "argsPlaceholder": "-NoLogo"
+    }
   },
   "plugins": {
     "enabled": "Enabled",
@@ -84,6 +98,9 @@
     "deleted": "Deleted {{name}}",
     "duplicateName": "{{name}} (copy)",
     "passwordCleared": "Stored password removed",
+    "passphraseCleared": "Stored passphrase removed",
+    "via": "via {{name}}",
+    "auth": { "password": "password", "key": "key", "agent": "agent" },
     "delete": {
       "title": "Delete server",
       "message": "Delete {{name}} and its stored password?"
@@ -103,6 +120,7 @@
       "port": "Port",
       "username": "Username",
       "group": "Group",
+      "authMethod": "Authentication",
       "password": "Password",
       "passwordStored": "A password is stored in the keychain",
       "passwordEmpty": "Asked for on connect",
@@ -110,6 +128,23 @@
       "saveToKeychain": "Save to keychain",
       "hasCredential": "Password stored",
       "clearCredential": "Clear stored password",
+      "keyPath": "Private key",
+      "keyPathPlaceholder": "~/.ssh/id_ed25519",
+      "keyPathHint": "OpenSSH private key file on this machine.",
+      "browse": "Browse",
+      "pickKey": "Select a private key",
+      "passphrase": "Passphrase",
+      "passphraseStored": "A passphrase is stored in the keychain",
+      "passphraseEmpty": "Asked for when the key is encrypted",
+      "passphraseHint": "Only needed for an encrypted key.",
+      "savePassphraseToKeychain": "Save passphrase to keychain",
+      "hasPassphrase": "Passphrase stored",
+      "clearPassphrase": "Clear stored passphrase",
+      "agentHintWindows": "Uses the running ssh-agent. On Windows, start the \"OpenSSH Authentication Agent\" service and add your key with ssh-add.",
+      "agentHintUnix": "Uses the ssh-agent reachable through SSH_AUTH_SOCK. Add your key with ssh-add.",
+      "jumpServer": "Jump host",
+      "jumpServerDirect": "Direct connection",
+      "jumpServerHint": "Connect through this saved server first (ProxyJump).",
       "color": "Colour",
       "noColor": "No colour"
     }
@@ -118,6 +153,9 @@
     "title": "NaviShell",
     "subtitle": "A pluggable SSH terminal with a dockable workspace.",
     "quickConnect": "Quick connect",
+    "localShell": "Local shell",
+    "newLocalTerminal": "New local terminal",
+    "newLocalTerminalHint": "Runs a shell on this machine ·",
     "hints": "Tips",
     "addFirstServer": "Add your first server",
     "addFirstServerHint": "Host, user and password are all it takes",
@@ -131,9 +169,11 @@
     }
   },
   "terminal": {
+    "localTitle": "Local shell",
     "sessionEnded": "Session ended",
     "connectionLost": "Connection closed",
     "reconnect": "Reconnect",
+    "reopen": "New local shell",
     "exitCode": "Exit code {{code}}",
     "exitNotice": "[session ended, exit code {{code}}]",
     "connectionLostNotice": "[connection closed]"
@@ -144,6 +184,17 @@
       "connect": "Connect",
       "placeholder": "SSH password",
       "save": "Save to keychain"
+    },
+    "passphrase": {
+      "title": "Key passphrase for {{name}}",
+      "placeholder": "Private key passphrase",
+      "save": "Save passphrase to keychain"
+    },
+    "authPrompt": {
+      "title": "Further verification for {{name}}",
+      "titleUnknown": "Further verification required",
+      "answer": "Answer",
+      "submit": "Send"
     },
     "hostKey": {
       "title": "Host key changed",
@@ -157,6 +208,9 @@
   "connect": {
     "hostKeyNew": "Trusted new host key for {{host}} ({{fingerprint}})",
     "authFailed": "Authentication failed for {{name}}",
+    "agentUnavailableWindows": "No ssh-agent reachable. Start the \"OpenSSH Authentication Agent\" service and add your key with ssh-add.",
+    "agentUnavailableUnix": "No ssh-agent reachable. Check that SSH_AUTH_SOCK is set and add your key with ssh-add.",
+    "jumpCycle": "The jump hosts of {{name}} form a loop.",
     "cancelled": "Connection cancelled"
   },
   "command": {
@@ -165,6 +219,7 @@
     "reloadPlugins": "Reload plugins",
     "connect": "Connect to server",
     "openTerminal": "Open terminal",
+    "newLocalTerminal": "New local terminal",
     "disconnect": "Disconnect",
     "openPanel": "Open panel",
     "closePanel": "Close panel",

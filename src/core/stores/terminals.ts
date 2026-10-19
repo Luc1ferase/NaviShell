@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { TerminalKind } from '@navishell/plugin-api';
 
 import type { TerminalSession } from '../terminal/session';
 
@@ -10,9 +11,14 @@ export interface TerminalExitInfo {
 
 export interface TerminalRecord {
   id: string;
-  serverId: string;
+  /** `ssh` terminals belong to a connection; `local` ones run a shell on this machine. */
+  kind: TerminalKind;
+  /** `null` for local terminals. */
+  serverId: string | null;
+  /** Server name for SSH terminals, the local shell label otherwise. */
   serverName: string;
-  connectionId: string;
+  /** `null` for local terminals. */
+  connectionId: string | null;
   session: TerminalSession;
   /** `null` while the shell is alive. */
   exited: TerminalExitInfo | null;
@@ -71,6 +77,7 @@ export function getTerminalRecord(id: string): TerminalRecord | undefined {
   return useTerminalsStore.getState().records[id];
 }
 
+/** Local terminals have no connection, so they never match here. */
 export function terminalsForConnection(connectionId: string): TerminalRecord[] {
   return listTerminalRecords().filter((record) => record.connectionId === connectionId);
 }

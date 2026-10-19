@@ -1,6 +1,7 @@
 import type { ServerInput, ServerRecord } from '@navishell/plugin-api';
 
 import { call } from '../ipc/client';
+import type { CredentialKind } from '../ipc/contract';
 import { useServersStore } from '../stores/servers';
 
 export async function loadServers(): Promise<ServerRecord[]> {
@@ -20,16 +21,27 @@ export async function deleteServer(serverId: string): Promise<void> {
   useServersStore.getState().remove(serverId);
 }
 
-export function credentialExists(serverId: string): Promise<boolean> {
-  return call('credential_exists', { serverId });
+/** `kind` selects the keychain entry: the account password or the key passphrase. */
+export function credentialExists(
+  serverId: string,
+  kind: CredentialKind = 'password',
+): Promise<boolean> {
+  return call('credential_exists', { serverId, kind });
 }
 
-export function setCredential(serverId: string, password: string): Promise<void> {
-  return call('credential_set', { serverId, password });
+export function setCredential(
+  serverId: string,
+  password: string,
+  kind: CredentialKind = 'password',
+): Promise<void> {
+  return call('credential_set', { serverId, password, kind });
 }
 
-export function deleteCredential(serverId: string): Promise<void> {
-  return call('credential_delete', { serverId });
+export function deleteCredential(
+  serverId: string,
+  kind: CredentialKind = 'password',
+): Promise<void> {
+  return call('credential_delete', { serverId, kind });
 }
 
 /** Build the `servers_save` payload for a duplicate of an existing record. */
@@ -43,5 +55,6 @@ export function duplicateInput(server: ServerRecord, name: string): ServerInput 
     tags: server.tags,
     color: server.color,
     auth: server.auth,
+    jumpServerId: server.jumpServerId ?? null,
   };
 }
