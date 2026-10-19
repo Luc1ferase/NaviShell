@@ -6,7 +6,7 @@
 
 **プラグインで拡張できる SSH ターミナル** · Tauri 2 + React 19 + TypeScript
 
-[简体中文](README.md) | [English](README.en.md) | 日本語
+[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | 日本語
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 

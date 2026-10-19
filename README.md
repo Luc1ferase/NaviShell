@@ -6,7 +6,7 @@
 
 **一个可插拔的 SSH 终端** · Tauri 2 + React 19 + TypeScript
 
-简体中文 | [English](README.en.md) | [日本語](README.ja.md)
+简体中文 | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [日本語](README.ja.md)
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
