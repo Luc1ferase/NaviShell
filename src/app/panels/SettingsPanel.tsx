@@ -12,7 +12,7 @@ import { useUiStore } from '@/core/stores/ui';
 import { Icon } from '@/app/components/Icon';
 
 /** Project repository shown in the About section. */
-const REPO_URL = 'https://github.com/navishell/navishell';
+const REPO_URL = 'https://github.com/Luc1ferase/NaviShell';
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
