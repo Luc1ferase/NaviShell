@@ -441,3 +441,16 @@ pub async fn ssh_list_connections(
 ) -> AppResult<Vec<ConnectionInfo>> {
     Ok(state.connection_infos().await)
 }
+
+/// Answers (or cancels, with `responses: None`) a pending keyboard-interactive prompt
+/// emitted as the `auth:prompt` event. Unknown or expired `request_id` => `NotFound`.
+#[tauri::command]
+pub async fn ssh_auth_respond(
+    _state: tauri::State<'_, AppState>,
+    request_id: String,
+    _responses: Option<Vec<String>>,
+) -> AppResult<()> {
+    Err(AppError::not_found(format!(
+        "no pending auth prompt {request_id} (keyboard-interactive is not implemented yet)"
+    )))
+}

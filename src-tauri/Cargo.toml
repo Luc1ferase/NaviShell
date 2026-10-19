@@ -27,6 +27,7 @@ tokio-util = { version = "0.7", features = ["io"] }
 # pregenerated assembly, so building needs no NASM/C toolchain on Windows.
 russh = { version = "0.64", default-features = false, features = ["ring", "flate2", "rsa"] }
 russh-sftp = "3"
+portable-pty = "0.9"
 keyring = { version = "4", features = ["v1"] }
 thiserror = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
