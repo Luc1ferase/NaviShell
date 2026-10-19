@@ -15,6 +15,8 @@ import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { resolveLocalized, type Locale } from '@navishell/plugin-api';
 
+import type { ITheme } from '@xterm/xterm';
+
 import { useI18n } from '@/core/i18n/useI18n';
 import { call, errorMessage } from '@/core/ipc/client';
 import { DEFAULT_PLUGIN_REGISTRY_URL, type PluginRegistryEntry } from '@/core/ipc/contract';
@@ -28,6 +30,7 @@ import {
   useMarketplaceStore,
 } from '@/core/stores/marketplace';
 import { useSettingsStore } from '@/core/stores/settings';
+import { ansiColors, resolveScheme, schemesOfKind, type SchemeKind } from '@/core/terminal/schemes';
 import { usePluginsStore, type PluginEntry } from '@/core/stores/plugins';
 import { useUiStore } from '@/core/stores/ui';
 import { useUpdaterStore } from '@/core/stores/updater';
@@ -36,6 +39,67 @@ import { Icon, resolveIcon } from '@/app/components/Icon';
 
 /** Project repository shown in the About section. */
 const REPO_URL = 'https://github.com/Luc1ferase/NaviShell';
+
+/** A swatch of one terminal palette: prompt-like text on its background plus the 16 ANSI colors. */
+function SchemePreview({ theme }: { theme: ITheme }) {
+  return (
+    <div
+      className="ns-scheme-preview"
+      style={{ background: theme.background, color: theme.foreground }}
+      aria-hidden="true"
+    >
+      <span>
+        <span style={{ color: theme.green }}>user@host</span>:
+        <span style={{ color: theme.blue }}>~/src</span>$ git status
+      </span>
+      <span className="ns-scheme-preview__dots">
+        {ansiColors(theme).map((color, index) => (
+          <span key={index} className="ns-scheme-preview__dot" style={{ background: color }} />
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/** Select one of the built-in terminal color schemes for one UI theme slot. */
+function SchemeSelect({
+  value,
+  slot,
+  onChange,
+}: {
+  value: string;
+  slot: SchemeKind;
+  onChange: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const scheme = resolveScheme(value, slot);
+  return (
+    <div className="ns-scheme-field">
+      <select
+        className="ns-select"
+        value={scheme.id}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {(['dark', 'light'] as const).map((kind) => (
+          <optgroup key={kind} label={t(`settings.schemeGroup.${kind}`)}>
+            {schemesOfKind(kind).map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <SchemePreview theme={scheme.theme} />
+    </div>
+  );
+}
+
+const CONTRAST_PRESETS: { value: number; key: string }[] = [
+  { value: 1, key: 'settings.minContrast.off' },
+  { value: 4.5, key: 'settings.minContrast.aa' },
+  { value: 7, key: 'settings.minContrast.aaa' },
+];
 
 function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -790,6 +854,46 @@ export function SettingsPanel() {
 
           <section className="ns-settings__section">
             <h3>{t('settings.terminal')}</h3>
+            <Row label={t('settings.colorSchemeDark')} hint={t('settings.colorSchemeHint')}>
+              <SchemeSelect
+                value={settings.terminal.colorScheme.dark}
+                slot="dark"
+                onChange={(id) =>
+                  updateTerminal({ colorScheme: { ...settings.terminal.colorScheme, dark: id } })
+                }
+              />
+            </Row>
+            <Row label={t('settings.colorSchemeLight')}>
+              <SchemeSelect
+                value={settings.terminal.colorScheme.light}
+                slot="light"
+                onChange={(id) =>
+                  updateTerminal({ colorScheme: { ...settings.terminal.colorScheme, light: id } })
+                }
+              />
+            </Row>
+            <Row label={t('settings.minContrast')} hint={t('settings.minContrastHint')}>
+              <select
+                className="ns-select ns-settings__control--narrow"
+                value={String(settings.terminal.minimumContrastRatio)}
+                onChange={(event) =>
+                  updateTerminal({ minimumContrastRatio: Number(event.target.value) || 1 })
+                }
+              >
+                {CONTRAST_PRESETS.map((preset) => (
+                  <option key={preset.value} value={String(preset.value)}>
+                    {t(preset.key)}
+                  </option>
+                ))}
+                {CONTRAST_PRESETS.every(
+                  (preset) => preset.value !== settings.terminal.minimumContrastRatio,
+                ) ? (
+                  <option value={String(settings.terminal.minimumContrastRatio)}>
+                    {settings.terminal.minimumContrastRatio} : 1
+                  </option>
+                ) : null}
+              </select>
+            </Row>
             <Row label={t('settings.fontFamily')}>
               <input
                 className="ns-input ns-input--mono"

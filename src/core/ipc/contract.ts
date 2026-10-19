@@ -45,6 +45,16 @@ export interface TerminalSettings {
   webgl: boolean;
   /** Value sent as TERM, e.g. "xterm-256color". */
   termType: string;
+  /**
+   * Built-in color scheme id (see `src/core/terminal/schemes.ts`) used while the UI theme
+   * resolves to dark / light. Either slot may hold a scheme of either kind.
+   */
+  colorScheme: { dark: string; light: string };
+  /**
+   * xterm `minimumContrastRatio`: text colors are nudged away from the background until
+   * they reach this ratio. 1 disables it; 4.5 is WCAG AA (VS Code's default); 7 is AAA.
+   */
+  minimumContrastRatio: number;
 }
 
 export interface LocalShellSettings {
@@ -90,6 +100,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     scrollback: 5000,
     webgl: true,
     termType: 'xterm-256color',
+    colorScheme: { dark: 'navishell-dark', light: 'navishell-light' },
+    minimumContrastRatio: 4.5,
   },
   localShell: { program: null, args: [] },
   updates: { checkOnStartup: true },

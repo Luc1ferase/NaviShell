@@ -37,6 +37,7 @@
   --ns-success-soft: rgba(74, 201, 138, 0.16);
   --ns-info: #58a6ff;
   --ns-info-soft: rgba(88, 166, 255, 0.16);
+  --ns-purple: #bc8cff;
 
   --ns-radius-sm: 3px;
   --ns-radius: 5px;
@@ -60,28 +61,34 @@
   --ns-statusbar-height: 24px;
 }
 
+/*
+ * Light: the content area stays white while every chrome surface (top bar, tab strips,
+ * status bar, cards) sits on a visibly grey layer and borders are strong enough to read
+ * panel boundaries - the hierarchy VS Code Light and GitHub's Primer light use. Text
+ * colors keep at least 4.5:1 against white, including the accent and "subtle" text.
+ */
 [data-theme='light'] {
   color-scheme: light;
 
   --ns-bg: #ffffff;
-  --ns-bg-elevated: #f3f5f7;
-  --ns-bg-inset: #eceff2;
-  --ns-bg-hover: rgba(13, 17, 23, 0.055);
-  --ns-bg-active: rgba(13, 17, 23, 0.09);
-  --ns-bg-selected: rgba(13, 148, 136, 0.12);
+  --ns-bg-elevated: #f0f2f5;
+  --ns-bg-inset: #f6f8fa;
+  --ns-bg-hover: rgba(31, 35, 40, 0.07);
+  --ns-bg-active: rgba(31, 35, 40, 0.12);
+  --ns-bg-selected: rgba(15, 118, 110, 0.13);
 
   --ns-fg: #1f2328;
-  --ns-fg-muted: #59636e;
-  --ns-fg-subtle: #818b96;
+  --ns-fg-muted: #57606a;
+  --ns-fg-subtle: #6e7781;
   --ns-fg-inverted: #ffffff;
 
-  --ns-border: #d8dde3;
-  --ns-border-strong: #c2c9d1;
-  --ns-focus-ring: rgba(13, 148, 136, 0.4);
+  --ns-border: #d0d7de;
+  --ns-border-strong: #afb8c1;
+  --ns-focus-ring: rgba(15, 118, 110, 0.4);
 
-  --ns-accent: #0d9488;
-  --ns-accent-hover: #0f766e;
-  --ns-accent-soft: rgba(13, 148, 136, 0.14);
+  --ns-accent: #0f766e;
+  --ns-accent-hover: #115e59;
+  --ns-accent-soft: rgba(15, 118, 110, 0.14);
 
   --ns-danger: #cf222e;
   --ns-danger-soft: rgba(207, 34, 46, 0.12);
@@ -91,6 +98,7 @@
   --ns-success-soft: rgba(26, 127, 55, 0.14);
   --ns-info: #0969da;
   --ns-info-soft: rgba(9, 105, 218, 0.12);
+  --ns-purple: #8250df;
 
   --ns-shadow: 0 10px 28px rgba(31, 35, 40, 0.18);
   --ns-shadow-sm: 0 2px 8px rgba(31, 35, 40, 0.12);

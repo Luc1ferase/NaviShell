@@ -56,6 +56,28 @@ pub struct TerminalSettings {
     pub webgl: bool,
     /// Value sent as `TERM` when opening a PTY.
     pub term_type: String,
+    /// Built-in color scheme ids used while the UI theme is dark / light (resolved by the
+    /// frontend; unknown ids fall back there).
+    pub color_scheme: ColorSchemeSettings,
+    /// xterm `minimumContrastRatio`; 1 disables it, 4.5 is WCAG AA.
+    pub minimum_contrast_ratio: f64,
+}
+
+/// Which terminal color scheme to use under each resolved UI theme.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ColorSchemeSettings {
+    pub dark: String,
+    pub light: String,
+}
+
+impl Default for ColorSchemeSettings {
+    fn default() -> Self {
+        Self {
+            dark: "navishell-dark".to_string(),
+            light: "navishell-light".to_string(),
+        }
+    }
 }
 
 impl Default for TerminalSettings {
@@ -69,6 +91,8 @@ impl Default for TerminalSettings {
             scrollback: 5000,
             webgl: true,
             term_type: "xterm-256color".to_string(),
+            color_scheme: ColorSchemeSettings::default(),
+            minimum_contrast_ratio: 4.5,
         }
     }
 }

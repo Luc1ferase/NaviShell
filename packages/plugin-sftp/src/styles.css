@@ -209,20 +209,21 @@
   color: var(--ns-accent);
 }
 
+/* File-type tints come from the host palette so they stay readable on both themes. */
 .ns-sftp-icon-link {
-  color: #c084fc;
+  color: var(--ns-purple);
 }
 
 .ns-sftp-icon-code {
-  color: #7dd3fc;
+  color: var(--ns-info);
 }
 
 .ns-sftp-icon-image {
-  color: #86efac;
+  color: var(--ns-success);
 }
 
 .ns-sftp-icon-archive {
-  color: #fcd34d;
+  color: var(--ns-warning);
 }
 
 .ns-sftp-icon-file,
@@ -328,7 +329,7 @@
 }
 
 .ns-sftp-transfer-ok {
-  color: #4ade80;
+  color: var(--ns-success);
 }
 
 .ns-sftp-transfer-error {
@@ -354,7 +355,7 @@
 }
 
 .ns-sftp-progress-done {
-  background: #4ade80;
+  background: var(--ns-success);
 }
 
 .ns-sftp-progress-error {
