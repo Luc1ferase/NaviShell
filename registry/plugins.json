@@ -17,9 +17,9 @@
         "zh-TW": "本機與 SSH 伺服器的 CPU、記憶體、GPU 即時儀表板，針對多顯示卡機器最佳化。",
         "ja": "このマシンと SSH サーバーの CPU・メモリ・GPU をリアルタイムに表示するダッシュボード。マルチ GPU 環境向けに最適化。"
       },
-      "version": "0.1.0",
-      "url": "https://github.com/Luc1ferase/NaviShell/releases/download/plugin-luciferase.hwmon-v0.1.0/luciferase.hwmon-0.1.0.zip",
-      "sha256": "bc4dd70a504f14788f4bb9b8a63649bc82a9475fbe076ed1a8956bd0ce910906",
+      "version": "0.1.1",
+      "url": "https://github.com/Luc1ferase/NaviShell/releases/download/plugin-luciferase.hwmon-v0.1.1/luciferase.hwmon-0.1.1.zip",
+      "sha256": "c86fe27584d3820a3fb6a3ecfabcfb134ac515ad388efb09b95e51b262d5b912",
       "homepage": "https://github.com/Luc1ferase/NaviShell/tree/master/packages/plugin-hwmon",
       "author": "Luciferase",
       "minHostVersion": "0.4.0",

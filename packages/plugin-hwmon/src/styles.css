@@ -814,6 +814,71 @@
   background: color-mix(in srgb, var(--ns-fg) 6%, transparent);
 }
 
+/* Rows with processes unfold them underneath; the header's process column does it for
+   every GPU at once. The detail row reuses the cards' process list. */
+.ns-hwmon-table tbody tr.ns-hwmon-row-expandable {
+  cursor: pointer;
+}
+
+.ns-hwmon-table tbody tr.ns-hwmon-row-open td {
+  border-bottom-color: transparent;
+}
+
+.ns-hwmon-table tbody tr.ns-hwmon-table-detail td {
+  height: auto;
+  padding: 0 8px 8px 44px;
+  white-space: normal;
+}
+
+.ns-hwmon-table tbody tr.ns-hwmon-table-detail:hover td {
+  background: none;
+}
+
+.ns-hwmon-table-detail .ns-hwmon-procs-list {
+  max-width: 720px;
+  padding-top: 4px;
+  border-top: none;
+}
+
+.ns-hwmon-table-detail .ns-hwmon-procs-row {
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+}
+
+.ns-hwmon-procs-toggle-cell {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 3px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font-family: var(--ns-font-mono);
+  font-size: inherit;
+}
+
+.ns-hwmon-procs-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.ns-hwmon-procs-all:hover:not(:disabled) {
+  color: var(--ns-fg);
+}
+
+.ns-hwmon-procs-all:disabled {
+  cursor: default;
+}
+
 .ns-hwmon-col-slot {
   width: 38px;
 }

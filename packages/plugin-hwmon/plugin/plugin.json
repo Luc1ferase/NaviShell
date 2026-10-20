@@ -6,7 +6,7 @@
     "zh-TW": "硬體監視器",
     "ja": "ハードウェア モニター"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": {
     "en": "Live CPU, memory and GPU dashboard for this machine and your SSH servers, built for multi-GPU boxes.",
     "zh-CN": "本机与 SSH 服务器的 CPU、内存、GPU 实时仪表盘，针对多显卡机器优化。",
