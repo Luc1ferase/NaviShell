@@ -21,9 +21,24 @@
       "url": "https://github.com/Luc1ferase/NaviShell/releases/download/plugin-luciferase.hwmon-v0.1.1/luciferase.hwmon-0.1.1.zip",
       "sha256": "c86fe27584d3820a3fb6a3ecfabcfb134ac515ad388efb09b95e51b262d5b912",
       "homepage": "https://github.com/Luc1ferase/NaviShell/tree/master/packages/plugin-hwmon",
+      "repository": "https://github.com/Luc1ferase/NaviShell",
+      "readme": "https://raw.githubusercontent.com/Luc1ferase/NaviShell/master/packages/plugin-hwmon/README.md",
+      "changelog": "https://raw.githubusercontent.com/Luc1ferase/NaviShell/master/packages/plugin-hwmon/CHANGELOG.md",
+      "license": "Apache-2.0",
       "author": "Luciferase",
       "minHostVersion": "0.4.0",
-      "icon": "Cpu"
+      "icon": "Cpu",
+      "categories": ["monitoring"],
+      "tags": ["cpu", "memory", "gpu", "nvidia", "amd", "multi-gpu", "ssh"],
+      "releases": [
+        {
+          "version": "0.1.0",
+          "url": "https://github.com/Luc1ferase/NaviShell/releases/download/plugin-luciferase.hwmon-v0.1.0/luciferase.hwmon-0.1.0.zip",
+          "sha256": "bc4dd70a504f14788f4bb9b8a63649bc82a9475fbe076ed1a8956bd0ce910906",
+          "minHostVersion": "0.4.0",
+          "date": "2026-10-20"
+        }
+      ]
     }
   ]
 }

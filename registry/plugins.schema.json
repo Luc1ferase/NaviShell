@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Luc1ferase/NaviShell/master/registry/plugins.schema.json",
   "title": "NaviShell plugin registry index",
-  "description": "The marketplace list NaviShell downloads with the `plugins_fetch_registry` command (Settings > Plugins > Marketplace). The app drops any entry that does not satisfy this schema instead of failing the whole index, so a malformed entry is simply never offered for install.",
+  "description": "The marketplace list NaviShell downloads with the `plugins_fetch_registry` command (Settings > Plugins > Marketplace). The app drops any entry that does not satisfy this schema instead of failing the whole index, so a malformed entry is simply never offered for install. `scripts/check-registry.mjs` validates this file against the schema and the rules the schema cannot express (see registry/README.md).",
   "type": "object",
   "required": ["plugins"],
   "additionalProperties": false,
@@ -17,9 +17,7 @@
       "description": "Display name of the index itself, shown above the list."
     },
     "updatedAt": {
-      "type": "string",
-      "format": "date",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "$ref": "#/definitions/date",
       "description": "ISO date (YYYY-MM-DD) of the last change to this file."
     },
     "plugins": {
@@ -39,10 +37,74 @@
           "additionalProperties": { "type": "string", "minLength": 1 },
           "properties": {
             "en": { "type": "string", "minLength": 1 },
-            "zh-CN": { "type": "string", "minLength": 1 }
+            "zh-CN": { "type": "string", "minLength": 1 },
+            "zh-TW": { "type": "string", "minLength": 1 },
+            "ja": { "type": "string", "minLength": 1 }
           }
         }
       ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$",
+      "description": "Dotted numeric version with an optional pre-release suffix, e.g. \"1.2.0\" or \"1.2.0-beta.1\"."
+    },
+    "httpUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "zipUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://.*\\.[Zz][Ii][Pp]$",
+      "description": "Direct http(s) download URL of a plugin zip (a GitHub Release asset, not a web page). Pin it to a tag, never to a moving branch."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$",
+      "description": "Hex SHA-256 of the zip. Strongly recommended: the app verifies it before unpacking and refuses a download that does not match."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "terminal",
+        "connections",
+        "files",
+        "monitoring",
+        "languages",
+        "productivity",
+        "themes",
+        "other"
+      ],
+      "description": "One of the fixed marketplace categories; the app shows them as translated filter chips."
+    },
+    "release": {
+      "type": "object",
+      "description": "A previous version of the plugin, kept so the app can offer the newest version a given host supports and users can go back.",
+      "required": ["version", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/version",
+          "description": "Must be lower than the entry's `version`; releases are listed newest first."
+        },
+        "url": { "$ref": "#/definitions/zipUrl" },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "minHostVersion": {
+          "$ref": "#/definitions/version",
+          "description": "Lowest NaviShell version this release works with."
+        },
+        "date": {
+          "$ref": "#/definitions/date",
+          "description": "Release date (YYYY-MM-DD)."
+        }
+      }
     },
     "entry": {
       "type": "object",
@@ -64,26 +126,32 @@
           "description": "One sentence on what the plugin does."
         },
         "version": {
+          "$ref": "#/definitions/version",
+          "description": "Version of the plugin the `url` points at, identical to `version` in its `plugin.json`. This is the latest release; older ones go in `releases`."
+        },
+        "url": { "$ref": "#/definitions/zipUrl" },
+        "sha256": { "$ref": "#/definitions/sha256" },
+        "homepage": {
+          "$ref": "#/definitions/httpUrl",
+          "description": "Documentation page of the plugin (a web page, shown as a link)."
+        },
+        "repository": {
+          "$ref": "#/definitions/httpUrl",
+          "description": "Source repository of the plugin."
+        },
+        "readme": {
+          "$ref": "#/definitions/httpUrl",
+          "description": "Raw Markdown README the app renders on the plugin's detail page (e.g. a raw.githubusercontent.com URL pinned to a branch or tag)."
+        },
+        "changelog": {
+          "$ref": "#/definitions/httpUrl",
+          "description": "Raw Markdown changelog, rendered next to the README."
+        },
+        "license": {
           "type": "string",
           "minLength": 1,
-          "description": "Version of the plugin the `url` points at, identical to `version` in its `plugin.json`."
-        },
-        "url": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https?://",
-          "description": "Direct http(s) download URL of the plugin zip (a GitHub Release asset, not a web page). Pin it to a tag, never to a moving branch."
-        },
-        "sha256": {
-          "type": "string",
-          "pattern": "^[A-Fa-f0-9]{64}$",
-          "description": "Hex SHA-256 of the zip at `url`. Strongly recommended: the app verifies it before unpacking and refuses a download that does not match."
-        },
-        "homepage": {
-          "type": "string",
-          "format": "uri",
-          "pattern": "^https?://",
-          "description": "Repository or documentation page of the plugin."
+          "maxLength": 64,
+          "description": "SPDX licence identifier, e.g. \"Apache-2.0\" or \"MIT\"."
         },
         "author": {
           "type": "string",
@@ -91,14 +159,41 @@
           "description": "Who publishes the plugin."
         },
         "minHostVersion": {
-          "type": "string",
-          "minLength": 1,
+          "$ref": "#/definitions/version",
           "description": "Lowest NaviShell version the plugin works with, e.g. \"0.2.0\"."
         },
         "icon": {
           "type": "string",
           "minLength": 1,
           "description": "A lucide-react icon name in PascalCase, e.g. \"Puzzle\"."
+        },
+        "categories": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/category" },
+          "description": "Up to three marketplace categories, the first one being the primary."
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,29}$" },
+          "description": "Free-form lowercase keywords for search, e.g. \"gpu\", \"nvidia\"."
+        },
+        "screenshots": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/httpUrl" },
+          "description": "Image URLs (PNG/JPEG/WebP) shown on the detail page."
+        },
+        "releases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/release" },
+          "description": "Previous versions, newest first. The latest version stays in the entry's own `version`/`url`/`sha256` fields so older hosts keep working."
         }
       }
     }

@@ -1,0 +1,67 @@
+# Checks the plugin marketplace index whenever it, or its checker, changes.
+#
+# Schema and consistency rules run on the whole index every time. Network checks (downloading
+# zips to verify digests and manifests, probing links) only cover what a pull request changed,
+# so reviewing a growing index stays cheap; a push to master or a manual run verifies all of it.
+# The rules are documented in registry/README.md.
+
+name: Registry
+
+on:
+  pull_request:
+    paths:
+      - 'registry/**'
+      - 'scripts/check-registry.mjs'
+      - '.github/workflows/registry.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'registry/**'
+      - 'scripts/check-registry.mjs'
+      - '.github/workflows/registry.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check index
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Formatting
+        run: pnpm exec prettier --check registry
+
+      # The base branch is needed so that only the entries a pull request changed are
+      # downloaded and probed.
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.base_ref }}
+        run: git fetch --no-tags --depth=1 origin "$BASE"
+
+      - name: Check index (entries changed by this pull request)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.base_ref }}
+        run: node scripts/check-registry.mjs --base "origin/$BASE"
+
+      - name: Check index (everything)
+        if: github.event_name != 'pull_request'
+        run: node scripts/check-registry.mjs

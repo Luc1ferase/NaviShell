@@ -59,6 +59,7 @@ NaviShell/
 │  └─ plugin-hwmon/           hardware monitor; NOT bundled: packed by scripts/pack-plugin.mjs, published by plugin-release.yml
 ├─ scripts/plugin-vite.mjs    shared Vite config for plugin bundles (CJS, externals)
 ├─ scripts/pack-plugin.mjs    deterministic zip + SHA-256 of a built plugin (for registry/plugins.json)
+├─ scripts/check-registry.mjs validates registry/plugins.json: schema, consistency, zip digests + manifests, links
 ├─ registry/                  plugins.json (marketplace index), its JSON Schema, submission guide
 ├─ src-tauri/                 Rust core
 │  ├─ Cargo.toml, tauri.conf.json, capabilities/default.json, icons/
@@ -76,7 +77,7 @@ NaviShell/
 │     ├─ local_exec.rs        local_exec (one-shot local command for plugins, no shell, no window)
 │     ├─ ssh/{mod,connection,terminal,exec,sftp}.rs
 │     └─ plugins.rs           plugins_list_external/read_file/install_*/uninstall/fetch_registry, plugin_storage_*
-└─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release), plugin-release.yml (dispatch -> plugin zip pre-release)
+└─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release), plugin-release.yml (dispatch -> plugin zip pre-release), registry.yml (registry/** -> check-registry)
 ```
 
 ## 3. Contracts
@@ -161,9 +162,15 @@ Changing a contract means updating both sides; prefer additive changes.
   parsed with its entries left as raw JSON, so an unreadable entry is dropped and logged
   instead of failing the whole listing; an entry is dropped for the same reasons it could
   never be installed (`id` outside `^[a-z0-9][a-z0-9._-]*$` or starting with `navishell.`,
-  empty `version`, non-http(s) `url`, missing `name`). Nothing is cached and nothing is
-  downloaded from the entries: installing a listed plugin is an ordinary
-  `plugins_install_from_url` call with the entry's `url` and `sha256`.
+  empty `version`, non-http(s) `url`, missing `name`); the optional metadata of a kept
+  entry (`repository`, `readme`, `changelog`, `screenshots`, `releases`, …) is cleaned
+  instead, dropping non-http(s) links and unusable previous releases. Nothing is cached
+  and nothing is downloaded from the entries: installing a listed plugin is an ordinary
+  `plugins_install_from_url` call with the entry's `url` and `sha256`. The index format
+  (`registry/plugins.schema.json`) carries the marketplace metadata — categories, tags,
+  README/changelog URLs, licence, screenshots and previous `releases` — and
+  `scripts/check-registry.mjs` (the `Registry` workflow) verifies every change to it:
+  schema, consistency rules, zip digests and manifests, links.
 - **Updates** (issue #5): `tauri-plugin-updater` + `tauri-plugin-process`, registered
   under `#[cfg(desktop)]`. `plugins.updater` in `tauri.conf.json` holds the minisign
   public key and the single endpoint

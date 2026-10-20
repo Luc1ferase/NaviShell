@@ -139,17 +139,59 @@ export interface PluginRegistryEntry {
   id: string;
   name: LocalizedText;
   description?: LocalizedText;
+  /** The latest version; older ones are listed in `releases`. */
   version: string;
   /** Direct http(s) URL of the plugin zip, installable with `plugins_install_from_url`. */
   url: string;
   /** Hex SHA-256 of the zip; strongly recommended. */
   sha256?: string;
+  /** Documentation page (a web page, opened externally). */
   homepage?: string;
+  /** Source repository. */
+  repository?: string;
+  /** Raw Markdown README, rendered on the detail page. */
+  readme?: string;
+  /** Raw Markdown changelog. */
+  changelog?: string;
+  /** SPDX licence identifier, e.g. `Apache-2.0`. */
+  license?: string;
   author?: string;
   minHostVersion?: string;
   /** lucide-react icon name. */
   icon?: string;
+  /** Marketplace categories, the first one being the primary; absent means none. */
+  categories?: PluginCategory[];
+  /** Lowercase search keywords. */
+  tags?: string[];
+  /** Image URLs for the detail page. */
+  screenshots?: string[];
+  /** Previous versions, newest first. */
+  releases?: PluginRegistryRelease[];
 }
+
+/** A previous version of a registry entry. */
+export interface PluginRegistryRelease {
+  version: string;
+  url: string;
+  sha256?: string;
+  minHostVersion?: string;
+  /** ISO date (YYYY-MM-DD). */
+  date?: string;
+}
+
+/** The fixed marketplace categories (`registry/plugins.schema.json`, `category`). */
+export const PLUGIN_CATEGORIES = [
+  'terminal',
+  'connections',
+  'files',
+  'monitoring',
+  'languages',
+  'productivity',
+  'themes',
+  'other',
+] as const;
+
+export type PluginCategory = (typeof PLUGIN_CATEGORIES)[number];
 
 export interface PluginRegistry {
   name?: string;
