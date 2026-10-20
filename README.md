@@ -272,24 +272,6 @@ ctx.i18n.registerLocale({
 命令补全插件的词典描述以 `dict.<命令>` 为键放在 `navishell.completion` 的条目里。
 `packages/lang-ja` 就是一份可以直接照抄的模板。
 
-## 路线图
-
-v1 之后规划的方向及其状态（欢迎在对应 issue 下讨论）：
-
-| # | 方向 | 状态 |
-| - | ---- | ---- |
-| [#1](../../issues/1) | 私钥登录（PEM / OpenSSH、passphrase） | 已实现（0.2.0） |
-| [#2](../../issues/2) | ssh-agent 支持 | 已实现（0.2.0） |
-| [#3](../../issues/3) | ProxyJump / 跳板机 | 已实现（0.2.0） |
-| [#4](../../issues/4) | keyboard-interactive（含 2FA） | 已实现（0.2.0） |
-| [#5](../../issues/5) | 应用内自动更新 | 已实现（0.2.0） |
-| [#6](../../issues/6) | 本地终端（不经过 SSH） | 已实现（0.2.0） |
-| [#7](../../issues/7) | 从 URL 安装插件 + 插件市场 | 已实现（0.2.0） |
-| [#8](../../issues/8) | 感知远端环境的命令补全（真实补全而非词典） | 已实现（0.2.0） |
-
-插件市场（#7 里提到的注册表索引 JSON）就是 [`registry/plugins.json`](registry/plugins.json)，
-在「设置 → 插件 → 插件市场」里；索引目前还是空的，欢迎发 PR 把你的插件加进来。
-
 ## 许可
 
 [Apache License 2.0](LICENSE)。可以自由使用、修改和分发，但再分发或衍生作品必须保留
