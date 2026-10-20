@@ -200,6 +200,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.servers` | 伺服器清單、連線、開啟終端機 |
 | `ctx.connections` | 連線清單、一次性 `exec`、`sftp(connectionId)`、中斷連線 |
 | `ctx.terminals` | 終端機控制代碼、輸入/輸出事件、覆蓋層元件、按鍵攔截 |
+| `ctx.local` | NaviShell 所在的本機：`platform`、`arch`，以及不經 shell 的一次性 `exec(program, args)` |
 | `ctx.storage` | 外掛私有的持久化 KV（`<appData>/plugin-data/<pluginId>.json`） |
 | `ctx.i18n` | 註冊翻譯資源、`t()`、目前語言與語言變更事件；`registerLocale()` 貢獻整種語言（語言套件） |
 | `ctx.ui` | toast、確認方塊、輸入方塊、檔案選取、儲存對話方塊、右鍵選單 |

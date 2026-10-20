@@ -55,6 +55,35 @@ Set them with `gh secret set <NAME> < file` or in the repository settings. The p
 key compiled into them and would have to be reinstalled by hand, so keep the private key
 backed up outside the repository.
 
+## Plugin releases
+
+Plugins that live in `packages/` but are not bundled with the app (they are absent from
+`public/builtin-plugins.json`; today `packages/plugin-hwmon`) reach users through the
+marketplace index `registry/plugins.json`, so they have their own, lighter flow:
+
+1. Bump `version` in the package's `plugin/plugin.json` (and `package.json`).
+2. Build and pack locally to learn the digest:
+
+   ```bash
+   pnpm --filter ./packages/plugin-hwmon build
+   node scripts/pack-plugin.mjs packages/plugin-hwmon   # prints zip=…, sha256=…
+   ```
+
+   The zip is deterministic (stored entries, fixed timestamps), so this digest is the one
+   the workflow will produce for the same commit.
+3. Update the entry in `registry/plugins.json`: `version`, `url`
+   (`https://github.com/Luc1ferase/NaviShell/releases/download/plugin-<id>-v<version>/<id>-<version>.zip`)
+   and `sha256`; run `pnpm exec prettier --write registry`. Merge.
+4. Dispatch **Plugin release** (`gh workflow run plugin-release.yml --ref master -f package=plugin-hwmon`).
+   It builds, packs, and creates the release `plugin-<id>-v<version>` with the zip and a
+   `.sha256` file attached. The release is a **pre-release** so that `releases/latest`,
+   which the app updater reads, keeps pointing at the newest app release.
+5. Compare the `sha256` in the job summary with the registry entry. They match for the
+   same commit; if they do not, fix the registry entry, never the asset.
+
+The app verifies the digest before unpacking, so a registry entry that points at a
+not-yet-published asset simply fails to install until step 4 is done.
+
 ## Forks
 
 A fork that wants its own release channel must:

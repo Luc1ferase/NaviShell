@@ -1,6 +1,29 @@
 {
   "$schema": "./plugins.schema.json",
   "name": "NaviShell plugin registry",
-  "updatedAt": "2026-10-19",
-  "plugins": []
+  "updatedAt": "2026-10-20",
+  "plugins": [
+    {
+      "id": "luciferase.hwmon",
+      "name": {
+        "en": "Hardware Monitor",
+        "zh-CN": "硬件监视器",
+        "zh-TW": "硬體監視器",
+        "ja": "ハードウェア モニター"
+      },
+      "description": {
+        "en": "Live CPU, memory and GPU dashboard for this machine and your SSH servers, built for multi-GPU boxes.",
+        "zh-CN": "本机与 SSH 服务器的 CPU、内存、GPU 实时仪表盘，针对多显卡机器优化。",
+        "zh-TW": "本機與 SSH 伺服器的 CPU、記憶體、GPU 即時儀表板，針對多顯示卡機器最佳化。",
+        "ja": "このマシンと SSH サーバーの CPU・メモリ・GPU をリアルタイムに表示するダッシュボード。マルチ GPU 環境向けに最適化。"
+      },
+      "version": "0.1.0",
+      "url": "https://github.com/Luc1ferase/NaviShell/releases/download/plugin-luciferase.hwmon-v0.1.0/luciferase.hwmon-0.1.0.zip",
+      "sha256": "bc4dd70a504f14788f4bb9b8a63649bc82a9475fbe076ed1a8956bd0ce910906",
+      "homepage": "https://github.com/Luc1ferase/NaviShell/tree/master/packages/plugin-hwmon",
+      "author": "Luciferase",
+      "minHostVersion": "0.4.0",
+      "icon": "Cpu"
+    }
+  ]
 }

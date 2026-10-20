@@ -223,6 +223,7 @@ The `ctx` passed to `activate(ctx)` is everything a plugin can touch. **Never ca
 | `ctx.servers` | server list, connect, open a terminal |
 | `ctx.connections` | connection list, one-shot `exec`, `sftp(connectionId)`, disconnect |
 | `ctx.terminals` | terminal handles, input/output events, overlay components, key interception |
+| `ctx.local` | the machine NaviShell runs on: `platform`, `arch`, one-shot `exec(program, args)` without a shell |
 | `ctx.storage` | private persistent key/value store (`<appData>/plugin-data/<pluginId>.json`) |
 | `ctx.i18n` | register translations, `t()`, current locale and locale-change events; `registerLocale()` contributes a whole UI language (a language pack) |
 | `ctx.ui` | toasts, confirm and prompt dialogs, file and save pickers, context menus |

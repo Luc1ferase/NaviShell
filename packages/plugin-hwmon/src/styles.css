@@ -1,0 +1,1057 @@
+/*
+ * luciferase.hwmon styles.
+ *
+ * Only host theme variables are used so the panel follows the app theme; every tint is a
+ * `color-mix` of one of them, never a literal black or white, so the dark and the light
+ * theme both work. Every class is prefixed with `ns-hwmon-`.
+ *
+ * Two custom properties carry the semantic colour of a value, set once by the
+ * `.ns-hwmon-tone-*` class the components pick: `--ns-hwmon-tone` paints the graphics
+ * (bars, rings, sparklines) and `--ns-hwmon-ink` the text, which stays plain foreground
+ * at normal levels and only takes colour when something is worth noticing.
+ *
+ * The panel is a container (`container: ns-hwmon / inline-size`), so the layout reacts to
+ * the panel's own width rather than the window's: it can be a wide centre tab or a narrow
+ * dock, and the GPU table drops its least important columns instead of overflowing.
+ */
+
+.ns-hwmon-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--ns-bg);
+  color: var(--ns-fg);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-font-size-sm, 12px);
+  line-height: 1.4;
+  container: ns-hwmon / inline-size;
+}
+
+/* Border-box throughout, so every px width in here (table columns above all) is the
+   width the element actually occupies, padding and border included. */
+.ns-hwmon-panel,
+.ns-hwmon-panel *,
+.ns-hwmon-panel *::before,
+.ns-hwmon-panel *::after {
+  box-sizing: border-box;
+}
+
+.ns-hwmon-panel :focus-visible {
+  outline: 1px solid var(--ns-accent);
+  outline-offset: 1px;
+}
+
+.ns-hwmon-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* -- tones ---------------------------------------------------------------- */
+
+.ns-hwmon-tone-muted {
+  --ns-hwmon-tone: var(--ns-fg-subtle);
+  --ns-hwmon-ink: var(--ns-fg-muted);
+}
+
+.ns-hwmon-tone-normal {
+  --ns-hwmon-tone: var(--ns-accent);
+  --ns-hwmon-ink: var(--ns-fg);
+}
+
+.ns-hwmon-tone-info {
+  --ns-hwmon-tone: var(--ns-info);
+  --ns-hwmon-ink: var(--ns-info);
+}
+
+.ns-hwmon-tone-warn {
+  --ns-hwmon-tone: var(--ns-warning);
+  --ns-hwmon-ink: var(--ns-warning);
+}
+
+.ns-hwmon-tone-danger {
+  --ns-hwmon-tone: var(--ns-danger);
+  --ns-hwmon-ink: var(--ns-danger);
+}
+
+.ns-hwmon-text {
+  color: var(--ns-hwmon-ink, inherit);
+}
+
+/* -- toolbar -------------------------------------------------------------- */
+
+.ns-hwmon-toolbar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--ns-border);
+  background: var(--ns-bg-elevated);
+}
+
+.ns-hwmon-toolbar-gap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ns-hwmon-select {
+  height: 24px;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg);
+  color: var(--ns-fg);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-font-size-xs, 11px);
+  cursor: pointer;
+}
+
+.ns-hwmon-select:hover {
+  border-color: var(--ns-border-strong);
+}
+
+.ns-hwmon-target {
+  flex: 0 1 190px;
+  max-width: 240px;
+}
+
+.ns-hwmon-select-narrow {
+  flex: none;
+  width: auto;
+}
+
+.ns-hwmon-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--ns-fg-subtle);
+}
+
+.ns-hwmon-dot-ok {
+  background: var(--ns-success);
+}
+
+.ns-hwmon-dot-sampling {
+  background: var(--ns-accent);
+  animation: ns-hwmon-pulse 1.2s ease-in-out infinite;
+}
+
+.ns-hwmon-dot-error {
+  background: var(--ns-danger);
+}
+
+.ns-hwmon-dot-paused {
+  background: var(--ns-warning);
+}
+
+.ns-hwmon-ago {
+  flex: none;
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-xs, 11px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ns-hwmon-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ns-radius, 4px);
+  background: transparent;
+  color: var(--ns-fg-muted);
+  cursor: pointer;
+}
+
+.ns-hwmon-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ns-fg) 10%, transparent);
+  color: var(--ns-fg);
+}
+
+.ns-hwmon-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ns-hwmon-icon-button-on {
+  color: var(--ns-accent);
+  border-color: color-mix(in srgb, var(--ns-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--ns-accent) 14%, transparent);
+}
+
+.ns-hwmon-segmented {
+  display: inline-flex;
+  flex: none;
+  gap: 1px;
+  padding: 1px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg);
+}
+
+.ns-hwmon-segmented .ns-hwmon-icon-button {
+  width: 22px;
+  height: 20px;
+  border-radius: var(--ns-radius-sm, 3px);
+}
+
+.ns-hwmon-button {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--ns-border-strong);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg-elevated);
+  color: var(--ns-fg);
+  font-family: inherit;
+  font-size: var(--ns-font-size-xs, 11px);
+  cursor: pointer;
+}
+
+.ns-hwmon-button:hover {
+  border-color: var(--ns-accent);
+  color: var(--ns-accent);
+}
+
+/* -- banner, notes, empty states ------------------------------------------ */
+
+.ns-hwmon-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--ns-danger) 45%, transparent);
+  border-radius: var(--ns-radius, 4px);
+  background: color-mix(in srgb, var(--ns-danger) 12%, transparent);
+}
+
+.ns-hwmon-banner-icon {
+  flex: none;
+  color: var(--ns-danger);
+}
+
+.ns-hwmon-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ns-hwmon-notes {
+  margin: 0;
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+.ns-hwmon-empty {
+  margin: 0;
+  padding: 10px 2px;
+  color: var(--ns-fg-subtle);
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+/* -- overview strip -------------------------------------------------------- */
+
+.ns-hwmon-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg-elevated);
+}
+
+.ns-hwmon-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ns-hwmon-meta-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--ns-fg-subtle);
+}
+
+.ns-hwmon-meta-label {
+  flex: none;
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-xs, 11px);
+  white-space: nowrap;
+}
+
+.ns-hwmon-meta-value {
+  min-width: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-font-size-xs, 11px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- cards ----------------------------------------------------------------- */
+
+.ns-hwmon-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.ns-hwmon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius-lg, 8px);
+  background: var(--ns-bg-elevated);
+}
+
+.ns-hwmon-card-head,
+.ns-hwmon-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ns-hwmon-card-icon {
+  flex: none;
+  color: var(--ns-fg-muted);
+}
+
+.ns-hwmon-card-title {
+  margin: 0;
+  flex: none;
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-xs, 11px);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ns-hwmon-card-head .ns-hwmon-stat {
+  margin-left: auto;
+}
+
+.ns-hwmon-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* -- labelled bar ---------------------------------------------------------- */
+
+.ns-hwmon-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ns-hwmon-gauge-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+.ns-hwmon-gauge-label {
+  flex: none;
+  color: var(--ns-fg-muted);
+  white-space: nowrap;
+}
+
+.ns-hwmon-gauge-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--ns-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-hwmon-gauge-percent {
+  flex: none;
+  color: var(--ns-fg-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* -- primitives: bar, ring, sparkline, stat -------------------------------- */
+
+.ns-hwmon-bar {
+  width: 100%;
+  min-width: 0;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ns-fg) 13%, transparent);
+  overflow: hidden;
+}
+
+.ns-hwmon-bar-thin {
+  height: 6px;
+}
+
+.ns-hwmon-bar-thick {
+  height: 10px;
+}
+
+.ns-hwmon-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ns-hwmon-tone, var(--ns-accent));
+  transition: width 140ms linear;
+}
+
+.ns-hwmon-ring {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.ns-hwmon-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ns-hwmon-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ns-fg) 13%, transparent);
+}
+
+.ns-hwmon-ring-value {
+  fill: none;
+  stroke: var(--ns-hwmon-tone, var(--ns-accent));
+  stroke-linecap: round;
+  transition: stroke-dashoffset 140ms linear;
+}
+
+.ns-hwmon-ring-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  line-height: 1.15;
+}
+
+.ns-hwmon-ring-value-text {
+  color: var(--ns-hwmon-ink, var(--ns-fg));
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ns-hwmon-ring-caption {
+  max-width: 100%;
+  color: var(--ns-fg-muted);
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-hwmon-spark {
+  display: block;
+  min-width: 0;
+  overflow: visible;
+}
+
+.ns-hwmon-spark-line {
+  fill: none;
+  stroke: var(--ns-hwmon-tone, var(--ns-accent));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ns-hwmon-spark-grow,
+.ns-hwmon-spark-wide {
+  border-radius: var(--ns-radius-sm, 3px);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--ns-fg) 12%, transparent);
+}
+
+.ns-hwmon-spark-grow {
+  flex: 1 1 0;
+  height: 44px;
+}
+
+.ns-hwmon-spark-wide {
+  width: 100%;
+  height: 28px;
+}
+
+.ns-hwmon-spark-cell {
+  width: 100%;
+  height: 16px;
+}
+
+.ns-hwmon-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+.ns-hwmon-stat-icon {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  color: var(--ns-fg-subtle);
+}
+
+.ns-hwmon-stat-label {
+  flex: none;
+  color: var(--ns-fg-muted);
+  white-space: nowrap;
+}
+
+.ns-hwmon-stat-value {
+  min-width: 0;
+  font-family: var(--ns-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- CPU: per-core bars ---------------------------------------------------- */
+
+.ns-hwmon-cores {
+  display: grid;
+  /* auto-fit (not auto-fill) keeps every core on one row with no dead tail; the per-bar
+     max-width stops a quad-core from turning into four fat slabs. */
+  grid-template-columns: repeat(auto-fit, minmax(14px, 1fr));
+  gap: 3px;
+  min-width: 0;
+}
+
+.ns-hwmon-core {
+  display: flex;
+  align-items: flex-end;
+  height: 28px;
+  /* `width` is needed because `justify-self: center` makes the item size to its content,
+     which the percentage-height fill alone does not give it. */
+  width: 100%;
+  min-width: 0;
+  max-width: 34px;
+  justify-self: center;
+  border-radius: var(--ns-radius-sm, 3px);
+  background: color-mix(in srgb, var(--ns-fg) 11%, transparent);
+  overflow: hidden;
+}
+
+.ns-hwmon-core-fill {
+  width: 100%;
+  min-height: 1px;
+  border-radius: inherit;
+  background: var(--ns-hwmon-tone, var(--ns-accent));
+  transition: height 140ms linear;
+}
+
+/* -- sections (GPUs, disks) ------------------------------------------------ */
+
+.ns-hwmon-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ns-hwmon-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg-inset);
+}
+
+/* -- GPU cards ------------------------------------------------------------- */
+
+.ns-hwmon-gpu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.ns-hwmon-gpu-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 188px;
+  padding: 7px 9px;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius-lg, 8px);
+  background: var(--ns-bg-elevated);
+}
+
+.ns-hwmon-gpu-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ns-hwmon-gpu-slot {
+  flex: none;
+  color: var(--ns-accent);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-font-size-xs, 11px);
+  font-weight: 600;
+}
+
+.ns-hwmon-gpu-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-hwmon-badge {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--ns-fg) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ns-fg) 8%, transparent);
+  color: var(--ns-fg-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 15px;
+}
+
+.ns-hwmon-badge-nvidia {
+  border-color: color-mix(in srgb, var(--ns-success) 45%, transparent);
+  background: color-mix(in srgb, var(--ns-success) 14%, transparent);
+  color: var(--ns-success);
+}
+
+.ns-hwmon-badge-amd {
+  border-color: color-mix(in srgb, var(--ns-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--ns-danger) 14%, transparent);
+  color: var(--ns-danger);
+}
+
+.ns-hwmon-badge-intel {
+  border-color: color-mix(in srgb, var(--ns-info) 45%, transparent);
+  background: color-mix(in srgb, var(--ns-info) 14%, transparent);
+  color: var(--ns-info);
+}
+
+.ns-hwmon-badge-apple {
+  border-color: color-mix(in srgb, var(--ns-purple) 45%, transparent);
+  background: color-mix(in srgb, var(--ns-purple) 14%, transparent);
+  color: var(--ns-purple);
+}
+
+.ns-hwmon-gpu-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 10px;
+  min-width: 0;
+}
+
+.ns-hwmon-procs-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  padding: 2px 0 0;
+  border: none;
+  background: none;
+  color: var(--ns-fg-muted);
+  font-family: inherit;
+  font-size: var(--ns-font-size-xs, 11px);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ns-hwmon-procs-toggle:hover:not(:disabled) {
+  color: var(--ns-fg);
+}
+
+.ns-hwmon-procs-toggle:disabled {
+  cursor: default;
+  color: var(--ns-fg-subtle);
+}
+
+.ns-hwmon-procs-count {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-hwmon-procs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 4px 0 0;
+  border-top: 1px solid var(--ns-border);
+  list-style: none;
+}
+
+.ns-hwmon-procs-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+.ns-hwmon-procs-pid {
+  color: var(--ns-fg-subtle);
+  font-family: var(--ns-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ns-hwmon-procs-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-hwmon-procs-mem {
+  color: var(--ns-fg-muted);
+  font-family: var(--ns-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ns-hwmon-proc-empty {
+  margin: 0;
+  color: var(--ns-fg-subtle);
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+/* -- GPU table ------------------------------------------------------------- */
+
+.ns-hwmon-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius, 4px);
+  background: var(--ns-bg-elevated);
+}
+
+.ns-hwmon-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+.ns-hwmon-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 24px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--ns-border-strong);
+  background: var(--ns-bg-elevated);
+  color: var(--ns-fg-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ns-hwmon-table tbody td {
+  height: 28px;
+  padding: 0 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ns-border) 65%, transparent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ns-hwmon-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ns-hwmon-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--ns-fg) 6%, transparent);
+}
+
+.ns-hwmon-col-slot {
+  width: 38px;
+}
+
+.ns-hwmon-col-util {
+  width: 112px;
+}
+
+/* The two elastic columns: percentages, so a wide panel spends its slack on longer
+   names and a longer visible history instead of one huge empty cell. */
+.ns-hwmon-col-name {
+  width: 22%;
+}
+
+.ns-hwmon-col-spark {
+  width: 17%;
+}
+
+.ns-hwmon-col-mem {
+  width: 170px;
+}
+
+.ns-hwmon-col-temp {
+  width: 56px;
+  text-align: right;
+}
+
+.ns-hwmon-col-power {
+  width: 88px;
+  text-align: right;
+}
+
+.ns-hwmon-col-fan {
+  width: 50px;
+  text-align: right;
+}
+
+.ns-hwmon-col-clock {
+  width: 80px;
+  text-align: right;
+}
+
+/* Wide enough for a four-character CJK header (處理程序, プロセス), which needs about
+   42px where the English PROCS needs 31px. */
+.ns-hwmon-col-procs {
+  width: 60px;
+  text-align: right;
+}
+
+.ns-hwmon-cell-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns-hwmon-cell-meter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ns-hwmon-cell-meter .ns-hwmon-bar {
+  flex: 1 1 auto;
+}
+
+.ns-hwmon-cell-num {
+  flex: none;
+  width: 34px;
+  text-align: right;
+  font-family: var(--ns-font-mono);
+}
+
+.ns-hwmon-cell-bytes {
+  flex: none;
+  color: var(--ns-fg-muted);
+  font-family: var(--ns-font-mono);
+  white-space: nowrap;
+}
+
+.ns-hwmon-table .ns-hwmon-col-power,
+.ns-hwmon-table .ns-hwmon-col-fan,
+.ns-hwmon-table .ns-hwmon-col-clock,
+.ns-hwmon-table .ns-hwmon-col-temp,
+.ns-hwmon-table .ns-hwmon-col-procs {
+  font-family: var(--ns-font-mono);
+}
+
+/* -- disks ----------------------------------------------------------------- */
+
+.ns-hwmon-disks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ns-hwmon-disk {
+  display: grid;
+  grid-template-columns: minmax(64px, 150px) minmax(48px, 420px) auto 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--ns-font-size-xs, 11px);
+}
+
+.ns-hwmon-disk-mount {
+  min-width: 0;
+  font-family: var(--ns-font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ns-hwmon-disk-bytes {
+  color: var(--ns-fg-muted);
+  font-family: var(--ns-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ns-hwmon-disk-percent {
+  color: var(--ns-fg-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* -- helpers --------------------------------------------------------------- */
+
+.ns-hwmon-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes ns-hwmon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ns-hwmon-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.ns-hwmon-spin {
+  animation: ns-hwmon-spin 900ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ns-hwmon-spin,
+  .ns-hwmon-dot-sampling {
+    animation: none;
+  }
+
+  .ns-hwmon-bar-fill,
+  .ns-hwmon-core-fill,
+  .ns-hwmon-ring-value {
+    transition: none;
+  }
+}
+
+/* -- narrow panels --------------------------------------------------------- */
+
+@container ns-hwmon (max-width: 920px) {
+  .ns-hwmon-col-spark {
+    display: none;
+  }
+}
+
+@container ns-hwmon (max-width: 840px) {
+  .ns-hwmon-col-clock {
+    display: none;
+  }
+}
+
+@container ns-hwmon (max-width: 740px) {
+  .ns-hwmon-col-fan {
+    display: none;
+  }
+}
+
+@container ns-hwmon (max-width: 640px) {
+  .ns-hwmon-col-power {
+    display: none;
+  }
+}
+
+@container ns-hwmon (max-width: 560px) {
+  /* A pixel width, not a share: once the fixed columns alone fill the table, a percentage
+     column resolves against an already overflowing width and collapses to nothing. */
+  .ns-hwmon-col-name {
+    width: 120px;
+  }
+
+  .ns-hwmon-col-mem {
+    width: 76px;
+  }
+
+  .ns-hwmon-cell-bytes {
+    display: none;
+  }
+
+  .ns-hwmon-col-util {
+    width: 86px;
+  }
+}
+
+/* Narrower than this, only the identity and the two numbers worth watching are left. */
+@container ns-hwmon (max-width: 460px) {
+  .ns-hwmon-col-mem,
+  .ns-hwmon-col-procs {
+    display: none;
+  }
+
+  .ns-hwmon-col-name {
+    width: auto;
+  }
+}
+
+@container ns-hwmon (max-width: 420px) {
+  .ns-hwmon-cores {
+    grid-template-columns: repeat(auto-fill, minmax(9px, 1fr));
+  }
+
+  .ns-hwmon-gpu-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

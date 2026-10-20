@@ -199,6 +199,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.servers` | 服务器列表、连接、打开终端 |
 | `ctx.connections` | 连接列表、一次性 `exec`、`sftp(connectionId)`、断开 |
 | `ctx.terminals` | 终端句柄、输入/输出事件、覆盖层组件、按键拦截 |
+| `ctx.local` | NaviShell 所在的本机：`platform`、`arch`，以及不经 shell 的一次性 `exec(program, args)` |
 | `ctx.storage` | 插件私有的持久化 KV（`<appData>/plugin-data/<pluginId>.json`） |
 | `ctx.i18n` | 注册翻译资源、`t()`、当前语言与语言变更事件；`registerLocale()` 贡献整门语言（语言包） |
 | `ctx.ui` | toast、确认框、输入框、文件选择、保存对话框、右键菜单 |

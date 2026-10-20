@@ -30,6 +30,7 @@ import { closePanel, isPanelOpen, openPanel, togglePanel } from '../services/lay
 import { createSftpClient } from '../services/sftp';
 import { getConnection, listConnections, onDidChangeConnections } from '../stores/connections';
 import { getServer, listServers, onDidChangeServers } from '../stores/servers';
+import { getAppInfo } from '../stores/settings';
 import { useUiStore } from '../stores/ui';
 import {
   getActiveTerminal,
@@ -145,6 +146,22 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
         call('ssh_exec', { connectionId, command, timeoutMs: opts?.timeoutMs }),
       sftp: createSftpClient,
       disconnect: disconnectConnection,
+    },
+
+    local: {
+      get platform() {
+        return getAppInfo()?.platform ?? 'other';
+      },
+      get arch() {
+        return getAppInfo()?.arch ?? '';
+      },
+      exec: (program, args, opts) =>
+        call('local_exec', {
+          program,
+          args: args ?? [],
+          timeoutMs: opts?.timeoutMs,
+          cwd: opts?.cwd,
+        }),
     },
 
     terminals: {

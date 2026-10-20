@@ -54,8 +54,10 @@ NaviShell/
 ├─ packages/
 │  ├─ plugin-api/             @navishell/plugin-api  <-- PLUGIN CONTRACT (types + helpers)
 │  ├─ plugin-sftp/            built-in file manager plugin
-│  └─ plugin-completion/      built-in command completion plugin
+│  ├─ plugin-completion/      built-in command completion plugin
+│  └─ plugin-hwmon/           hardware monitor; NOT bundled: packed by scripts/pack-plugin.mjs, published by plugin-release.yml
 ├─ scripts/plugin-vite.mjs    shared Vite config for plugin bundles (CJS, externals)
+├─ scripts/pack-plugin.mjs    deterministic zip + SHA-256 of a built plugin (for registry/plugins.json)
 ├─ registry/                  plugins.json (marketplace index), its JSON Schema, submission guide
 ├─ src-tauri/                 Rust core
 │  ├─ Cargo.toml, tauri.conf.json, capabilities/default.json, icons/
@@ -70,9 +72,10 @@ NaviShell/
 │     ├─ secrets.rs           credential_* (keyring)
 │     ├─ known_hosts.rs       known_hosts.json (TOFU store)
 │     ├─ local_pty.rs         term_open_local (local shells through portable-pty)
+│     ├─ local_exec.rs        local_exec (one-shot local command for plugins, no shell, no window)
 │     ├─ ssh/{mod,connection,terminal,exec,sftp}.rs
 │     └─ plugins.rs           plugins_list_external/read_file/install_*/uninstall/fetch_registry, plugin_storage_*
-└─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release)
+└─ .github/workflows/         ci.yml (check on push/PR), release.yml (tag v* -> draft release), plugin-release.yml (dispatch -> plugin zip pre-release)
 ```
 
 ## 3. Contracts
@@ -81,7 +84,8 @@ NaviShell/
   the wire; Rust params are snake_case and Tauri maps them), results, error codes and
   events. The Rust side implements exactly this surface; the host's `client.ts` wraps it.
 - **Plugin contract**: `packages/plugin-api/src/index.ts`. Plugins only ever see
-  `PluginContext`; they never call `invoke` directly.
+  `PluginContext`; they never call `invoke` directly. `ctx.local` (platform, arch and a
+  shell-less one-shot `exec`) is the local counterpart of `ctx.connections.exec`.
 
 Changing a contract means updating both sides; prefer additive changes.
 
@@ -272,6 +276,18 @@ Changing a contract means updating both sides; prefer additive changes.
   seen, history is recorded from the exact command text instead of the keystroke-tracked
   line (the pending keystroke candidate is dropped), and commands that exit with 127
   (command not found) are skipped.
+
+- `luciferase.hwmon` (not bundled; installed from the marketplace): a centre-docked
+  hardware dashboard. One target at a time - this machine through `ctx.local.exec` or any
+  open SSH connection through `ctx.connections.exec` (platform probed once with
+  `uname -s`) - is sampled on a timer while the panel is visible. Each platform has one
+  collector (`packages/plugin-hwmon/src/collect/`): a self-contained script (POSIX `sh` on
+  Linux/macOS, PowerShell on Windows) that prints what is available without ever failing
+  as a whole, plus a parser that turns it into a `Snapshot` (host, CPU incl. per-core
+  usage from two `/proc/stat` readings, memory, GPUs via `nvidia-smi` / `rocm-smi` with
+  per-GPU processes, disks). The UI keeps a 120-point history for sparklines and switches
+  the GPU section from cards to a dense table at six GPUs, with sorting by utilisation,
+  memory or temperature, so 8-16 GPU servers stay readable.
 
 ## 5. Conventions
 

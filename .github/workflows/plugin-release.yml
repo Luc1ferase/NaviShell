@@ -1,0 +1,75 @@
+# Publishes one of the plugins that live in packages/ but are not bundled with the app
+# (currently packages/plugin-hwmon). Dispatch it by hand, pick the package, and it builds
+# the plugin, zips it with scripts/pack-plugin.mjs and attaches the zip plus its SHA-256
+# to a GitHub release tagged `plugin-<id>-v<version>`.
+#
+# The release is a *pre-release* on purpose: GitHub's `releases/latest` must keep pointing
+# at the newest app release, because the in-app updater reads
+# `releases/latest/download/latest.json`.
+#
+# The zip is deterministic (stored entries, fixed timestamps), so the `sha256` printed by
+# the pack step must equal the one in registry/plugins.json for that version; if it does
+# not, the registry entry is what has to change.
+
+name: Plugin release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package directory under packages/
+        required: true
+        default: plugin-hwmon
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build, pack and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and pack
+        id: pack
+        run: |
+          pnpm --filter "./packages/${{ inputs.package }}" typecheck
+          pnpm --filter "./packages/${{ inputs.package }}" build
+          node scripts/pack-plugin.mjs "packages/${{ inputs.package }}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: plugin-${{ steps.pack.outputs.id }}-v${{ steps.pack.outputs.version }}
+          ZIP: ${{ steps.pack.outputs.zip }}
+          SHA256: ${{ steps.pack.outputs.sha256 }}
+          NAME: ${{ steps.pack.outputs.name }}
+        run: |
+          notes=$(printf 'Plugin `%s` version %s.\n\nInstall it from *Settings → Plugins → Marketplace*, or paste the zip URL into "Install from URL".\n\n`%s`\nSHA-256: `%s`\n\nBuilt from %s.' \
+            "${{ steps.pack.outputs.id }}" "${{ steps.pack.outputs.version }}" "$NAME" "$SHA256" "$GITHUB_SHA")
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" "$ZIP.sha256" --clobber
+          else
+            gh release create "$TAG" "$ZIP" "$ZIP.sha256" \
+              --title "Plugin ${{ steps.pack.outputs.id }} v${{ steps.pack.outputs.version }}" \
+              --notes "$notes" --prerelease --target "$GITHUB_SHA"
+          fi
+          echo "::notice::$NAME sha256=$SHA256"
+          echo "Registry entry: https://github.com/${GH_REPO}/releases/download/${TAG}/${NAME}" >> "$GITHUB_STEP_SUMMARY"
+          echo "sha256: $SHA256" >> "$GITHUB_STEP_SUMMARY"

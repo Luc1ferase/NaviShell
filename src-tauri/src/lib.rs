@@ -12,6 +12,7 @@
 mod error;
 mod fonts;
 mod known_hosts;
+mod local_exec;
 mod local_pty;
 mod plugins;
 mod secrets;
@@ -76,6 +77,8 @@ pub fn run() {
             settings::layout_set,
             // installed fonts (Settings font picker)
             fonts::fonts_list,
+            // one-shot local commands for plugins
+            local_exec::local_exec,
             // server records
             servers::servers_list,
             servers::servers_save,
