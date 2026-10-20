@@ -54,6 +54,8 @@ sha2 = "0.10"
 # the `deflate` feature would additionally pull in the zopfli *compressor*.
 zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 tempfile = "3"
+# Enumerates installed font families for the Settings font picker (`fonts_list`).
+fontdb = "0.24"
 
 [profile.release]
 codegen-units = 1

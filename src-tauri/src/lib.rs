@@ -10,6 +10,7 @@
 //! which the frontend reads as `HostError`.
 
 mod error;
+mod fonts;
 mod known_hosts;
 mod local_pty;
 mod plugins;
@@ -73,6 +74,8 @@ pub fn run() {
             settings::settings_set,
             settings::layout_get,
             settings::layout_set,
+            // installed fonts (Settings font picker)
+            fonts::fonts_list,
             // server records
             servers::servers_list,
             servers::servers_save,

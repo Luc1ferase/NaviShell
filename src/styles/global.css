@@ -739,6 +739,51 @@ body {
   border-radius: 2px;
 }
 
+/* Terminal font picker: installed fonts, the custom escape hatch and a live sample. */
+.ns-font-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+}
+
+.ns-font-field__row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ns-font-field__row .ns-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ns-font-field__note {
+  font-size: var(--ns-font-size-xs);
+  color: var(--ns-fg-subtle);
+}
+
+.ns-font-field__note--error {
+  color: var(--ns-danger);
+}
+
+.ns-font-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid var(--ns-border-strong);
+  border-radius: var(--ns-radius);
+  background: var(--ns-bg-inset);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ns-font-preview__glyphs {
+  color: var(--ns-fg-subtle);
+}
+
 .ns-plugin-card {
   display: flex;
   gap: 10px;
