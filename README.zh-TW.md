@@ -273,24 +273,6 @@ ctx.i18n.registerLocale({
 指令自動完成外掛的字典說明以 `dict.<指令>` 為鍵放在 `navishell.completion` 的項目裡。
 `packages/lang-zh-tw` 就是一份可以直接照抄的範本。
 
-## 路線圖
-
-v1 之後規劃的方向及其狀態（歡迎在對應 issue 下討論）：
-
-| # | 方向 | 狀態 |
-| - | ---- | ---- |
-| [#1](../../issues/1) | 私密金鑰登入（PEM / OpenSSH、passphrase） | 已實作（0.2.0） |
-| [#2](../../issues/2) | ssh-agent 支援 | 已實作（0.2.0） |
-| [#3](../../issues/3) | ProxyJump / 跳板主機 | 已實作（0.2.0） |
-| [#4](../../issues/4) | keyboard-interactive（含 2FA） | 已實作（0.2.0） |
-| [#5](../../issues/5) | 應用程式內自動更新 | 已實作（0.2.0） |
-| [#6](../../issues/6) | 本機終端機（不經過 SSH） | 已實作（0.2.0） |
-| [#7](../../issues/7) | 從 URL 安裝外掛 + 外掛市集 | 已實作（0.2.0） |
-| [#8](../../issues/8) | 感知遠端環境的指令自動完成（真實自動完成而非字典） | 已實作（0.2.0） |
-
-外掛市集（#7 裡提到的索引 JSON）就是 [`registry/plugins.json`](registry/plugins.json)，
-在「設定 → 外掛 → 外掛市集」裡；索引目前還是空的，歡迎發 PR 把你的外掛加進來。
-
 ## 授權條款
 
 [Apache License 2.0](LICENSE)。可以自由使用、修改和散布，但再散布或衍生作品必須保留

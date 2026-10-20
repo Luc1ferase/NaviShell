@@ -296,25 +296,6 @@ ctx.i18n.registerLocale({
 The completion plugin's dictionary descriptions live in its `navishell.completion` bundle
 under `dict.<command>` keys. `packages/lang-ja` is a template you can copy as is.
 
-## Roadmap
-
-Directions planned after v1 and their status (discuss in the linked issues):
-
-| # | Direction | Status |
-| - | --------- | ------ |
-| [#1](../../issues/1) | Private-key login (PEM / OpenSSH, passphrase) | shipped in 0.2.0 |
-| [#2](../../issues/2) | ssh-agent support | shipped in 0.2.0 |
-| [#3](../../issues/3) | ProxyJump / jump hosts | shipped in 0.2.0 |
-| [#4](../../issues/4) | keyboard-interactive (including 2FA) | shipped in 0.2.0 |
-| [#5](../../issues/5) | In-app auto update | shipped in 0.2.0 |
-| [#6](../../issues/6) | Local terminals (no SSH) | shipped in 0.2.0 |
-| [#7](../../issues/7) | Install plugins from a URL + marketplace | shipped in 0.2.0 |
-| [#8](../../issues/8) | Remote-aware command completion (real completion, not a dictionary) | shipped in 0.2.0 |
-
-The plugin marketplace (the registry index JSON mentioned in #7) is
-[`registry/plugins.json`](registry/plugins.json), listed under Settings → Plugins →
-Marketplace. The index is still empty; pull requests adding a plugin are welcome.
-
 ## License
 
 [Apache License 2.0](LICENSE). Use, modify and redistribute freely; redistributions and
