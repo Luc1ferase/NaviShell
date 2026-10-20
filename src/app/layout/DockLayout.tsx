@@ -141,6 +141,12 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
       components={COMPONENTS}
       tabComponents={TAB_COMPONENTS}
       watermarkComponent={Watermark}
+      // Drive tab/group drags with pointer events instead of HTML5 drag-and-drop:
+      // Tauri replaces WebView2's drag-drop handler on Windows (`dragDropEnabled`,
+      // on by default), which silently breaks HTML5 drags, and webkit2gtk on Linux
+      // is flaky with them too. Nothing here needs the native drag image or
+      // cross-window drags that the pointer backend gives up.
+      dndStrategy="pointer"
       onReady={onReady}
     />
   );
