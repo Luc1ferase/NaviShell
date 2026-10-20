@@ -9,6 +9,7 @@ export default defineConfig([
     ignores: [
       'dist/**',
       'public/plugins/**',
+      '.playwright-mcp/**',
       'src-tauri/**',
       'node_modules/**',
       'packages/*/dist/**',

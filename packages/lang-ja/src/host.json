@@ -17,6 +17,9 @@
     "settings": {
       "title": "設定"
     },
+    "extensions": {
+      "title": "拡張機能"
+    },
     "unavailable": "パネルを利用できません",
     "unavailableHint": "対応するプラグインが読み込まれていない、無効、またはアクティブ化に失敗しました。"
   },
@@ -29,7 +32,9 @@
     "panels": "パネル",
     "panelsTooltip": "パネルを開く、または表示する",
     "noPanels": "登録されたパネルはありません",
-    "noServers": "サーバーがありません"
+    "noServers": "サーバーがありません",
+    "extensions": "拡張機能",
+    "extensionsTooltip": "拡張機能の閲覧・インストール・更新"
   },
   "status": {
     "notConnected": "未接続",
@@ -138,23 +143,11 @@
     },
     "market": {
       "title": "マーケットプレース",
-      "refresh": "更新",
-      "loading": "レジストリを読み込んでいます…",
-      "notLoaded": "レジストリが読み込まれていません",
-      "untitled": "プラグイン レジストリ",
-      "updated": "{{date}} に更新",
-      "hint": "更新すると、インストールできるプラグインの一覧を読み込みます",
-      "empty": "レジストリにプラグインがありません",
-      "failed": "レジストリを読み込めませんでした: {{message}}",
-      "install": "インストール",
-      "update": "アップデート",
-      "installedVersion": "インストール済み v{{version}}",
-      "available": "v{{version}} が利用できます",
-      "requiresHost": "NaviShell {{version}} が必要です",
-      "homepage": "ホームページ",
       "registryUrl": "レジストリの URL",
       "registryUrlHint": "インストールできるプラグインの JSON インデックス。空の場合は公式のものを使用します",
-      "reset": "リセット"
+      "reset": "リセット",
+      "browse": "マーケットプレイスを開く",
+      "moved": "拡張機能の閲覧・インストール・更新は「拡張機能」パネルで行います。ここではパネルが読み込むインデックスの URL を設定します。"
     },
     "uninstall": {
       "label": "アンインストール",
@@ -163,6 +156,99 @@
       "ok": "アンインストール",
       "done": "{{name}} をアンインストールしました"
     }
+  },
+  "ext": {
+    "search": "拡張機能を検索",
+    "count": "{{count}} 件の拡張機能",
+    "view": {
+      "marketplace": "マーケット",
+      "installed": "インストール済み",
+      "updates": "更新"
+    },
+    "updatesBadge": "{{count}} 件の更新があります",
+    "sort": {
+      "label": "並べ替え",
+      "default": "レジストリ順",
+      "name": "名前"
+    },
+    "category": {
+      "all": "すべてのカテゴリ",
+      "terminal": "ターミナル",
+      "connections": "接続",
+      "files": "ファイル",
+      "monitoring": "モニタリング",
+      "languages": "言語",
+      "productivity": "生産性",
+      "themes": "テーマ",
+      "other": "その他"
+    },
+    "refresh": "再読み込み",
+    "loading": "マーケットを読み込んでいます…",
+    "failed": "マーケットを読み込めません: {{message}}",
+    "notLoaded": "マーケットはまだ読み込まれていません。",
+    "empty": {
+      "marketplace": "一致する拡張機能はありません。",
+      "installed": "一致するインストール済み拡張機能はありません。",
+      "updates": "すべて最新です。"
+    },
+    "select": "拡張機能を選択すると詳細が表示されます。",
+    "back": "一覧に戻る",
+    "action": {
+      "install": "インストール",
+      "update": "{{version}} に更新",
+      "uninstall": "アンインストール",
+      "enable": "有効化",
+      "disable": "無効化",
+      "installVersion": "{{version}} をインストール",
+      "busy": "処理中…"
+    },
+    "badge": {
+      "installed": "インストール済み",
+      "update": "更新あり",
+      "builtin": "内蔵",
+      "disabled": "無効",
+      "error": "エラー",
+      "requiresHost": "NaviShell {{version}} 以降が必要"
+    },
+    "tab": {
+      "details": "詳細",
+      "changelog": "変更履歴",
+      "versions": "バージョン"
+    },
+    "detail": {
+      "noReadme": "この拡張機能には README がありません。",
+      "noChangelog": "この拡張機能には変更履歴がありません。",
+      "noVersions": "この拡張機能はマーケットに掲載されていないため、選べるバージョンはありません。",
+      "loading": "読み込み中…",
+      "loadFailed": "ドキュメントを読み込めません: {{message}}",
+      "retry": "再試行"
+    },
+    "meta": {
+      "id": "識別子",
+      "version": "バージョン",
+      "installedVersion": "インストール済みバージョン",
+      "author": "公開元",
+      "license": "ライセンス",
+      "categories": "カテゴリ",
+      "tags": "タグ",
+      "minHost": "必要バージョン",
+      "minHostValue": "NaviShell {{version}} 以降",
+      "links": "リンク",
+      "homepage": "ホームページ",
+      "repository": "リポジトリ",
+      "path": "場所"
+    },
+    "versions": {
+      "latest": "最新",
+      "installed": "インストール済み",
+      "requires": "NaviShell {{version}} 以降"
+    },
+    "confirm": {
+      "versionTitle": "別のバージョンをインストール",
+      "versionMessage": "インストール済みの {{installed}} を {{version}} に置き換えますか？",
+      "versionOk": "インストール"
+    },
+    "registrySettings": "レジストリ設定"
   },
   "updates": {
     "title": "アップデート",

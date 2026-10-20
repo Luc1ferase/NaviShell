@@ -158,12 +158,18 @@ Settings → Plugins can also install straight from a zip, skipping the manual c
 
 ### Plugin marketplace
 
-Settings → Plugins → Marketplace lists a registry index, by default this repository's
-[`registry/plugins.json`](registry/plugins.json): picking a plugin installs it from the URL
-and SHA-256 of its entry, so there is no address to type. The index URL can be pointed at
-your own in Settings → Plugins (empty means the default one). The download is capped at
-15 s and 1 MiB, only http / https is accepted, and an entry with invalid fields is dropped
-with a log warning rather than failing the whole list.
+The **Extensions** button in the top bar opens the extensions panel, in the spirit of VS
+Code's extensions view: a list on the left with Marketplace, Installed and Updates views,
+search and category filters; a detail pane on the right that renders the plugin's README,
+changelog and version list, with install, update, enable, disable and uninstall, and the
+option to go back to an older version. The list comes from a registry index, by default
+this repository's [`registry/plugins.json`](registry/plugins.json): picking a plugin
+installs it from the URL and SHA-256 of its entry, so there is no address to type. The
+index URL can be pointed at your own in Settings → Plugins (empty means the default one).
+The download is capped at 15 s and 1 MiB, only http / https is accepted, and an entry with
+invalid fields is dropped with a log warning rather than failing the whole list. README and
+changelog are sanitized before rendering (no scripts, only http(s) links and images) and
+links open in the system browser.
 
 To get a plugin into that list, open a pull request against [`registry/`](registry/). The
 entry format, how to host the zip and how to compute its SHA-256 are documented in

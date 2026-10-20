@@ -42,6 +42,8 @@ const DEFAULT_REGISTRY_URL: &str =
 const MAX_REGISTRY_BYTES: u64 = 1024 * 1024;
 /// Deadline for fetching a registry index, connection setup included.
 const REGISTRY_TIMEOUT: Duration = Duration::from_secs(15);
+/// Largest README / changelog `plugins_fetch_text` returns.
+const MAX_TEXT_BYTES: u64 = 2 * 1024 * 1024;
 
 /// `plugin.json`, mirroring `PluginManifest` of the plugin API.
 ///
@@ -911,6 +913,20 @@ fn sanitize_registry_entry(entry: &mut PluginRegistryEntry) {
 
 /// Downloads a registry index into memory, refusing anything over [`MAX_REGISTRY_BYTES`].
 async fn fetch_registry(url: &str) -> AppResult<String> {
+    fetch_text(url, MAX_REGISTRY_BYTES, "the registry index").await
+}
+
+/// A plugin's README or changelog for the Extensions panel: the Markdown document at
+/// `url`, fetched with the registry's transport rules (http(s) only, 15 s, a size cap).
+/// The frontend sanitizes it before rendering; nothing here interprets it.
+#[tauri::command]
+pub async fn plugins_fetch_text(url: String) -> AppResult<String> {
+    fetch_text(url.trim(), MAX_TEXT_BYTES, "the document").await
+}
+
+/// Downloads a small UTF-8 text document into memory, refusing anything over `limit`
+/// bytes; `what` names the document in the error.
+async fn fetch_text(url: &str, limit: u64, what: &str) -> AppResult<String> {
     let parsed = parse_http_url(url)?;
     let client = http_client(REGISTRY_TIMEOUT)?;
 
@@ -925,9 +941,9 @@ async fn fetch_registry(url: &str) -> AppResult<String> {
             .with_data(serde_json::json!({ "status": status.as_u16() })));
     }
     if let Some(length) = response.content_length()
-        && length > MAX_REGISTRY_BYTES
+        && length > limit
     {
-        return Err(registry_too_large(length));
+        return Err(text_too_large(what, limit, length));
     }
 
     let mut body: Vec<u8> = Vec::new();
@@ -939,24 +955,24 @@ async fn fetch_registry(url: &str) -> AppResult<String> {
         .map_err(|e| http_error(url, &e, REGISTRY_TIMEOUT))?
     {
         let total = (body.len() as u64).saturating_add(chunk.len() as u64);
-        if total > MAX_REGISTRY_BYTES {
-            return Err(registry_too_large(total));
+        if total > limit {
+            return Err(text_too_large(what, limit, total));
         }
         body.extend_from_slice(&chunk);
     }
 
     let text = String::from_utf8(body)
-        .map_err(|_| AppError::io(format!("{url} did not return UTF-8 JSON")))?;
-    // A self-hosted index saved by a Windows editor tends to start with a BOM, which
-    // `serde_json` refuses.
+        .map_err(|_| AppError::io(format!("{url} did not return UTF-8 text")))?;
+    // A document saved by a Windows editor tends to start with a BOM, which `serde_json`
+    // refuses and Markdown would show as a stray character.
     Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
 }
 
-/// The single error for a registry index past [`MAX_REGISTRY_BYTES`].
-fn registry_too_large(bytes: u64) -> AppError {
+/// The single error for a text document past its size limit.
+fn text_too_large(what: &str, limit: u64, bytes: u64) -> AppError {
     AppError::io(format!(
-        "the registry index exceeds the {} MiB limit ({bytes} bytes)",
-        MAX_REGISTRY_BYTES / (1024 * 1024)
+        "{what} exceeds the {} MiB limit ({bytes} bytes)",
+        limit / (1024 * 1024)
     ))
 }
 

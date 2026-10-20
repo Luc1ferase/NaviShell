@@ -8,9 +8,18 @@
     "dismiss": "Dismiss"
   },
   "panel": {
-    "home": { "title": "Welcome" },
-    "servers": { "title": "Servers" },
-    "settings": { "title": "Settings" },
+    "home": {
+      "title": "Welcome"
+    },
+    "servers": {
+      "title": "Servers"
+    },
+    "settings": {
+      "title": "Settings"
+    },
+    "extensions": {
+      "title": "Extensions"
+    },
     "unavailable": "Panel unavailable",
     "unavailableHint": "Its plugin is not loaded, disabled or failed to activate."
   },
@@ -23,7 +32,9 @@
     "panels": "Panels",
     "panelsTooltip": "Open or reveal a panel",
     "noPanels": "No panels registered",
-    "noServers": "No servers yet"
+    "noServers": "No servers yet",
+    "extensions": "Extensions",
+    "extensionsTooltip": "Browse, install and update extensions"
   },
   "status": {
     "notConnected": "Not connected",
@@ -43,8 +54,14 @@
     "about": "About",
     "localeLabel": "Language",
     "themeLabel": "Theme",
-    "locale": { "system": "Follow system" },
-    "theme": { "system": "System", "dark": "Dark", "light": "Light" },
+    "locale": {
+      "system": "Follow system"
+    },
+    "theme": {
+      "system": "System",
+      "dark": "Dark",
+      "light": "Light"
+    },
     "closeWithLastTerminal": "Close connections",
     "closeWithLastTerminalHint": "Disconnect when the last terminal of a connection closes",
     "fontFamily": "Font family",
@@ -62,7 +79,11 @@
     "fontPreviewText": "The quick brown fox jumps over the lazy dog",
     "lineHeight": "Line height",
     "cursorStyle": "Cursor style",
-    "cursor": { "block": "Block", "underline": "Underline", "bar": "Bar" },
+    "cursor": {
+      "block": "Block",
+      "underline": "Underline",
+      "bar": "Bar"
+    },
     "cursorBlink": "Cursor blink",
     "cursorBlinkHint": "Blink the cursor",
     "scrollback": "Scrollback",
@@ -73,7 +94,10 @@
     "colorSchemeDark": "Color scheme (dark UI)",
     "colorSchemeLight": "Color scheme (light UI)",
     "colorSchemeHint": "Each UI theme has its own terminal palette; a dark terminal on the light UI is fine",
-    "schemeGroup": { "dark": "Dark schemes", "light": "Light schemes" },
+    "schemeGroup": {
+      "dark": "Dark schemes",
+      "light": "Light schemes"
+    },
     "minContrast": "Minimum contrast",
     "minContrastHint": "Nudges text colors that would blend into the background",
     "minContrast.off": "Off",
@@ -96,8 +120,15 @@
     "reloaded": "Plugins reloaded",
     "none": "No plugins found",
     "installed": "Installed",
-    "status": { "active": "active", "disabled": "disabled", "error": "error" },
-    "source": { "builtin": "built-in", "external": "external" },
+    "status": {
+      "active": "active",
+      "disabled": "disabled",
+      "error": "error"
+    },
+    "source": {
+      "builtin": "built-in",
+      "external": "external"
+    },
     "errors": {
       "manifest": "Could not read plugin.json: {{message}}",
       "noExport": "The bundle does not export a NaviShell plugin",
@@ -124,23 +155,11 @@
     },
     "market": {
       "title": "Marketplace",
-      "refresh": "Refresh",
-      "loading": "Loading registry…",
-      "notLoaded": "Registry not loaded",
-      "untitled": "Plugin registry",
-      "updated": "updated {{date}}",
-      "hint": "Refresh to load the list of available plugins",
-      "empty": "The registry lists no plugins",
-      "failed": "Could not load the registry: {{message}}",
-      "install": "Install",
-      "update": "Update",
-      "installedVersion": "Installed v{{version}}",
-      "available": "v{{version}} available",
-      "requiresHost": "Needs NaviShell {{version}}",
-      "homepage": "Homepage",
       "registryUrl": "Registry URL",
       "registryUrlHint": "JSON index of installable plugins; empty = the official one",
-      "reset": "Reset"
+      "reset": "Reset",
+      "browse": "Browse the marketplace",
+      "moved": "Extensions are browsed, installed and updated in the Extensions panel; the index it reads is set here."
     },
     "uninstall": {
       "label": "Uninstall",
@@ -149,6 +168,99 @@
       "ok": "Uninstall",
       "done": "Uninstalled {{name}}"
     }
+  },
+  "ext": {
+    "search": "Search extensions",
+    "count": "{{count}} extensions",
+    "view": {
+      "marketplace": "Marketplace",
+      "installed": "Installed",
+      "updates": "Updates"
+    },
+    "updatesBadge": "{{count}} updates available",
+    "sort": {
+      "label": "Sort",
+      "default": "Registry order",
+      "name": "Name"
+    },
+    "category": {
+      "all": "All categories",
+      "terminal": "Terminal",
+      "connections": "Connections",
+      "files": "Files",
+      "monitoring": "Monitoring",
+      "languages": "Languages",
+      "productivity": "Productivity",
+      "themes": "Themes",
+      "other": "Other"
+    },
+    "refresh": "Refresh",
+    "loading": "Loading the marketplace…",
+    "failed": "Could not load the marketplace: {{message}}",
+    "notLoaded": "The marketplace has not been loaded.",
+    "empty": {
+      "marketplace": "No extensions match.",
+      "installed": "No installed extensions match.",
+      "updates": "Everything is up to date."
+    },
+    "select": "Select an extension to see its details.",
+    "back": "Back to the list",
+    "action": {
+      "install": "Install",
+      "update": "Update to {{version}}",
+      "uninstall": "Uninstall",
+      "enable": "Enable",
+      "disable": "Disable",
+      "installVersion": "Install {{version}}",
+      "busy": "Working…"
+    },
+    "badge": {
+      "installed": "Installed",
+      "update": "Update available",
+      "builtin": "Built-in",
+      "disabled": "Disabled",
+      "error": "Error",
+      "requiresHost": "Requires NaviShell {{version}}"
+    },
+    "tab": {
+      "details": "Details",
+      "changelog": "Changelog",
+      "versions": "Versions"
+    },
+    "detail": {
+      "noReadme": "This extension has no README.",
+      "noChangelog": "This extension has no changelog.",
+      "noVersions": "The marketplace does not list this extension, so there are no versions to pick from.",
+      "loading": "Loading…",
+      "loadFailed": "Could not load this document: {{message}}",
+      "retry": "Retry"
+    },
+    "meta": {
+      "id": "Identifier",
+      "version": "Version",
+      "installedVersion": "Installed version",
+      "author": "Publisher",
+      "license": "License",
+      "categories": "Categories",
+      "tags": "Tags",
+      "minHost": "Requires",
+      "minHostValue": "NaviShell {{version}} or newer",
+      "links": "Links",
+      "homepage": "Homepage",
+      "repository": "Repository",
+      "path": "Location"
+    },
+    "versions": {
+      "latest": "latest",
+      "installed": "installed",
+      "requires": "needs NaviShell {{version}}"
+    },
+    "confirm": {
+      "versionTitle": "Install a different version",
+      "versionMessage": "Replace the installed {{installed}} with {{version}}?",
+      "versionOk": "Install"
+    },
+    "registrySettings": "Registry settings"
   },
   "updates": {
     "title": "Updates",
@@ -195,7 +307,11 @@
     "passwordCleared": "Stored password removed",
     "passphraseCleared": "Stored passphrase removed",
     "via": "via {{name}}",
-    "auth": { "password": "password", "key": "key", "agent": "agent" },
+    "auth": {
+      "password": "password",
+      "key": "key",
+      "agent": "agent"
+    },
     "delete": {
       "title": "Delete server",
       "message": "Delete {{name}} and its stored password?"

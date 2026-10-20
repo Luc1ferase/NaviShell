@@ -41,13 +41,13 @@ NaviShell/
 │  ├─ core/
 │  │  ├─ ipc/contract.ts      <-- IPC CONTRACT (commands, args, results, events)
 │  │  ├─ ipc/client.ts        typed invoke wrappers (`call('ssh_connect', {...})`)
-│  │  ├─ stores/              zustand stores: settings, servers, connections, terminals, ui, plugins
+│  │  ├─ stores/              zustand stores: settings, servers, connections, terminals, ui, plugins, marketplace, remoteText
 │  │  ├─ plugins/             plugin host: loader (builtin + external), require shim, PluginContext impl, registries
 │  │  ├─ terminal/            xterm factory, TerminalHandle impl
 │  │  └─ i18n/                i18next setup, locales/en.json, locales/zh-CN.json; language packs add more
 │  ├─ app/
 │  │  ├─ layout/              DockLayout (dockview), default layout, persistence
-│  │  ├─ panels/              ServersPanel, TerminalPanel, HomePanel, SettingsPanel, PluginPanel (generic)
+│  │  ├─ panels/              ServersPanel, TerminalPanel, HomePanel, SettingsPanel, PluginPanel (generic), extensions/ (the marketplace view)
 │  │  ├─ components/          Dialogs (confirm/prompt/password/host-key), Toasts, ContextMenu, StatusBar, TopBar
 │  │  └─ menus/               panels.ts: the Panels menu (every registered panel, open ones checked) used by TopBar and StatusBar
 │  └─ styles/                 CSS variables + global styles (dark theme first)
@@ -171,6 +171,16 @@ Changing a contract means updating both sides; prefer additive changes.
   README/changelog URLs, licence, screenshots and previous `releases` — and
   `scripts/check-registry.mjs` (the `Registry` workflow) verifies every change to it:
   schema, consistency rules, zip digests and manifests, links.
+- **Extensions panel** (`src/app/panels/extensions/`, core panel `core:extensions`, a
+  centre tab like Settings): the marketplace UI. `model.ts` merges the index with the
+  installed plugins into one list (Marketplace / Installed / Updates views, search,
+  category chips, per-version install from `releases`); the Settings tab keeps only the
+  index URL. README and changelog arrive through `plugins_fetch_text` (the index's
+  transport rules, 2 MiB cap, cached per URL in `stores/remoteText.ts`) and are rendered
+  by `core/plugins/markdown.ts`: marked (GFM) then DOMPurify with scripts, styles, forms,
+  frames, SVG and `id`s stripped, http(s)-only links and images, relative references
+  resolved against the document's own URL. Link clicks are intercepted and opened in the
+  system browser, never in the webview.
 - **Updates** (issue #5): `tauri-plugin-updater` + `tauri-plugin-process`, registered
   under `#[cfg(desktop)]`. `plugins.updater` in `tauri.conf.json` holds the minisign
   public key and the single endpoint
@@ -211,7 +221,7 @@ Changing a contract means updating both sides; prefer additive changes.
   no-op rather than an error on every launch. The same check sits in Settings > About,
   where it is explicit and does report a failure; outside a packaged app it says so
   instead of calling the plugin.
-- **Panels**: one registry for core panels (`core:servers`, `core:settings`) and plugin panels
+- **Panels**: one registry for core panels (`core:servers`, `core:extensions`, `core:settings`) and plugin panels
   (`<pluginId>:<panelId>`). Dockview uses a single generic `panel` component whose params are
   `{ panelId }`; it looks the definition up in the registry and renders it (or a
   placeholder if the plugin is not loaded/disabled). Terminal tabs use the `terminal`
