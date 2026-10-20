@@ -61,7 +61,8 @@ Plugins that live in `packages/` but are not bundled with the app (they are abse
 `public/builtin-plugins.json`; today `packages/plugin-hwmon`) reach users through the
 marketplace index `registry/plugins.json`, so they have their own, lighter flow:
 
-1. Bump `version` in the package's `plugin/plugin.json` (and `package.json`).
+1. On a branch, bump `version` in the package's `plugin/plugin.json` (and `package.json`)
+   and add the version to the package's `CHANGELOG.md`. Push the branch.
 2. Build and pack locally to learn the digest:
 
    ```bash
@@ -70,19 +71,27 @@ marketplace index `registry/plugins.json`, so they have their own, lighter flow:
    ```
 
    The zip is deterministic (stored entries, fixed timestamps), so this digest is the one
-   the workflow will produce for the same commit.
-3. Update the entry in `registry/plugins.json`: `version`, `url`
-   (`https://github.com/Luc1ferase/NaviShell/releases/download/plugin-<id>-v<version>/<id>-<version>.zip`)
-   and `sha256`; run `pnpm exec prettier --write registry`. Merge.
-4. Dispatch **Plugin release** (`gh workflow run plugin-release.yml --ref master -f package=plugin-hwmon`).
-   It builds, packs, and creates the release `plugin-<id>-v<version>` with the zip and a
+   the workflow will produce for the same sources.
+3. Dispatch **Plugin release** from that branch
+   (`gh workflow run plugin-release.yml --ref <branch> -f package=plugin-hwmon`). It
+   builds, packs, and creates the release `plugin-<id>-v<version>` with the zip and a
    `.sha256` file attached. The release is a **pre-release** so that `releases/latest`,
-   which the app updater reads, keeps pointing at the newest app release.
-5. Compare the `sha256` in the job summary with the registry entry. They match for the
-   same commit; if they do not, fix the registry entry, never the asset.
+   which the app updater reads, keeps pointing at the newest app release. The `sha256` in
+   the job summary must equal the one from step 2; if it does not, the sources differ
+   from what was pushed.
+4. Update the entry in `registry/plugins.json` on the same branch: move the current
+   `version` / `url` / `sha256` / `minHostVersion` to the top of `releases` (with the
+   release `date`), then set the new `version`, `url`
+   (`https://github.com/Luc1ferase/NaviShell/releases/download/plugin-<id>-v<version>/<id>-<version>.zip`)
+   and `sha256`, and run `pnpm exec prettier --write registry` and
+   `node scripts/check-registry.mjs`. Open the PR: the **Registry** workflow downloads the
+   published asset and checks its digest and manifest against the entry, so a mismatch
+   blocks the merge rather than a user's install.
+5. Merge. If the plugin sources change during review, run step 3 again (the workflow
+   replaces the assets of an existing release) and update the digest in the entry.
 
-The app verifies the digest before unpacking, so a registry entry that points at a
-not-yet-published asset simply fails to install until step 4 is done.
+The app verifies the digest before unpacking, so even a wrong entry fails safely: the
+install is refused, nothing half-installed is left behind.
 
 ## Forks
 

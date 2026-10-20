@@ -729,6 +729,18 @@ pub struct PluginRegistryEntry {
     pub sha256: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
+    /// Source repository (a web page).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repository: Option<String>,
+    /// Raw Markdown README for the detail page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub readme: Option<String>,
+    /// Raw Markdown changelog for the detail page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changelog: Option<String>,
+    /// SPDX licence identifier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -736,6 +748,35 @@ pub struct PluginRegistryEntry {
     /// `lucide-react` icon name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// Marketplace categories (the schema's fixed set; the frontend translates them).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categories: Vec<String>,
+    /// Lowercase search keywords.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    /// Image URLs for the detail page.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub screenshots: Vec<String>,
+    /// Previous versions, newest first; the entry's own fields describe the latest one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub releases: Vec<PluginRegistryRelease>,
+}
+
+/// A previous version listed under a registry entry's `releases`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginRegistryRelease {
+    #[serde(default)]
+    pub version: String,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_host_version: Option<String>,
+    /// ISO date (YYYY-MM-DD).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
 }
 
 /// A validated registry index, the result of [`plugins_fetch_registry`].
@@ -783,11 +824,14 @@ pub async fn plugins_fetch_registry(url: Option<String>) -> AppResult<PluginRegi
     let mut plugins: Vec<PluginRegistryEntry> = Vec::with_capacity(listed);
     for value in raw.plugins {
         match serde_json::from_value::<PluginRegistryEntry>(value) {
-            Ok(entry) => match registry_entry_problem(&entry) {
+            Ok(mut entry) => match registry_entry_problem(&entry) {
                 Some(reason) => {
                     tracing::warn!(url, reason, "dropping a plugin registry entry");
                 }
-                None => plugins.push(entry),
+                None => {
+                    sanitize_registry_entry(&mut entry);
+                    plugins.push(entry);
+                }
             },
             Err(e) => {
                 tracing::warn!(url, error = %e, "dropping an unreadable plugin registry entry");
@@ -824,6 +868,45 @@ fn registry_entry_problem(entry: &PluginRegistryEntry) -> Option<String> {
         return Some(format!("plugin {}: {}", entry.id, e.message));
     }
     None
+}
+
+/// Cleans the optional metadata of an entry that is being kept, so that what reaches the
+/// marketplace is either absent or usable: links must be http(s) and a previous release
+/// needs a version and an installable URL. Each dropped value is logged.
+fn sanitize_registry_entry(entry: &mut PluginRegistryEntry) {
+    let id = entry.id.clone();
+    for (field, value) in [
+        ("homepage", &mut entry.homepage),
+        ("repository", &mut entry.repository),
+        ("readme", &mut entry.readme),
+        ("changelog", &mut entry.changelog),
+    ] {
+        if let Some(url) = value.as_deref()
+            && parse_http_url(url).is_err()
+        {
+            tracing::warn!(plugin = %id, field, url, "ignoring a non-http(s) link");
+            *value = None;
+        }
+    }
+    entry.screenshots.retain(|url| {
+        let usable = parse_http_url(url).is_ok();
+        if !usable {
+            tracing::warn!(plugin = %id, url, "ignoring a non-http(s) screenshot");
+        }
+        usable
+    });
+    entry.releases.retain(|release| {
+        let usable = !release.version.trim().is_empty() && parse_http_url(&release.url).is_ok();
+        if !usable {
+            tracing::warn!(
+                plugin = %id,
+                version = %release.version,
+                url = %release.url,
+                "ignoring an unusable previous release"
+            );
+        }
+        usable
+    });
 }
 
 /// Downloads a registry index into memory, refusing anything over [`MAX_REGISTRY_BYTES`].
