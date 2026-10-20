@@ -48,7 +48,8 @@ NaviShell/
 │  ├─ app/
 │  │  ├─ layout/              DockLayout (dockview), default layout, persistence
 │  │  ├─ panels/              ServersPanel, TerminalPanel, HomePanel, SettingsPanel, PluginPanel (generic)
-│  │  └─ components/          Dialogs (confirm/prompt/password/host-key), Toasts, ContextMenu, StatusBar, TopBar
+│  │  ├─ components/          Dialogs (confirm/prompt/password/host-key), Toasts, ContextMenu, StatusBar, TopBar
+│  │  └─ menus/               panels.ts: the Panels menu (every registered panel, open ones checked) used by TopBar and StatusBar
 │  └─ styles/                 CSS variables + global styles (dark theme first)
 ├─ public/plugins/            GENERATED built-in plugin bundles (gitignored)
 ├─ packages/

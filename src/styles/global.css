@@ -1346,6 +1346,12 @@ body {
   background: var(--ns-border);
 }
 
+.ns-menu__check {
+  flex: 0 0 auto;
+  margin-left: 12px;
+  color: var(--ns-accent);
+}
+
 .ns-menu__label {
   flex: 1;
   overflow: hidden;

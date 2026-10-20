@@ -20,6 +20,7 @@ import { useServersStore } from '@/core/stores/servers';
 import { useSettingsStore } from '@/core/stores/settings';
 import { useTerminalsStore } from '@/core/stores/terminals';
 import { useUiStore } from '@/core/stores/ui';
+import { panelMenuItems } from '@/app/menus/panels';
 
 function shortFingerprint(fingerprint: string): string {
   const body = fingerprint.startsWith('SHA256:') ? fingerprint.slice(7) : fingerprint;
@@ -131,10 +132,15 @@ export function StatusBar() {
         {t('status.terminals', { n: terminalCount })}
       </span>
 
-      <span className="ns-statusbar__item">
+      <button
+        type="button"
+        className="ns-statusbar__item ns-statusbar__item--button"
+        onClick={(event) => openMenu(event, panelMenuItems())}
+        title={t('topbar.panelsTooltip')}
+      >
         <Plug size={12} />
         {t('status.plugins', { n: activePlugins })}
-      </span>
+      </button>
 
       <span className="ns-statusbar__spacer" />
 

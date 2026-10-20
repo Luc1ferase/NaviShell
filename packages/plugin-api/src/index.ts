@@ -521,6 +521,8 @@ export interface MenuItem {
   icon?: string;
   disabled?: boolean;
   danger?: boolean;
+  /** Shows a check mark on the right, for toggles and "currently open" states. */
+  checked?: boolean;
   /** `true` renders a separator; other fields are ignored. */
   separator?: boolean;
   onClick?: () => void;

@@ -1,5 +1,11 @@
 import type { MouseEvent } from 'react';
-import { ChevronRight, Plus, Settings as SettingsIcon, SquareTerminal } from 'lucide-react';
+import {
+  ChevronRight,
+  PanelsTopLeft,
+  Plus,
+  Settings as SettingsIcon,
+  SquareTerminal,
+} from 'lucide-react';
 import type { MenuItem } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
@@ -7,6 +13,7 @@ import { errorMessage } from '@/core/ipc/client';
 import { openSettingsPanel } from '@/core/services/layout';
 import { useServersStore } from '@/core/stores/servers';
 import { useUiStore } from '@/core/stores/ui';
+import { panelMenuItems } from '@/app/menus/panels';
 import { openLocalTerminal, revealOrOpenTerminal } from '@/core/terminal/manager';
 
 export function TopBar() {
@@ -42,6 +49,11 @@ export function TopBar() {
     showContextMenu(items, { x: rect.left, y: rect.bottom + 4 });
   };
 
+  const openPanelsMenu = (event: MouseEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    showContextMenu(panelMenuItems(), { x: rect.left, y: rect.bottom + 4 });
+  };
+
   return (
     <header className="ns-topbar">
       <div className="ns-topbar__brand">
@@ -67,6 +79,16 @@ export function TopBar() {
       >
         <SquareTerminal size={14} />
         {t('topbar.newLocalTerminal')}
+      </button>
+
+      <button
+        type="button"
+        className="ns-btn ns-btn--ghost"
+        onClick={openPanelsMenu}
+        title={t('topbar.panelsTooltip')}
+      >
+        <PanelsTopLeft size={14} />
+        {t('topbar.panels')}
       </button>
 
       <div className="ns-topbar__spacer" />
