@@ -26,8 +26,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Publishing a draft that a manual dispatch produced creates the tag, and that tag push
+  # would otherwise start a second, identical build that ends in a duplicate draft. Skip
+  # the build when the tag already has a published release.
+  guard:
+    name: Check for an existing release
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+    steps:
+      - name: Skip tag pushes whose release is already published
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          build=true
+          if [ "${{ github.event_name }}" = "push" ]; then
+            state=$(gh release view "$GITHUB_REF_NAME" --json isDraft               --jq 'if .isDraft then "draft" else "published" end' 2>/dev/null || echo "none")
+            if [ "$state" = "published" ]; then
+              echo "::notice::$GITHUB_REF_NAME already has a published release; nothing to build."
+              build=false
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
   bundle:
     name: ${{ matrix.label }}
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
     runs-on: ${{ matrix.platform }}
     strategy:
       # One broken platform should not cancel the others' uploads.

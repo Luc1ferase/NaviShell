@@ -33,6 +33,12 @@ Nothing is packaged in CI; installers only come from the release workflow below.
    `releases/latest/download/latest.json`, and GitHub's `latest` only points at published,
    non-pre-release releases.
 
+   Until it is published, a draft has no tag: its URL is `releases/tag/untagged-<hash>`
+   (`gh release view v0.3.0 --json url` prints it) and `releases/tag/v0.3.0` is a 404.
+   Publishing a draft that came from a manual dispatch creates the tag at that moment; the
+   workflow's `guard` job notices that the tag already has a published release and skips
+   the build the tag push would otherwise start, so no duplicate draft appears.
+
 ## Update signing
 
 Signing updates needs two repository secrets; the build fails if either is missing:
