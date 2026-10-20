@@ -78,6 +78,14 @@ A listed plugin is still third-party code that the host evaluates in its rendere
 is a sanity check on the entry (the fields, the zip layout, the digest) and not an audit of
 the plugin — install from this list with the same judgement you would apply to any zip.
 
+## Plugins maintained in this repository
+
+Plugins under `packages/` that are not bundled with the app (today `plugin-hwmon`) follow
+the same rules: the *Plugin release* workflow (`.github/workflows/plugin-release.yml`)
+builds and zips them with `scripts/pack-plugin.mjs` and attaches the zip to a pre-release
+tagged `plugin-<id>-v<version>`; the entry here points at that asset. See
+`docs/RELEASING.md`, "Plugin releases".
+
 ## Hosting the zip
 
 A GitHub Release asset is the easiest stable home:

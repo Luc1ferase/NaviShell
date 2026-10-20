@@ -1,0 +1,26 @@
+{
+  "name": "@navishell/plugin-hwmon",
+  "version": "0.1.0",
+  "description": "NaviShell hardware monitor plugin (CPU, memory, GPUs); installed from the marketplace, not bundled with the app",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "pack": "node ../../scripts/pack-plugin.mjs .",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@navishell/plugin-api": "workspace:*",
+    "lucide-react": "^1.59.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.4"
+  }
+}

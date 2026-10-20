@@ -25,11 +25,16 @@ export const HOST_PROVIDED_MODULES = [
 /**
  * @param {string} pluginId e.g. "navishell.sftp"
  * @param {string} pkgDirUrl pass `import.meta.url` from the plugin's vite.config.ts
+ * @param {{ outDir?: string }} [options] `outDir` (relative to the package) replaces the
+ *   default `<repo>/public/plugins/<id>/`; plugins that are not bundled with the app build
+ *   into their own `dist/` and are zipped from there (see scripts/pack-plugin.mjs).
  */
-export function createPluginConfig(pluginId, pkgDirUrl) {
+export function createPluginConfig(pluginId, pkgDirUrl, options = {}) {
   const pkgDir = path.dirname(fileURLToPath(pkgDirUrl));
   const repoRoot = path.resolve(pkgDir, '..', '..');
-  const outDir = path.join(repoRoot, 'public', 'plugins', pluginId);
+  const outDir = options.outDir
+    ? path.resolve(pkgDir, options.outDir)
+    : path.join(repoRoot, 'public', 'plugins', pluginId);
 
   return defineConfig({
     plugins: [react()],

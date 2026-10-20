@@ -204,6 +204,18 @@ export interface Commands {
   layout_get: { args: Record<string, never>; result: JsonValue | null };
   layout_set: { args: { layout: JsonValue }; result: void };
 
+  // ---- local machine -----------------------------------------------------
+  /**
+   * Runs `program` with `args` on this machine without a shell (no window on Windows) and
+   * returns its output; `ExecResult.exitCode` is `null` when the process was killed by a
+   * signal. Output is UTF-8 (lossy) and capped at 8 MiB per stream. Default timeout
+   * 30 s (max 10 min); the process is killed when it expires (`Timeout`).
+   */
+  local_exec: {
+    args: { program: string; args: string[]; timeoutMs?: number; cwd?: string };
+    result: ExecResult;
+  };
+
   // ---- fonts -------------------------------------------------------------
   /** Installed font families sorted by name; cached per process unless `refresh`. */
   fonts_list: { args: { refresh: boolean }; result: FontFamily[] };

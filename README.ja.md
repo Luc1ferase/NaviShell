@@ -230,6 +230,7 @@ externals 設定済み）。
 | `ctx.servers` | サーバー一覧、接続、ターミナルを開く |
 | `ctx.connections` | 接続一覧、ワンショットの `exec`、`sftp(connectionId)`、切断 |
 | `ctx.terminals` | ターミナルハンドル、入出力イベント、オーバーレイコンポーネント、キー割り込み |
+| `ctx.local` | NaviShell が動作しているマシン: `platform`、`arch`、シェルを介さない単発の `exec(program, args)` |
 | `ctx.storage` | プラグイン専用の永続 KV（`<appData>/plugin-data/<pluginId>.json`） |
 | `ctx.i18n` | 翻訳リソースの登録、`t()`、現在のロケールとロケール変更イベント。`registerLocale()` で UI 言語全体（言語パック）を提供 |
 | `ctx.ui` | トースト、確認ダイアログ、入力ダイアログ、ファイル選択、保存ダイアログ、コンテキストメニュー |

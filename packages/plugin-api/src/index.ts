@@ -437,6 +437,33 @@ export interface TerminalsApi {
 }
 
 // ---------------------------------------------------------------------------
+// The local machine
+// ---------------------------------------------------------------------------
+
+export type Platform = 'windows' | 'macos' | 'linux' | 'other';
+
+export interface LocalExecOptions {
+  /** Default 30 000 ms; the process is killed when it expires. */
+  timeoutMs?: number;
+  /** Working directory; defaults to the app's. */
+  cwd?: string;
+}
+
+/** The machine NaviShell itself runs on, as opposed to the SSH connections. */
+export interface LocalApi {
+  readonly platform: Platform;
+  /** e.g. `x86_64`, `aarch64`. */
+  readonly arch: string;
+  /**
+   * Run a program on this machine without a shell and collect what it printed. `program`
+   * is resolved through `PATH`; pass a shell explicitly (`sh -c …`,
+   * `powershell -Command …`) when shell syntax is needed. No window is shown on Windows.
+   * Output is decoded as UTF-8 and capped at 8 MiB per stream.
+   */
+  exec(program: string, args?: string[], options?: LocalExecOptions): Promise<ExecResult>;
+}
+
+// ---------------------------------------------------------------------------
 // Storage, i18n, UI, logging
 // ---------------------------------------------------------------------------
 
@@ -537,6 +564,7 @@ export interface PluginContext {
   readonly servers: ServersApi;
   readonly connections: ConnectionsApi;
   readonly terminals: TerminalsApi;
+  readonly local: LocalApi;
   readonly storage: StorageApi;
   readonly i18n: I18nApi;
   readonly ui: UiApi;

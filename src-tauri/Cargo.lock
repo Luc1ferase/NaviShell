@@ -2830,7 +2830,7 @@ dependencies = [
 
 [[package]]
 name = "navishell"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -5578,6 +5578,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",
