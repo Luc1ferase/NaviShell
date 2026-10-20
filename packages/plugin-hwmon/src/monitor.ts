@@ -41,6 +41,8 @@ const SAMPLE_TIMEOUT_MS = 20_000;
 const PROBE_TIMEOUT_MS = 10_000;
 /** See `effectiveInterval`. */
 const MACOS_MIN_INTERVAL_MS = 2000;
+/** Longest pause between two attempts while a target keeps failing. */
+const MAX_BACKOFF_MS = 30_000;
 
 interface CollectorBundle {
   collector: Collector;
@@ -58,6 +60,8 @@ export class Monitor {
   private visible = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private sampling = false;
+  /** Consecutive failed samples of the selected target; drives the backoff. */
+  private failures = 0;
   private disposed = false;
   private view: MonitorView;
   private readonly listeners = new Set<() => void>();
@@ -111,6 +115,7 @@ export class Monitor {
   select(id: TargetId): void {
     if (!this.targets.has(id) || id === this.selectedId) return;
     this.selectedId = id;
+    this.failures = 0;
     this.emit();
     this.schedule(0);
   }
@@ -150,6 +155,7 @@ export class Monitor {
   /** Forget the collector of a target so its platform is probed again (e.g. after an error). */
   reset(id: TargetId): void {
     this.collectors.delete(id);
+    if (id === this.selectedId) this.failures = 0;
     this.update(id, (current) => ({
       ...current,
       status: 'idle',
@@ -233,13 +239,19 @@ export class Monitor {
 
   /**
    * The configured interval, except on macOS where one sample already takes ~1.5 s
-   * (`top -l 2` and `system_profiler`), so anything under 2 s would never stop sampling.
+   * (`top -l 2` and `system_profiler`), so anything under 2 s would never stop sampling,
+   * doubled per consecutive failure up to {@link MAX_BACKOFF_MS}.
    */
   private effectiveInterval(): number {
     const platform = this.targets.get(this.selectedId)?.target.platform;
-    return platform === 'macos'
-      ? Math.max(this.prefs.intervalMs, MACOS_MIN_INTERVAL_MS)
-      : this.prefs.intervalMs;
+    const base =
+      platform === 'macos'
+        ? Math.max(this.prefs.intervalMs, MACOS_MIN_INTERVAL_MS)
+        : this.prefs.intervalMs;
+    // Back off while the target keeps failing (hung tool, dead connection) so neither
+    // the log nor the remote is hammered every tick; a success, `select` or `reset`
+    // restores the cadence.
+    return Math.min(base * 2 ** Math.min(this.failures, 4), MAX_BACKOFF_MS);
   }
 
   private async sample(id: TargetId): Promise<void> {
@@ -253,6 +265,7 @@ export class Monitor {
       const parsed = bundle.collector.parse({ ...result, at }, bundle.state);
       bundle.state = parsed.state;
       if (!this.targets.has(id)) return; // the connection closed meanwhile
+      this.failures = 0;
       this.update(id, (current) => ({
         ...current,
         status: 'ok',
@@ -264,6 +277,7 @@ export class Monitor {
     } catch (error) {
       if (!this.targets.has(id)) return;
       this.ctx.log.warn(`sampling ${id} failed`, error);
+      this.failures += 1;
       this.update(id, (current) => ({ ...current, status: 'error', error: errorText(error) }));
     }
   }
