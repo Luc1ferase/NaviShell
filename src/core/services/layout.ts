@@ -15,6 +15,7 @@ import { useSettingsStore } from '../stores/settings';
 export const CORE_HOME_PANEL = 'core:home';
 export const CORE_SERVERS_PANEL = 'core:servers';
 export const CORE_SETTINGS_PANEL = 'core:settings';
+export const CORE_EXTENSIONS_PANEL = 'core:extensions';
 
 export const TERMINAL_PANEL_PREFIX = 'terminal:';
 
@@ -96,10 +97,7 @@ export function openPanel(fullId: string, options: OpenPanelOptions = {}): void 
   }
 
   const entry = getPanelEntry(fullId);
-  const position =
-    options.position ??
-    (entry?.kind === 'plugin' ? entry.def.defaultPosition : undefined) ??
-    'right';
+  const position = options.position ?? entry?.def.defaultPosition ?? 'right';
   const size = options.size ?? (entry?.kind === 'plugin' ? entry.def.defaultSize : undefined);
   const closable = entry?.kind === 'plugin' ? entry.def.closable !== false : true;
   const direction = directionFor(position);
@@ -135,6 +133,11 @@ export function togglePanel(fullId: string, options: OpenPanelOptions = {}): voi
 
 export function openSettingsPanel(): void {
   openPanel(CORE_SETTINGS_PANEL, { position: 'center' });
+}
+
+/** The marketplace / installed-plugins view, a centre tab like Settings. */
+export function openExtensionsPanel(): void {
+  openPanel(CORE_EXTENSIONS_PANEL, { position: 'center' });
 }
 
 export interface TerminalPanelParams {

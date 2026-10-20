@@ -428,6 +428,8 @@ export interface Commands {
    * `version` are dropped, not fatal. Network/HTTP/parse failures => `Io`.
    */
   plugins_fetch_registry: { args: { url?: string }; result: PluginRegistry };
+  /** A plugin's README or changelog for the Extensions panel: http(s) only, 15 s, 2 MiB. */
+  plugins_fetch_text: { args: { url: string }; result: string };
   plugin_storage_get: { args: { pluginId: string; key: string }; result: JsonValue | null };
   plugin_storage_set: { args: { pluginId: string; key: string; value: JsonValue }; result: void };
   plugin_storage_remove: { args: { pluginId: string; key: string }; result: void };

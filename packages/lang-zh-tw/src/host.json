@@ -17,6 +17,9 @@
     "settings": {
       "title": "設定"
     },
+    "extensions": {
+      "title": "擴充功能"
+    },
     "unavailable": "面板無法使用",
     "unavailableHint": "對應的外掛未載入、已停用或啟動失敗。"
   },
@@ -29,7 +32,9 @@
     "panels": "面板",
     "panelsTooltip": "開啟或切換到某個面板",
     "noPanels": "沒有已註冊的面板",
-    "noServers": "尚無伺服器"
+    "noServers": "尚無伺服器",
+    "extensions": "擴充功能",
+    "extensionsTooltip": "瀏覽、安裝與更新擴充功能"
   },
   "status": {
     "notConnected": "未連線",
@@ -138,23 +143,11 @@
     },
     "market": {
       "title": "外掛市集",
-      "refresh": "重新整理",
-      "loading": "正在載入索引…",
-      "notLoaded": "尚未載入索引",
-      "untitled": "外掛索引",
-      "updated": "{{date}} 更新",
-      "hint": "按下重新整理即可載入可安裝的外掛清單",
-      "empty": "索引中沒有任何外掛",
-      "failed": "無法載入索引：{{message}}",
-      "install": "安裝",
-      "update": "更新",
-      "installedVersion": "已安裝 v{{version}}",
-      "available": "可更新至 v{{version}}",
-      "requiresHost": "需要 NaviShell {{version}}",
-      "homepage": "首頁",
       "registryUrl": "索引 URL",
       "registryUrlHint": "列出可安裝外掛的 JSON 索引；留空則使用官方索引",
-      "reset": "重設"
+      "reset": "重設",
+      "browse": "瀏覽外掛市集",
+      "moved": "外掛的瀏覽、安裝與更新在「擴充功能」面板中進行；這裡只設定它讀取的索引位址。"
     },
     "uninstall": {
       "label": "解除安裝",
@@ -163,6 +156,99 @@
       "ok": "解除安裝",
       "done": "已解除安裝 {{name}}"
     }
+  },
+  "ext": {
+    "search": "搜尋擴充功能",
+    "count": "{{count}} 個擴充功能",
+    "view": {
+      "marketplace": "市集",
+      "installed": "已安裝",
+      "updates": "更新"
+    },
+    "updatesBadge": "{{count}} 個可用更新",
+    "sort": {
+      "label": "排序",
+      "default": "索引順序",
+      "name": "名稱"
+    },
+    "category": {
+      "all": "全部分類",
+      "terminal": "終端機",
+      "connections": "連線",
+      "files": "檔案",
+      "monitoring": "監控",
+      "languages": "語言",
+      "productivity": "效率",
+      "themes": "佈景主題",
+      "other": "其他"
+    },
+    "refresh": "重新整理",
+    "loading": "正在載入外掛市集…",
+    "failed": "無法載入外掛市集：{{message}}",
+    "notLoaded": "尚未載入外掛市集。",
+    "empty": {
+      "marketplace": "沒有符合的擴充功能。",
+      "installed": "沒有符合的已安裝擴充功能。",
+      "updates": "所有擴充功能都是最新的。"
+    },
+    "select": "選擇一個擴充功能以檢視詳細資訊。",
+    "back": "返回清單",
+    "action": {
+      "install": "安裝",
+      "update": "更新至 {{version}}",
+      "uninstall": "解除安裝",
+      "enable": "啟用",
+      "disable": "停用",
+      "installVersion": "安裝 {{version}}",
+      "busy": "處理中…"
+    },
+    "badge": {
+      "installed": "已安裝",
+      "update": "有可用更新",
+      "builtin": "內建",
+      "disabled": "已停用",
+      "error": "錯誤",
+      "requiresHost": "需要 NaviShell {{version}}"
+    },
+    "tab": {
+      "details": "詳細",
+      "changelog": "變更記錄",
+      "versions": "版本"
+    },
+    "detail": {
+      "noReadme": "這個擴充功能沒有 README。",
+      "noChangelog": "這個擴充功能沒有變更記錄。",
+      "noVersions": "外掛市集沒有收錄這個擴充功能，沒有可選的版本。",
+      "loading": "載入中…",
+      "loadFailed": "無法載入文件：{{message}}",
+      "retry": "重試"
+    },
+    "meta": {
+      "id": "識別碼",
+      "version": "版本",
+      "installedVersion": "已安裝版本",
+      "author": "發布者",
+      "license": "授權條款",
+      "categories": "分類",
+      "tags": "標籤",
+      "minHost": "需求",
+      "minHostValue": "NaviShell {{version}} 或更新",
+      "links": "連結",
+      "homepage": "首頁",
+      "repository": "儲存庫",
+      "path": "位置"
+    },
+    "versions": {
+      "latest": "最新",
+      "installed": "已安裝",
+      "requires": "需要 NaviShell {{version}}"
+    },
+    "confirm": {
+      "versionTitle": "安裝其他版本",
+      "versionMessage": "以 {{version}} 取代已安裝的 {{installed}}？",
+      "versionOk": "安裝"
+    },
+    "registrySettings": "索引設定"
   },
   "updates": {
     "title": "更新",

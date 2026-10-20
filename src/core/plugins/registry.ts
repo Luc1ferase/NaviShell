@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import type {
   PanelApi,
   PanelDefinition,
+  PanelPosition,
   PluginContext,
   TerminalHandle,
   TerminalOverlayProps,
@@ -29,6 +30,8 @@ export interface CorePanelDefinition {
   icon?: string;
   component: ComponentType<CorePanelProps>;
   closable?: boolean;
+  /** Where `openPanel` puts it when the caller does not say; default `right`. */
+  defaultPosition?: PanelPosition;
 }
 
 export type PanelEntry =

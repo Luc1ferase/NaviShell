@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/Luc1ferase/NaviShell/master/registry/plugins.schema.json",
   "title": "NaviShell plugin registry index",
-  "description": "The marketplace list NaviShell downloads with the `plugins_fetch_registry` command (Settings > Plugins > Marketplace). The app drops any entry that does not satisfy this schema instead of failing the whole index, so a malformed entry is simply never offered for install. `scripts/check-registry.mjs` validates this file against the schema and the rules the schema cannot express (see registry/README.md).",
+  "description": "The marketplace list NaviShell downloads with the `plugins_fetch_registry` command (the Extensions panel). The app drops any entry that does not satisfy this schema instead of failing the whole index, so a malformed entry is simply never offered for install. `scripts/check-registry.mjs` validates this file against the schema and the rules the schema cannot express (see registry/README.md).",
   "type": "object",
   "required": ["plugins"],
   "additionalProperties": false,

@@ -37,7 +37,7 @@ target; without it the GPUs are listed without live numbers and a note says why.
 
 ## Install
 
-In NaviShell open **Settings → Plugins → Marketplace** and install *Hardware Monitor*
+In NaviShell open **Extensions** from the top bar and install *Hardware Monitor*
 (host 0.4.0 or newer). The panel opens in the centre; reopen it any time from the
 **Panels** menu in the top bar.
 

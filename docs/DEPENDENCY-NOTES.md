@@ -253,6 +253,19 @@ calls return `Error::NoDefaultStore` / platform errors – surface as `Keyring` 
   swallow), `term.buffer.active.cursorX/cursorY`, `term.rows/cols`, `term.element`.
 - Removed options: `windowsMode`, `fastScrollModifier`.
 
+### marked 18 + dompurify 3.4 (Markdown in the Extensions panel)
+
+- `marked.parse(src, { gfm: true, async: false })` returns a `string`; the `async: false`
+  literal is what narrows the overload (without it the type is `string | Promise<string>`).
+  The old `baseUrl` and `sanitize` options are gone (removed in v5 / v8), so resolving
+  relative URLs and sanitising are our own job (`src/core/plugins/markdown.ts`).
+- DOMPurify is a default export (`import DOMPurify from 'dompurify'`) with bundled types.
+  `addHook('uponSanitizeAttribute', (node, data) => …)` runs *before* the attribute is
+  validated and `data.attrValue` is mutable, so rewriting a relative `href` / `src` to an
+  absolute one there lets `ALLOWED_URI_REGEXP` judge the final value. `USE_PROFILES:
+  { html: true }` keeps SVG and MathML out; `FORBID_TAGS` / `FORBID_ATTR` apply on top of
+  the profile. Licence: MPL-2.0 OR Apache-2.0 (we take Apache-2.0); marked is MIT.
+
 ### @tauri-apps/api 2.12 (JS)
 
 - `import { invoke, Channel } from '@tauri-apps/api/core'`;

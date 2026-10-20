@@ -8,9 +8,18 @@
     "dismiss": "关闭提示"
   },
   "panel": {
-    "home": { "title": "欢迎" },
-    "servers": { "title": "服务器" },
-    "settings": { "title": "设置" },
+    "home": {
+      "title": "欢迎"
+    },
+    "servers": {
+      "title": "服务器"
+    },
+    "settings": {
+      "title": "设置"
+    },
+    "extensions": {
+      "title": "扩展"
+    },
     "unavailable": "面板不可用",
     "unavailableHint": "对应插件未加载、已禁用或激活失败。"
   },
@@ -23,7 +32,9 @@
     "panels": "面板",
     "panelsTooltip": "打开或切换到某个面板",
     "noPanels": "没有已注册的面板",
-    "noServers": "尚无服务器"
+    "noServers": "尚无服务器",
+    "extensions": "扩展",
+    "extensionsTooltip": "浏览、安装和更新扩展"
   },
   "status": {
     "notConnected": "未连接",
@@ -43,8 +54,14 @@
     "about": "关于",
     "localeLabel": "语言",
     "themeLabel": "主题",
-    "locale": { "system": "跟随系统" },
-    "theme": { "system": "跟随系统", "dark": "深色", "light": "浅色" },
+    "locale": {
+      "system": "跟随系统"
+    },
+    "theme": {
+      "system": "跟随系统",
+      "dark": "深色",
+      "light": "浅色"
+    },
     "closeWithLastTerminal": "自动断开连接",
     "closeWithLastTerminalHint": "关闭连接的最后一个终端时断开 SSH",
     "fontFamily": "字体",
@@ -62,7 +79,11 @@
     "fontPreviewText": "终端字体预览 The quick brown fox 中英文混排",
     "lineHeight": "行高",
     "cursorStyle": "光标样式",
-    "cursor": { "block": "方块", "underline": "下划线", "bar": "竖线" },
+    "cursor": {
+      "block": "方块",
+      "underline": "下划线",
+      "bar": "竖线"
+    },
     "cursorBlink": "光标闪烁",
     "cursorBlinkHint": "让光标闪烁",
     "scrollback": "回滚行数",
@@ -73,7 +94,10 @@
     "colorSchemeDark": "终端配色（深色界面）",
     "colorSchemeLight": "终端配色（浅色界面）",
     "colorSchemeHint": "深色 / 浅色界面各用一套终端配色；浅色界面里也可以选深色配色",
-    "schemeGroup": { "dark": "深色配色", "light": "浅色配色" },
+    "schemeGroup": {
+      "dark": "深色配色",
+      "light": "浅色配色"
+    },
     "minContrast": "最低对比度",
     "minContrastHint": "自动调整与背景过于接近的文字颜色",
     "minContrast.off": "关闭",
@@ -96,8 +120,15 @@
     "reloaded": "插件已重新加载",
     "none": "未发现插件",
     "installed": "已安装",
-    "status": { "active": "已激活", "disabled": "已禁用", "error": "错误" },
-    "source": { "builtin": "内置", "external": "外部" },
+    "status": {
+      "active": "已激活",
+      "disabled": "已禁用",
+      "error": "错误"
+    },
+    "source": {
+      "builtin": "内置",
+      "external": "外部"
+    },
     "errors": {
       "manifest": "无法读取 plugin.json：{{message}}",
       "noExport": "插件包没有导出 NaviShell 插件对象",
@@ -124,23 +155,11 @@
     },
     "market": {
       "title": "插件市场",
-      "refresh": "刷新",
-      "loading": "正在加载索引…",
-      "notLoaded": "尚未加载索引",
-      "untitled": "插件索引",
-      "updated": "更新于 {{date}}",
-      "hint": "点击刷新以加载可安装的插件列表",
-      "empty": "索引中暂无插件",
-      "failed": "无法加载插件索引：{{message}}",
-      "install": "安装",
-      "update": "更新",
-      "installedVersion": "已安装 v{{version}}",
-      "available": "可更新到 v{{version}}",
-      "requiresHost": "需要 NaviShell {{version}}",
-      "homepage": "项目主页",
       "registryUrl": "索引地址",
       "registryUrlHint": "列出可安装插件的 JSON 索引，留空使用官方索引",
-      "reset": "恢复默认"
+      "reset": "恢复默认",
+      "browse": "浏览插件市场",
+      "moved": "插件的浏览、安装和更新在「扩展」面板中进行；这里只设置它读取的索引地址。"
     },
     "uninstall": {
       "label": "卸载",
@@ -149,6 +168,99 @@
       "ok": "卸载",
       "done": "已卸载 {{name}}"
     }
+  },
+  "ext": {
+    "search": "搜索扩展",
+    "count": "{{count}} 个扩展",
+    "view": {
+      "marketplace": "市场",
+      "installed": "已安装",
+      "updates": "更新"
+    },
+    "updatesBadge": "{{count}} 个可用更新",
+    "sort": {
+      "label": "排序",
+      "default": "索引顺序",
+      "name": "名称"
+    },
+    "category": {
+      "all": "全部分类",
+      "terminal": "终端",
+      "connections": "连接",
+      "files": "文件",
+      "monitoring": "监控",
+      "languages": "语言",
+      "productivity": "效率",
+      "themes": "主题",
+      "other": "其他"
+    },
+    "refresh": "刷新",
+    "loading": "正在加载插件市场…",
+    "failed": "无法加载插件市场：{{message}}",
+    "notLoaded": "尚未加载插件市场。",
+    "empty": {
+      "marketplace": "没有匹配的扩展。",
+      "installed": "没有匹配的已安装扩展。",
+      "updates": "所有扩展都是最新的。"
+    },
+    "select": "选择一个扩展查看详情。",
+    "back": "返回列表",
+    "action": {
+      "install": "安装",
+      "update": "更新到 {{version}}",
+      "uninstall": "卸载",
+      "enable": "启用",
+      "disable": "禁用",
+      "installVersion": "安装 {{version}}",
+      "busy": "处理中…"
+    },
+    "badge": {
+      "installed": "已安装",
+      "update": "有可用更新",
+      "builtin": "内置",
+      "disabled": "已禁用",
+      "error": "错误",
+      "requiresHost": "需要 NaviShell {{version}}"
+    },
+    "tab": {
+      "details": "详情",
+      "changelog": "更新日志",
+      "versions": "版本"
+    },
+    "detail": {
+      "noReadme": "这个扩展没有 README。",
+      "noChangelog": "这个扩展没有更新日志。",
+      "noVersions": "插件市场没有收录这个扩展，没有可选的版本。",
+      "loading": "加载中…",
+      "loadFailed": "无法加载文档：{{message}}",
+      "retry": "重试"
+    },
+    "meta": {
+      "id": "标识符",
+      "version": "版本",
+      "installedVersion": "已安装版本",
+      "author": "发布者",
+      "license": "许可证",
+      "categories": "分类",
+      "tags": "标签",
+      "minHost": "要求",
+      "minHostValue": "NaviShell {{version}} 或更高",
+      "links": "链接",
+      "homepage": "主页",
+      "repository": "仓库",
+      "path": "位置"
+    },
+    "versions": {
+      "latest": "最新",
+      "installed": "已安装",
+      "requires": "需要 NaviShell {{version}}"
+    },
+    "confirm": {
+      "versionTitle": "安装其他版本",
+      "versionMessage": "用 {{version}} 替换已安装的 {{installed}}？",
+      "versionOk": "安装"
+    },
+    "registrySettings": "索引设置"
   },
   "updates": {
     "title": "更新",
@@ -195,7 +307,11 @@
     "passwordCleared": "已清除保存的密码",
     "passphraseCleared": "已清除保存的密钥口令",
     "via": "经由 {{name}}",
-    "auth": { "password": "密码", "key": "密钥", "agent": "代理" },
+    "auth": {
+      "password": "密码",
+      "key": "密钥",
+      "agent": "代理"
+    },
     "delete": {
       "title": "删除服务器",
       "message": "确定删除 {{name}} 及其保存的密码？"

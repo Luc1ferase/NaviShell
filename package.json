@@ -1,7 +1,7 @@
 {
   "name": "navishell",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI",
   "type": "module",
   "license": "Apache-2.0",
@@ -31,8 +31,10 @@
     "@xterm/xterm": "^6.0.0",
     "clsx": "^2.1.1",
     "dockview-react": "^8.6.0",
+    "dompurify": "^3.4.17",
     "i18next": "^26.5.2",
     "lucide-react": "^1.59.0",
+    "marked": "^18.1.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zustand": "^5.0.15"

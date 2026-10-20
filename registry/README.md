@@ -1,8 +1,8 @@
 # NaviShell plugin registry
 
 `plugins.json` in this directory is the **plugin marketplace index**: the list NaviShell
-shows under _Settings → Plugins → Marketplace_. It is a plain JSON document served over
-HTTPS, nothing more — there is no server, no account and no build step behind it.
+shows in its Extensions panel (the **Extensions** button in the top bar). It is a plain
+JSON document served over HTTPS, nothing more — there is no server, no account and no build step behind it.
 
 | File                  | What it is                                                      |
 | --------------------- | --------------------------------------------------------------- |

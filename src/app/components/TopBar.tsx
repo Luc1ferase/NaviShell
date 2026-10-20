@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react';
 import {
+  Blocks,
   ChevronRight,
   PanelsTopLeft,
   Plus,
@@ -10,7 +11,7 @@ import type { MenuItem } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
-import { openSettingsPanel } from '@/core/services/layout';
+import { openExtensionsPanel, openSettingsPanel } from '@/core/services/layout';
 import { useServersStore } from '@/core/stores/servers';
 import { useUiStore } from '@/core/stores/ui';
 import { panelMenuItems } from '@/app/menus/panels';
@@ -89,6 +90,16 @@ export function TopBar() {
       >
         <PanelsTopLeft size={14} />
         {t('topbar.panels')}
+      </button>
+
+      <button
+        type="button"
+        className="ns-btn ns-btn--ghost"
+        onClick={() => openExtensionsPanel()}
+        title={t('topbar.extensionsTooltip')}
+      >
+        <Blocks size={14} />
+        {t('topbar.extensions')}
       </button>
 
       <div className="ns-topbar__spacer" />

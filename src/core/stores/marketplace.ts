@@ -1,5 +1,6 @@
 /**
- * The plugin registry index ("marketplace") shown in Settings > Plugins.
+ * The plugin registry index ("marketplace") shown in the Extensions panel; the index URL
+ * is set in Settings > Plugins.
  *
  * The index is fetched on demand through `plugins_fetch_registry` and cached for the rest
  * of the app session; editing the registry URL drops the cache ({@link clearPluginRegistry}).
