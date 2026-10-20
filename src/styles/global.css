@@ -2043,3 +2043,8 @@ body {
   border-radius: var(--ns-radius);
   background: var(--ns-bg-inset);
 }
+
+/* Status bar: the plugin-updates item stands out in the accent colour. */
+.ns-statusbar__item--accent {
+  color: var(--ns-accent);
+}

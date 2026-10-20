@@ -10,6 +10,7 @@ import { call } from '../ipc/client';
 import { t, translatePlugin } from '../i18n';
 import { debounce } from '../util/fn';
 import { getPanelEntry, listPanelEntries, type PanelEntry } from '../plugins/registry';
+import { useExtensionsViewStore, type ExtensionView } from '../stores/extensionsView';
 import { useSettingsStore } from '../stores/settings';
 
 export const CORE_HOME_PANEL = 'core:home';
@@ -135,8 +136,12 @@ export function openSettingsPanel(): void {
   openPanel(CORE_SETTINGS_PANEL, { position: 'center' });
 }
 
-/** The marketplace / installed-plugins view, a centre tab like Settings. */
-export function openExtensionsPanel(): void {
+/**
+ * The marketplace / installed-plugins view, a centre tab like Settings. `view` picks the
+ * list the panel shows (it switches when already open).
+ */
+export function openExtensionsPanel(view?: ExtensionView): void {
+  if (view) useExtensionsViewStore.getState().request(view);
   openPanel(CORE_EXTENSIONS_PANEL, { position: 'center' });
 }
 

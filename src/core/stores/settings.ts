@@ -44,6 +44,8 @@ export function mergeSettings(raw: Partial<AppSettings> | null | undefined): App
       disabled: raw?.plugins?.disabled ?? [],
       registryUrl: raw?.plugins?.registryUrl ?? DEFAULT_SETTINGS.plugins.registryUrl,
       seenPanels: raw?.plugins?.seenPanels ?? [],
+      checkUpdates: raw?.plugins?.checkUpdates ?? DEFAULT_SETTINGS.plugins.checkUpdates,
+      autoUpdate: raw?.plugins?.autoUpdate ?? DEFAULT_SETTINGS.plugins.autoUpdate,
     },
     closeConnectionWithLastTerminal:
       raw?.closeConnectionWithLastTerminal ?? DEFAULT_SETTINGS.closeConnectionWithLastTerminal,

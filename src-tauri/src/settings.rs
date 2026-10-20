@@ -87,13 +87,31 @@ impl Default for TerminalSettings {
 }
 
 /// Plugin related preferences.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct PluginSettings {
     /// Plugin ids the user switched off.
     pub disabled: Vec<String>,
+    /// Marketplace index URL; `None` means the built-in default.
+    pub registry_url: Option<String>,
     /// Panel ids that were auto-opened once already.
     pub seen_panels: Vec<String>,
+    /// Fetch the marketplace index in the background and badge available updates.
+    pub check_updates: bool,
+    /// Install the updates this host supports as soon as a check finds them.
+    pub auto_update: bool,
+}
+
+impl Default for PluginSettings {
+    fn default() -> Self {
+        Self {
+            disabled: Vec::new(),
+            registry_url: None,
+            seen_panels: Vec::new(),
+            check_updates: true,
+            auto_update: false,
+        }
+    }
 }
 
 /// Everything stored in `settings.json`.

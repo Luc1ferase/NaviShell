@@ -12,6 +12,7 @@ import type { MenuItem } from '@navishell/plugin-api';
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
 import { openExtensionsPanel, openSettingsPanel } from '@/core/services/layout';
+import { usePluginUpdates } from '@/core/services/pluginUpdates';
 import { useServersStore } from '@/core/stores/servers';
 import { useUiStore } from '@/core/stores/ui';
 import { panelMenuItems } from '@/app/menus/panels';
@@ -49,6 +50,8 @@ export function TopBar() {
           }));
     showContextMenu(items, { x: rect.left, y: rect.bottom + 4 });
   };
+
+  const pluginUpdates = usePluginUpdates().length;
 
   const openPanelsMenu = (event: MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -95,11 +98,18 @@ export function TopBar() {
       <button
         type="button"
         className="ns-btn ns-btn--ghost"
-        onClick={() => openExtensionsPanel()}
-        title={t('topbar.extensionsTooltip')}
+        onClick={() => openExtensionsPanel(pluginUpdates > 0 ? 'updates' : undefined)}
+        title={
+          pluginUpdates > 0
+            ? t('topbar.extensionsUpdatesTooltip', { count: pluginUpdates })
+            : t('topbar.extensionsTooltip')
+        }
       >
         <Blocks size={14} />
         {t('topbar.extensions')}
+        {pluginUpdates > 0 ? (
+          <span className="ns-badge ns-badge--accent ns-badge--xs">{pluginUpdates}</span>
+        ) : null}
       </button>
 
       <div className="ns-topbar__spacer" />

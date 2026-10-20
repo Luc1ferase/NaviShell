@@ -21,6 +21,11 @@ import { DEFAULT_PLUGIN_REGISTRY_URL, type FontFamily } from '@/core/ipc/contrac
 import { installPlugin, type InstallAttempt } from '@/core/plugins/install';
 import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
 import { openExtensionsPanel } from '@/core/services/layout';
+import {
+  checkPluginUpdates,
+  usePluginUpdates,
+  usePluginUpdatesStore,
+} from '@/core/services/pluginUpdates';
 import { checkForUpdates, downloadAndInstall, restartApp } from '@/core/services/updater';
 import { clearPluginRegistry } from '@/core/stores/marketplace';
 import { useSettingsStore } from '@/core/stores/settings';
@@ -500,6 +505,82 @@ function RegistryUrlRow() {
         </button>
       </span>
     </Row>
+  );
+}
+
+/** Background plugin update checks: the two switches, a manual check and its outcome. */
+function PluginUpdatesSection() {
+  const { t, locale } = useI18n();
+  const plugins = useSettingsStore((state) => state.settings.plugins);
+  const updatePlugins = useSettingsStore((state) => state.updatePlugins);
+  const checking = usePluginUpdatesStore((state) => state.checking);
+  const checkedAt = usePluginUpdatesStore((state) => state.checkedAt);
+  const error = usePluginUpdatesStore((state) => state.error);
+  const updates = usePluginUpdates().length;
+
+  let status: string;
+  if (checking) status = t('plugins.updates.checking');
+  else if (error) status = error;
+  else if (checkedAt === null) status = t('plugins.updates.notChecked');
+  else if (updates > 0) status = t('plugins.updates.available', { count: updates });
+  else status = t('plugins.updates.upToDate');
+  const checked =
+    checkedAt === null
+      ? undefined
+      : t('plugins.updates.lastChecked', {
+          time: new Date(checkedAt).toLocaleTimeString(locale, {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        });
+
+  return (
+    <>
+      <Row label={t('plugins.updates.checkUpdates')}>
+        <label className="ns-check">
+          <input
+            type="checkbox"
+            checked={plugins.checkUpdates}
+            onChange={(event) => updatePlugins({ checkUpdates: event.target.checked })}
+          />
+          {t('plugins.updates.checkUpdatesHint')}
+        </label>
+      </Row>
+      <Row label={t('plugins.updates.autoUpdate')}>
+        <label className="ns-check">
+          <input
+            type="checkbox"
+            checked={plugins.autoUpdate}
+            disabled={!plugins.checkUpdates}
+            onChange={(event) => updatePlugins({ autoUpdate: event.target.checked })}
+          />
+          {t('plugins.updates.autoUpdateHint')}
+        </label>
+      </Row>
+      <Row label={t('plugins.updates.title')} hint={checked}>
+        <span className="ns-plugin-install__actions">
+          <button
+            type="button"
+            className="ns-btn"
+            disabled={checking}
+            onClick={() => void checkPluginUpdates({ force: true })}
+          >
+            <RefreshCw size={14} className={checking ? 'ns-spin' : undefined} />
+            {t('plugins.updates.checkNow')}
+          </button>
+          <span className="ns-marketplace__status">{status}</span>
+          {updates > 0 ? (
+            <button
+              type="button"
+              className="ns-link"
+              onClick={() => openExtensionsPanel('updates')}
+            >
+              {t('plugins.updates.view')}
+            </button>
+          ) : null}
+        </span>
+      </Row>
+    </>
   );
 }
 
@@ -990,6 +1071,7 @@ export function SettingsPanel() {
 
             <h4 className="ns-settings__subtitle">{t('plugins.market.title')}</h4>
             <MarketplaceSection />
+            <PluginUpdatesSection />
 
             <h4 className="ns-settings__subtitle">{t('plugins.install.title')}</h4>
             <PluginInstaller />

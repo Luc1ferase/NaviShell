@@ -34,7 +34,8 @@
     "noPanels": "No panels registered",
     "noServers": "No servers yet",
     "extensions": "Extensions",
-    "extensionsTooltip": "Browse, install and update extensions"
+    "extensionsTooltip": "Browse, install and update extensions",
+    "extensionsUpdatesTooltip": "{{count}} plugin updates available"
   },
   "status": {
     "notConnected": "Not connected",
@@ -44,7 +45,8 @@
     "authMethodTooltip": "Authenticated with {{method}}",
     "viaUnknown": "a closed jump host",
     "localeTooltip": "Interface language",
-    "themeTooltip": "Colour theme"
+    "themeTooltip": "Colour theme",
+    "pluginUpdates": "{{n}} plugin updates"
   },
   "settings": {
     "title": "Settings",
@@ -167,6 +169,21 @@
       "message": "Delete {{name}} from the plugins folder?",
       "ok": "Uninstall",
       "done": "Uninstalled {{name}}"
+    },
+    "updates": {
+      "title": "Plugin updates",
+      "checkUpdates": "Check for plugin updates",
+      "checkUpdatesHint": "In the background, shortly after start and every six hours",
+      "autoUpdate": "Install automatically",
+      "autoUpdateHint": "Updates this NaviShell version supports are installed as soon as they are found",
+      "checkNow": "Check now",
+      "checking": "Checking…",
+      "available": "{{count}} plugin updates available",
+      "upToDate": "All plugins are up to date.",
+      "notChecked": "Not checked yet.",
+      "lastChecked": "Last checked at {{time}}",
+      "view": "View",
+      "toastAvailable": "{{count}} plugin updates are available"
     }
   },
   "ext": {

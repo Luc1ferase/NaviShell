@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react';
 import {
+  CircleArrowUp,
   Fingerprint,
   Languages,
   Monitor,
@@ -14,6 +15,8 @@ import type { ConnectionInfo, MenuItem } from '@navishell/plugin-api';
 
 import { localeName } from '@/core/i18n';
 import { useAvailableLocales, useI18n } from '@/core/i18n/useI18n';
+import { openExtensionsPanel } from '@/core/services/layout';
+import { usePluginUpdates } from '@/core/services/pluginUpdates';
 import { useConnectionsStore } from '@/core/stores/connections';
 import { usePluginsStore } from '@/core/stores/plugins';
 import { useServersStore } from '@/core/stores/servers';
@@ -38,6 +41,7 @@ export function StatusBar() {
   const activePlugins = usePluginsStore(
     (state) => state.entries.filter((entry) => entry.status === 'active').length,
   );
+  const pluginUpdates = usePluginUpdates().length;
   const settings = useSettingsStore((state) => state.settings);
   const update = useSettingsStore((state) => state.update);
   const showContextMenu = useUiStore((state) => state.showContextMenu);
@@ -141,6 +145,18 @@ export function StatusBar() {
         <Plug size={12} />
         {t('status.plugins', { n: activePlugins })}
       </button>
+
+      {pluginUpdates > 0 ? (
+        <button
+          type="button"
+          className="ns-statusbar__item ns-statusbar__item--button ns-statusbar__item--accent"
+          onClick={() => openExtensionsPanel('updates')}
+          title={t('topbar.extensionsUpdatesTooltip', { count: pluginUpdates })}
+        >
+          <CircleArrowUp size={12} />
+          {t('status.pluginUpdates', { n: pluginUpdates })}
+        </button>
+      ) : null}
 
       <span className="ns-statusbar__spacer" />
 

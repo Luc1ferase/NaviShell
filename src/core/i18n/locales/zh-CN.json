@@ -34,7 +34,8 @@
     "noPanels": "没有已注册的面板",
     "noServers": "尚无服务器",
     "extensions": "扩展",
-    "extensionsTooltip": "浏览、安装和更新扩展"
+    "extensionsTooltip": "浏览、安装和更新扩展",
+    "extensionsUpdatesTooltip": "{{count}} 个插件有可用更新"
   },
   "status": {
     "notConnected": "未连接",
@@ -44,7 +45,8 @@
     "authMethodTooltip": "认证方式：{{method}}",
     "viaUnknown": "已关闭的跳板机",
     "localeTooltip": "界面语言",
-    "themeTooltip": "配色主题"
+    "themeTooltip": "配色主题",
+    "pluginUpdates": "{{n}} 个插件更新"
   },
   "settings": {
     "title": "设置",
@@ -167,6 +169,21 @@
       "message": "确定从插件目录中删除 {{name}}？",
       "ok": "卸载",
       "done": "已卸载 {{name}}"
+    },
+    "updates": {
+      "title": "插件更新",
+      "checkUpdates": "检查插件更新",
+      "checkUpdatesHint": "启动后不久以及之后每 6 小时在后台检查",
+      "autoUpdate": "自动安装",
+      "autoUpdateHint": "发现当前 NaviShell 版本支持的更新后立即安装",
+      "checkNow": "立即检查",
+      "checking": "正在检查…",
+      "available": "{{count}} 个插件可更新",
+      "upToDate": "所有插件都是最新的。",
+      "notChecked": "尚未检查。",
+      "lastChecked": "上次检查：{{time}}",
+      "view": "查看",
+      "toastAvailable": "{{count}} 个插件有可用更新"
     }
   },
   "ext": {

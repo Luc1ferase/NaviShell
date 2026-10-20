@@ -20,6 +20,8 @@ export interface MarketplaceStore {
   error: string | null;
   /** Registry URL the cached index came from (`null` = the default URL). */
   source: string | null;
+  /** When the cached index was fetched (ms since epoch); `null` without one. */
+  fetchedAt: number | null;
   /** Whether a fetch already ran in this app session (the auto-fetch runs once). */
   requested: boolean;
   begin(): void;
@@ -34,18 +36,19 @@ export const useMarketplaceStore = create<MarketplaceStore>((set) => ({
   loading: false,
   error: null,
   source: null,
+  fetchedAt: null,
   requested: false,
   begin() {
     set({ loading: true, error: null, requested: true });
   },
   succeed(registry, source) {
-    set({ registry, source, loading: false, error: null });
+    set({ registry, source, fetchedAt: Date.now(), loading: false, error: null });
   },
   fail(message) {
     set({ loading: false, error: message });
   },
   clear() {
-    set({ registry: null, source: null, error: null });
+    set({ registry: null, source: null, fetchedAt: null, error: null });
   },
 }));
 

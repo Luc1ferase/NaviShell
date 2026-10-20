@@ -20,6 +20,7 @@ import { handleAuthPrompt } from '@/core/services/connect';
 import { flushLayoutPersist, refreshPanelTitles } from '@/core/services/layout';
 import { applyThemeToDocument, resolveTheme } from '@/core/services/theme';
 import { runStartupUpdateCheck } from '@/core/services/updater';
+import { startPluginUpdateChecks } from '@/core/services/pluginUpdates';
 import { flushSettings, getSettings, onDidChangeSettings } from '@/core/stores/settings';
 import { useUiStore } from '@/core/stores/ui';
 import {
@@ -54,6 +55,7 @@ export function App() {
         setPhase('ready');
         // Plugins are up by now; the check is silent unless it finds something.
         void runStartupUpdateCheck();
+        startPluginUpdateChecks();
         if (result.warnings.length > 0) {
           console.warn('[navishell] startup warnings', result.warnings);
           if (isTauri()) {

@@ -171,6 +171,11 @@ invalid fields is dropped with a log warning rather than failing the whole list.
 changelog are sanitized before rendering (no scripts, only http(s) links and images) and
 links open in the system browser.
 
+Shortly after start and every few hours the app fetches the index in the background to
+look for plugin updates (switch it off under Settings → Plugins); the top bar and the
+status bar badge the count and a toast points at them, and the updates this version
+supports can optionally be installed automatically.
+
 To get a plugin into that list, open a pull request against [`registry/`](registry/). The
 entry format, how to host the zip and how to compute its SHA-256 are documented in
 [`registry/README.md`](registry/README.md).

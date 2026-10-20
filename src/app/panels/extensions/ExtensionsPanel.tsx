@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState, type JSX } from 'react';
 import { useI18n } from '@/core/i18n/useI18n';
 import type { PluginCategory } from '@/core/ipc/contract';
 import type { CorePanelProps } from '@/core/plugins/registry';
+import { takeRequestedExtensionView, useExtensionsViewStore } from '@/core/stores/extensionsView';
 import { ensurePluginRegistry, useMarketplaceStore } from '@/core/stores/marketplace';
 import { usePluginsStore } from '@/core/stores/plugins';
 import { useSettingsStore } from '@/core/stores/settings';
@@ -35,7 +36,10 @@ export function ExtensionsPanel(_props: CorePanelProps): JSX.Element {
   const entries = usePluginsStore((state) => state.entries);
   const hostVersion = useSettingsStore((state) => state.appInfo?.version ?? null);
 
-  const [view, setView] = useState<ExtensionView>('marketplace');
+  // A caller may have asked for a view before opening the panel (the update badges do).
+  const [view, setView] = useState<ExtensionView>(
+    () => takeRequestedExtensionView() ?? 'marketplace',
+  );
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<PluginCategory | null>(null);
   const [sort, setSort] = useState<ExtensionSort>('default');
@@ -45,6 +49,17 @@ export function ExtensionsPanel(_props: CorePanelProps): JSX.Element {
   useEffect(() => {
     void ensurePluginRegistry();
   }, []);
+
+  // Requests made while the panel is open switch the view at once.
+  useEffect(
+    () =>
+      useExtensionsViewStore.subscribe((state) => {
+        if (state.requested === null) return;
+        setView(state.requested);
+        state.clear();
+      }),
+    [],
+  );
 
   const items = useMemo(
     () => buildItems(registry?.plugins ?? [], entries, locale, hostVersion),
