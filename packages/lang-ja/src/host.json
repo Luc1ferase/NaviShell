@@ -26,6 +26,9 @@
     "newLocalTerminal": "ローカル ターミナル",
     "newLocalTerminalTooltip": "新しいローカル ターミナル (Ctrl+Shift+`)",
     "settings": "設定",
+    "panels": "パネル",
+    "panelsTooltip": "パネルを開く、または表示する",
+    "noPanels": "登録されたパネルはありません",
     "noServers": "サーバーがありません"
   },
   "status": {

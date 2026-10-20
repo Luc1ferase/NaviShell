@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { Check } from 'lucide-react';
 import type { MenuItem } from '@navishell/plugin-api';
 
 import { useUiStore } from '@/core/stores/ui';
@@ -78,6 +79,9 @@ export function ContextMenuHost() {
           >
             <Icon name={item.icon} size={14} />
             <span className="ns-menu__label">{item.label}</span>
+            {item.checked ? (
+              <Check size={12} className="ns-menu__check" aria-hidden="true" />
+            ) : null}
           </button>
         ),
       )}

@@ -20,6 +20,9 @@
     "newLocalTerminal": "本地终端",
     "newLocalTerminalTooltip": "新建本地终端（Ctrl+Shift+`）",
     "settings": "设置",
+    "panels": "面板",
+    "panelsTooltip": "打开或切换到某个面板",
+    "noPanels": "没有已注册的面板",
     "noServers": "尚无服务器"
   },
   "status": {

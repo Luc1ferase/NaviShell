@@ -20,6 +20,9 @@
     "newLocalTerminal": "Local terminal",
     "newLocalTerminalTooltip": "New local terminal (Ctrl+Shift+`)",
     "settings": "Settings",
+    "panels": "Panels",
+    "panelsTooltip": "Open or reveal a panel",
+    "noPanels": "No panels registered",
     "noServers": "No servers yet"
   },
   "status": {

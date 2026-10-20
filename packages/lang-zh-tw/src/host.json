@@ -26,6 +26,9 @@
     "newLocalTerminal": "本機終端機",
     "newLocalTerminalTooltip": "新增本機終端機（Ctrl+Shift+`）",
     "settings": "設定",
+    "panels": "面板",
+    "panelsTooltip": "開啟或切換到某個面板",
+    "noPanels": "沒有已註冊的面板",
     "noServers": "尚無伺服器"
   },
   "status": {
