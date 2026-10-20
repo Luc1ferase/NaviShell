@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Check,
   CircleArrowUp,
@@ -20,7 +20,11 @@ import type { ITheme } from '@xterm/xterm';
 import { fallbackChain } from '@/core/i18n';
 import { useAvailableLocales, useI18n } from '@/core/i18n/useI18n';
 import { call, errorMessage } from '@/core/ipc/client';
-import { DEFAULT_PLUGIN_REGISTRY_URL, type PluginRegistryEntry } from '@/core/ipc/contract';
+import {
+  DEFAULT_PLUGIN_REGISTRY_URL,
+  type FontFamily,
+  type PluginRegistryEntry,
+} from '@/core/ipc/contract';
 import { installPlugin, type InstallAttempt } from '@/core/plugins/install';
 import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
 import { checkForUpdates, downloadAndInstall, restartApp } from '@/core/services/updater';
@@ -31,6 +35,7 @@ import {
   useMarketplaceStore,
 } from '@/core/stores/marketplace';
 import { useSettingsStore } from '@/core/stores/settings';
+import { DEFAULT_FONT_STACK, fontFamilyFor, parseFontFamily } from '@/core/terminal/fonts';
 import { ansiColors, resolveScheme, schemesOfKind, type SchemeKind } from '@/core/terminal/schemes';
 import { usePluginsStore, type PluginEntry } from '@/core/stores/plugins';
 import { useUiStore } from '@/core/stores/ui';
@@ -92,6 +97,153 @@ function SchemeSelect({
         ))}
       </select>
       <SchemePreview theme={scheme.theme} />
+    </div>
+  );
+}
+
+/** Sentinel option values of the font picker; real families use their names. */
+const FONT_AUTO = '\u0000auto';
+const FONT_CUSTOM = '\u0000custom';
+/** Characters that tell monospace fonts apart: look-alike glyphs and ligature candidates. */
+const FONT_GLYPH_SAMPLE = '0O 1lI | -> => != <= {} [] () ~';
+
+/**
+ * Terminal font picker: the families `fonts_list` found on this machine (monospace by
+ * default), an "automatic" entry for the default stack and a "custom" escape hatch that
+ * exposes the raw CSS `font-family` list. The choice is previewed below at the terminal size.
+ */
+function FontFamilyField({
+  value,
+  fontSize,
+  onChange,
+}: {
+  value: string;
+  fontSize: number;
+  onChange: (fontFamily: string) => void;
+}) {
+  const { t } = useI18n();
+  /** `null` until the first scan answered (or failed). */
+  const [fonts, setFonts] = useState<FontFamily[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [rescanning, setRescanning] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [custom, setCustom] = useState(false);
+
+  // Promise callbacks keep the state updates off the effect's synchronous path.
+  const load = useCallback(
+    (refresh: boolean) =>
+      call('fonts_list', { refresh })
+        .then(
+          (list) => {
+            setFonts(list);
+            setError(null);
+          },
+          (err: unknown) => {
+            setFonts((previous) => previous ?? []);
+            setError(errorMessage(err));
+          },
+        )
+        .finally(() => setRescanning(false)),
+    [],
+  );
+
+  useEffect(() => {
+    void load(false);
+  }, [load]);
+
+  const choice = parseFontFamily(value);
+  const mode = custom || choice.kind === 'custom' ? 'custom' : choice.kind;
+  const picked = choice.kind === 'family' ? choice.name : null;
+  const missing = picked !== null && fonts !== null && !fonts.some((font) => font.name === picked);
+  const hasProportional = fonts?.some((font) => !font.monospaced) ?? false;
+  const options = (fonts ?? []).filter((font) => showAll || font.monospaced);
+  if (picked !== null && !options.some((font) => font.name === picked)) {
+    // Keep the current choice selectable even when it is proportional or no longer installed.
+    options.push(
+      fonts?.find((font) => font.name === picked) ?? { name: picked, monospaced: false },
+    );
+  }
+  const selected =
+    mode === 'custom' ? FONT_CUSTOM : mode === 'auto' ? FONT_AUTO : (picked ?? FONT_AUTO);
+
+  const select = (next: string) => {
+    if (next === FONT_CUSTOM) {
+      setCustom(true);
+      return;
+    }
+    setCustom(false);
+    onChange(next === FONT_AUTO ? DEFAULT_FONT_STACK : fontFamilyFor(next));
+  };
+
+  return (
+    <div className="ns-font-field">
+      <div className="ns-font-field__row">
+        <select
+          className="ns-select"
+          value={selected}
+          disabled={fonts === null}
+          onChange={(event) => select(event.target.value)}
+        >
+          <option value={FONT_AUTO}>{t('settings.fontAuto')}</option>
+          {options.length > 0 ? (
+            <optgroup label={t(showAll ? 'settings.fontGroupAll' : 'settings.fontGroupMono')}>
+              {options.map((font) => (
+                <option key={font.name} value={font.name}>
+                  {missing && font.name === picked
+                    ? `${font.name} (${t('settings.fontMissing')})`
+                    : font.name}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+          <option value={FONT_CUSTOM}>{t('settings.fontCustom')}</option>
+        </select>
+        <button
+          type="button"
+          className="ns-btn ns-btn--sm"
+          title={t('settings.fontRefresh')}
+          aria-label={t('settings.fontRefresh')}
+          disabled={fonts === null || rescanning}
+          onClick={() => {
+            setRescanning(true);
+            void load(true);
+          }}
+        >
+          <RefreshCw size={14} className={rescanning ? 'ns-spin' : undefined} />
+        </button>
+      </div>
+      {hasProportional ? (
+        <label className="ns-check">
+          <input
+            type="checkbox"
+            checked={showAll}
+            onChange={(event) => setShowAll(event.target.checked)}
+          />
+          {t('settings.fontShowAll')}
+        </label>
+      ) : null}
+      {mode === 'custom' ? (
+        <>
+          <input
+            className="ns-input ns-input--mono"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <small className="ns-font-field__note">{t('settings.fontCustomHint')}</small>
+        </>
+      ) : null}
+      {fonts === null ? (
+        <small className="ns-font-field__note">{t('settings.fontLoading')}</small>
+      ) : null}
+      {error ? (
+        <small className="ns-font-field__note ns-font-field__note--error">
+          {t('settings.fontLoadFailed', { message: error })}
+        </small>
+      ) : null}
+      <div className="ns-font-preview" style={{ fontFamily: value, fontSize }} aria-hidden="true">
+        <span>{t('settings.fontPreviewText')}</span>
+        <span className="ns-font-preview__glyphs">{FONT_GLYPH_SAMPLE}</span>
+      </div>
     </div>
   );
 }
@@ -905,10 +1057,10 @@ export function SettingsPanel() {
               </select>
             </Row>
             <Row label={t('settings.fontFamily')}>
-              <input
-                className="ns-input ns-input--mono"
+              <FontFamilyField
                 value={settings.terminal.fontFamily}
-                onChange={(event) => updateTerminal({ fontFamily: event.target.value })}
+                fontSize={settings.terminal.fontSize}
+                onChange={(fontFamily) => updateTerminal({ fontFamily })}
               />
             </Row>
             <Row label={t('settings.fontSize')}>

@@ -65,6 +65,7 @@ NaviShell/
 │     ├─ state.rs             AppState (connections, terminals, transfers)
 │     ├─ storage.rs           JSON file helpers under app data dir
 │     ├─ settings.rs          settings_get/set, layout_get/set, app_info
+│     ├─ fonts.rs             fonts_list (installed families for the Settings font picker)
 │     ├─ servers.rs           servers_* commands (servers.json)
 │     ├─ secrets.rs           credential_* (keyring)
 │     ├─ known_hosts.rs       known_hosts.json (TOFU store)
@@ -279,6 +280,11 @@ Changing a contract means updating both sides; prefer additive changes.
 - Terminal palettes are independent of the UI theme: `src/core/terminal/schemes.ts` holds the
   built-in schemes, `settings.terminal.colorScheme.{dark,light}` names one per resolved UI
   theme, and `settings.terminal.minimumContrastRatio` is passed straight to xterm.
+- The terminal font stays a plain CSS `font-family` list (`settings.terminal.fontFamily`).
+  The Settings picker (`src/core/terminal/fonts.ts`) offers the default stack ("automatic"),
+  the families `fonts_list` finds on the machine (`src-tauri/src/fonts.rs`, via `fontdb`;
+  monospace by default) and a custom escape hatch; a picked family is stored as
+  `"<family>", <default stack>` so glyphs it lacks still fall back.
 - CSS: plain CSS with variables defined in `src/styles/theme.css` (dark first; light values
   under `[data-theme="light"]`). Plugins may ship their own CSS but should use the host
   variables (`--ns-bg`, `--ns-fg`, `--ns-border`, `--ns-accent`, …) for consistency.

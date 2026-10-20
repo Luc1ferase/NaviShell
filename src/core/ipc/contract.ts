@@ -170,6 +170,21 @@ export interface ExternalPluginInfo {
 }
 
 // ---------------------------------------------------------------------------
+// Installed fonts
+// ---------------------------------------------------------------------------
+
+/** One font family installed on this machine (see `fonts_list`). */
+export interface FontFamily {
+  /** Family name as CSS `font-family` expects it. */
+  name: string;
+  /**
+   * At least one face of the family is fixed-pitch. CJK "mono" fonts with double-width
+   * ideographs often report `false`, which is why the picker can show all fonts.
+   */
+  monospaced: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Command table
 // ---------------------------------------------------------------------------
 
@@ -188,6 +203,10 @@ export interface Commands {
   /** Serialised dockview layout; `null` when none saved. */
   layout_get: { args: Record<string, never>; result: JsonValue | null };
   layout_set: { args: { layout: JsonValue }; result: void };
+
+  // ---- fonts -------------------------------------------------------------
+  /** Installed font families sorted by name; cached per process unless `refresh`. */
+  fonts_list: { args: { refresh: boolean }; result: FontFamily[] };
 
   // ---- servers -----------------------------------------------------------
   servers_list: { args: Record<string, never>; result: ServerRecord[] };
