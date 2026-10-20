@@ -2025,3 +2025,21 @@ body {
   background: var(--ns-border);
   border: 0;
 }
+
+/* Screenshots listed in the index, above the README. */
+.ns-ext__shots {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ns-ext__shot {
+  flex: 0 0 auto;
+  max-height: 180px;
+  max-width: 100%;
+  border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius);
+  background: var(--ns-bg-inset);
+}

@@ -239,11 +239,21 @@ export function ExtensionDetail({ item, hostVersion, onBack }: ExtensionDetailPr
         aria-labelledby={`ns-ext-tab-${tab}`}
       >
         {tab === 'details' ? (
-          <ExtensionDocument
-            url={entry?.readme}
-            fallback={item.description}
-            emptyLabel={t('ext.detail.noReadme')}
-          />
+          <>
+            {entry?.screenshots && entry.screenshots.length > 0 ? (
+              <div className="ns-ext__shots">
+                {/* The host keeps only http(s) URLs in `screenshots`. */}
+                {entry.screenshots.map((url) => (
+                  <img key={url} className="ns-ext__shot" src={url} alt="" loading="lazy" />
+                ))}
+              </div>
+            ) : null}
+            <ExtensionDocument
+              url={entry?.readme}
+              fallback={item.description}
+              emptyLabel={t('ext.detail.noReadme')}
+            />
+          </>
         ) : null}
         {tab === 'changelog' ? (
           <ExtensionDocument url={entry?.changelog} emptyLabel={t('ext.detail.noChangelog')} />
