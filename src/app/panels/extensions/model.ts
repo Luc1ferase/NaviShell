@@ -14,10 +14,11 @@ import {
   type PluginCategory,
   type PluginRegistryEntry,
 } from '@/core/ipc/contract';
+import type { ExtensionView } from '@/core/stores/extensionsView';
 import type { PluginEntry } from '@/core/stores/plugins';
 import { compareVersions } from '@/core/util/fn';
 
-export type ExtensionView = 'marketplace' | 'installed' | 'updates';
+export type { ExtensionView };
 export type ExtensionSort = 'default' | 'name';
 
 /** What the primary button of an item does. */

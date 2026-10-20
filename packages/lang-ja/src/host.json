@@ -34,7 +34,8 @@
     "noPanels": "登録されたパネルはありません",
     "noServers": "サーバーがありません",
     "extensions": "拡張機能",
-    "extensionsTooltip": "拡張機能の閲覧・インストール・更新"
+    "extensionsTooltip": "拡張機能の閲覧・インストール・更新",
+    "extensionsUpdatesTooltip": "{{count}} 件のプラグイン更新があります"
   },
   "status": {
     "notConnected": "未接続",
@@ -44,7 +45,8 @@
     "authMethodTooltip": "{{method}} で認証済み",
     "viaUnknown": "閉じた踏み台サーバー",
     "localeTooltip": "インターフェイスの言語",
-    "themeTooltip": "配色テーマ"
+    "themeTooltip": "配色テーマ",
+    "pluginUpdates": "プラグイン更新 {{n}} 件"
   },
   "settings": {
     "title": "設定",
@@ -155,6 +157,21 @@
       "message": "{{name}} をプラグイン フォルダーから削除しますか?",
       "ok": "アンインストール",
       "done": "{{name}} をアンインストールしました"
+    },
+    "updates": {
+      "title": "プラグインの更新",
+      "checkUpdates": "プラグインの更新を確認",
+      "checkUpdatesHint": "起動直後とその後 6 時間ごとにバックグラウンドで確認",
+      "autoUpdate": "自動的にインストール",
+      "autoUpdateHint": "この NaviShell で動作する更新を見つけ次第インストールします",
+      "checkNow": "今すぐ確認",
+      "checking": "確認中…",
+      "available": "{{count}} 件のプラグイン更新があります",
+      "upToDate": "すべてのプラグインは最新です。",
+      "notChecked": "まだ確認していません。",
+      "lastChecked": "最終確認: {{time}}",
+      "view": "表示",
+      "toastAvailable": "{{count}} 件のプラグイン更新があります"
     }
   },
   "ext": {

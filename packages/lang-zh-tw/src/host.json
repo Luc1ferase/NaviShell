@@ -34,7 +34,8 @@
     "noPanels": "沒有已註冊的面板",
     "noServers": "尚無伺服器",
     "extensions": "擴充功能",
-    "extensionsTooltip": "瀏覽、安裝與更新擴充功能"
+    "extensionsTooltip": "瀏覽、安裝與更新擴充功能",
+    "extensionsUpdatesTooltip": "{{count}} 個外掛有可用更新"
   },
   "status": {
     "notConnected": "未連線",
@@ -44,7 +45,8 @@
     "authMethodTooltip": "驗證方式：{{method}}",
     "viaUnknown": "已關閉的跳板主機",
     "localeTooltip": "介面語言",
-    "themeTooltip": "配色主題"
+    "themeTooltip": "配色主題",
+    "pluginUpdates": "{{n}} 個外掛更新"
   },
   "settings": {
     "title": "設定",
@@ -155,6 +157,21 @@
       "message": "要從外掛資料夾刪除 {{name}} 嗎？",
       "ok": "解除安裝",
       "done": "已解除安裝 {{name}}"
+    },
+    "updates": {
+      "title": "外掛更新",
+      "checkUpdates": "檢查外掛更新",
+      "checkUpdatesHint": "啟動後不久以及之後每 6 小時在背景檢查",
+      "autoUpdate": "自動安裝",
+      "autoUpdateHint": "發現目前 NaviShell 版本支援的更新後立即安裝",
+      "checkNow": "立即檢查",
+      "checking": "正在檢查…",
+      "available": "{{count}} 個外掛可更新",
+      "upToDate": "所有外掛都是最新的。",
+      "notChecked": "尚未檢查。",
+      "lastChecked": "上次檢查：{{time}}",
+      "view": "檢視",
+      "toastAvailable": "{{count}} 個外掛有可用更新"
     }
   },
   "ext": {

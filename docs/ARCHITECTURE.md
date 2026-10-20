@@ -41,7 +41,7 @@ NaviShell/
 │  ├─ core/
 │  │  ├─ ipc/contract.ts      <-- IPC CONTRACT (commands, args, results, events)
 │  │  ├─ ipc/client.ts        typed invoke wrappers (`call('ssh_connect', {...})`)
-│  │  ├─ stores/              zustand stores: settings, servers, connections, terminals, ui, plugins, marketplace, remoteText
+│  │  ├─ stores/              zustand stores: settings, servers, connections, terminals, ui, plugins, marketplace, remoteText, extensionsView
 │  │  ├─ plugins/             plugin host: loader (builtin + external), require shim, PluginContext impl, registries
 │  │  ├─ terminal/            xterm factory, TerminalHandle impl
 │  │  └─ i18n/                i18next setup, locales/en.json, locales/zh-CN.json; language packs add more
@@ -181,6 +181,16 @@ Changing a contract means updating both sides; prefer additive changes.
   frames, SVG and `id`s stripped, http(s)-only links and images, relative references
   resolved against the document's own URL. Link clicks are intercepted and opened in the
   system browser, never in the webview.
+- **Plugin update checks** (`services/pluginUpdates.ts`, started after bootstrap): with
+  `settings.plugins.checkUpdates` (default on) the index is fetched 15 s after start and
+  every 6 h (a copy younger than 10 min is reused) and compared with the installed
+  external plugins. The count is badged in the top bar, the status bar and the panel's
+  Updates view (`stores/extensionsView.ts` lets a caller open the panel on a view); new
+  candidates are announced once per version with a toast that opens the panel on Updates.
+  `settings.plugins.autoUpdate` (default off) installs the ones this host supports
+  instead. Failures stay silent; Settings > Plugins shows the last check and runs one on
+  demand. `registryUrl`, `checkUpdates` and `autoUpdate` are part of `PluginSettings` on
+  the Rust side too, so they survive a save (the URL did not before 0.6.0).
 - **Updates** (issue #5): `tauri-plugin-updater` + `tauri-plugin-process`, registered
   under `#[cfg(desktop)]`. `plugins.updater` in `tauri.conf.json` holds the minisign
   public key and the single endpoint

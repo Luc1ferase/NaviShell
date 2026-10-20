@@ -85,6 +85,10 @@ export interface AppSettings {
     registryUrl: string | null;
     /** Panel ids (`<pluginId>:<panelId>`) that have been auto-opened once (for `defaultOpen`). */
     seenPanels: string[];
+    /** Fetch the index in the background and badge available plugin updates. */
+    checkUpdates: boolean;
+    /** Install the updates this host supports as soon as a check finds them. */
+    autoUpdate: boolean;
   };
   /** Auto-close the SSH connection when its last terminal closes. */
   closeConnectionWithLastTerminal: boolean;
@@ -107,7 +111,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   localShell: { program: null, args: [] },
   updates: { checkOnStartup: true },
-  plugins: { disabled: [], registryUrl: null, seenPanels: [] },
+  plugins: {
+    disabled: [],
+    registryUrl: null,
+    seenPanels: [],
+    checkUpdates: true,
+    autoUpdate: false,
+  },
   closeConnectionWithLastTerminal: true,
 };
 
