@@ -50,30 +50,30 @@ export function panelTitle(entry: PanelEntry): string {
     : translatePlugin(entry.pluginId, entry.def.title);
 }
 
-/** Panels that live in the centre: Home, terminals and panels whose default spot is there. */
-function isCenterPanelId(id: string): boolean {
-  if (id === CORE_HOME_PANEL || id.startsWith(TERMINAL_PANEL_PREFIX)) return true;
-  return getPanelEntry(id)?.def.defaultPosition === 'center';
-}
-
-/** A group counts as a centre group while it holds at least one centre panel. */
+/**
+ * A group counts as a centre group while it holds Home or a terminal. Extensions and
+ * Settings do not count: they open wherever the focus is, so their presence says nothing
+ * about a group being the main area.
+ */
 function isCenterGroup(group: DockviewGroupPanel): boolean {
-  return group.panels.some((panel) => isCenterPanelId(panel.id));
+  return group.panels.some(
+    (panel) => panel.id === CORE_HOME_PANEL || panel.id.startsWith(TERMINAL_PANEL_PREFIX),
+  );
 }
 
 /**
- * Remembers the focused group when it is a centre group, so that a centre tab opened
- * while a side panel has the focus still lands where the user last worked. Wired to
- * dockview's active-group event by the dock layout.
+ * Remembers the focused group when it is a centre group, so that a terminal opened from
+ * a side panel (double-clicking a server) still lands where the user last worked. Wired
+ * to dockview's active-group event by the dock layout.
  */
 export function noteActiveGroup(group: DockviewGroupPanel | undefined): void {
   if (group && isCenterGroup(group)) lastCenterGroupId = group.id;
 }
 
 /**
- * The group new centre tabs (and the reference for side panels) go to: the focused group
+ * The group new terminals go to, and the reference for side panels: the focused group
  * when it is a centre group, else the centre group focused most recently, else the group
- * holding Home. A focused side panel (Servers, a file manager) never receives centre tabs.
+ * holding Home. A focused side panel (Servers, a file manager) never receives terminals.
  */
 function centerGroup(api: DockviewApi): DockviewGroupPanel | undefined {
   const active = api.activeGroup;
@@ -83,6 +83,15 @@ function centerGroup(api: DockviewApi): DockviewGroupPanel | undefined {
   const home = api.getPanel(CORE_HOME_PANEL);
   if (home) return home.api.group;
   return active ?? api.groups[0];
+}
+
+/**
+ * The group a centre panel (Extensions, Settings, a plugin's centre panel) opens in: the
+ * focused group, whichever it is, so that a panel opened from the top bar while Servers
+ * has the focus joins Servers as a tab. [`centerGroup`] when no group has the focus.
+ */
+function focusedGroup(api: DockviewApi): DockviewGroupPanel | undefined {
+  return api.activeGroup ?? centerGroup(api);
 }
 
 function directionFor(position: PanelPosition): 'left' | 'right' | 'below' | 'within' {
@@ -132,7 +141,7 @@ export function openPanel(fullId: string, options: OpenPanelOptions = {}): void 
   const size = options.size ?? (entry?.kind === 'plugin' ? entry.def.defaultSize : undefined);
   const closable = entry?.kind === 'plugin' ? entry.def.closable !== false : true;
   const direction = directionFor(position);
-  const group = centerGroup(api);
+  const group = direction === 'within' ? focusedGroup(api) : centerGroup(api);
   const title = entry ? panelTitle(entry) : fullId;
 
   const sizing =
