@@ -1,7 +1,7 @@
 {
   "name": "navishell",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "NaviShell - a pluggable SSH terminal with a VS Code-like dockable UI",
   "type": "module",
   "license": "Apache-2.0",
