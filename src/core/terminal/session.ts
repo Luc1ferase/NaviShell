@@ -20,7 +20,7 @@ import type {
 } from '@navishell/plugin-api';
 
 import { Channel, call } from '../ipc/client';
-import type { TerminalSettings } from '../ipc/contract';
+import type { TerminalRightClick, TerminalSettings } from '../ipc/contract';
 import { createEmitter } from '../util/events';
 import { debounce } from '../util/fn';
 import { terminalTheme } from './theme';
@@ -67,6 +67,7 @@ export class TerminalSession implements TerminalHandle {
   private readonly outputEmitter = createEmitter<Uint8Array>();
   private readonly disposeEmitter = createEmitter<void>();
   private readonly options: TerminalSessionOptions;
+  private rightClick: TerminalRightClick;
 
   private readonly pushResize = debounce((cols: number, rows: number) => {
     if (!this._id || this._disposed) return;
@@ -77,6 +78,7 @@ export class TerminalSession implements TerminalHandle {
 
   constructor(options: TerminalSessionOptions) {
     this.options = options;
+    this.rightClick = options.settings.rightClick;
     this.kind = options.kind;
     this.serverId = options.serverId;
     this.serverName = options.serverName;
@@ -192,6 +194,7 @@ export class TerminalSession implements TerminalHandle {
   // -- settings ------------------------------------------------------------
 
   applySettings(settings: TerminalSettings, theme: 'dark' | 'light'): void {
+    this.rightClick = settings.rightClick;
     if (this._disposed) return;
     const { options } = this.xterm;
     options.fontFamily = settings.fontFamily;
@@ -307,17 +310,24 @@ export class TerminalSession implements TerminalHandle {
     return true;
   }
 
+  /**
+   * The right button: with `terminal.rightClick` set to `menu` (or Shift held) nothing
+   * happens here and the panel opens the context menu; otherwise the click copies the
+   * selection or pastes, PuTTY style, or always pastes.
+   */
   private readonly handleContextMenu = (event: MouseEvent): void => {
     if (this._disposed) return;
     // Let plugin overlays own their own context menus.
     if (this.overlayElement.contains(event.target as Node)) return;
+    const mode = event.shiftKey ? 'menu' : this.rightClick;
+    if (mode === 'menu') return;
     event.preventDefault();
-    if (this.xterm.hasSelection()) {
+    if (mode === 'copyPaste' && this.xterm.hasSelection()) {
       void this.copySelection();
       this.xterm.clearSelection();
-    } else {
-      void this.pasteFromClipboard();
+      return;
     }
+    void this.pasteFromClipboard();
   };
 
   async copySelection(): Promise<void> {

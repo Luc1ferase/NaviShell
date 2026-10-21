@@ -30,6 +30,7 @@ plugins that use exactly the same API as third-party ones.
   Closing the jump connection closes everything tunnelled through it.
 - **Multiple terminals**: real PTY sessions on xterm.js with tabs, split docking and a
   layout that is saved and restored automatically.
+- **Context menus**: terminals, tabs, the server list, text fields and the extension list all have the app's own right-click menus (the terminal's right button can also copy / paste PuTTY style); plugins add their own items through `ctx.menus`.
 - **Local terminals**: open a shell on this machine without SSH. The default program is
   `pwsh.exe` on Windows (`powershell.exe` when it is missing) and `$SHELL` elsewhere
   (`/bin/bash` when unset); Settings → Local shell accepts any program and arguments.
@@ -238,6 +239,7 @@ The `ctx` passed to `activate(ctx)` is everything a plugin can touch. **Never ca
 | `ctx.storage` | private persistent key/value store (`<appData>/plugin-data/<pluginId>.json`) |
 | `ctx.i18n` | register translations, `t()`, current locale and locale-change events; `registerLocale()` contributes a whole UI language (a language pack) |
 | `ctx.ui` | toasts, confirm and prompt dialogs, file and save pickers, context menus |
+| `ctx.menus` | add items to the host's context menus (terminal, server, tab) |
 | `ctx.log` | write to the application log |
 | `ctx.subscriptions` | `Disposable`s pushed here are released automatically on deactivation |
 

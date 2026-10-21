@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 import type { IDockviewPanelProps } from 'dockview-react';
 
+import { terminalMenuItems } from '@/app/menus/terminal';
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
+import { menuPositionFor } from '@/core/menus/guard';
 import type { TerminalPanelParams } from '@/core/services/layout';
 import { useTerminalsStore } from '@/core/stores/terminals';
 import { useUiStore } from '@/core/stores/ui';
@@ -23,6 +25,7 @@ export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
   const { t } = useI18n();
   const record = useTerminalsStore((state) => state.records[terminalId]);
   const toast = useUiStore((state) => state.toast);
+  const showContextMenu = useUiStore((state) => state.showContextMenu);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const session = record?.session;
   const label = local ? t('terminal.localTitle') : serverName;
@@ -58,6 +61,20 @@ export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
   const report = (error: unknown) => {
     const message = errorMessage(error);
     if (message) toast(message, 'error');
+  };
+
+  /**
+   * The session leaves the event alone in `menu` mode (and on Shift+click); it has
+   * already handled the copy/paste modes by the time it bubbles up here.
+   */
+  const onContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || !session) return;
+    event.preventDefault();
+    setActiveTerminal(terminalId);
+    showContextMenu(
+      terminalMenuItems(session),
+      menuPositionFor(event.nativeEvent, hostRef.current),
+    );
   };
 
   /** Replace this panel with a fresh session of the same kind. */
@@ -104,7 +121,7 @@ export function TerminalPanel(props: IDockviewPanelProps<TerminalPanelParams>) {
   }
 
   return (
-    <div className="ns-terminal-panel">
+    <div className="ns-terminal-panel" onContextMenu={onContextMenu}>
       <div ref={hostRef} style={{ height: '100%' }} />
       {record.exited ? (
         <div className="ns-term-exit">

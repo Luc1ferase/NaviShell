@@ -26,6 +26,7 @@ NaviShell 是一個跨平台的 SSH 終端機用戶端：Rust（Tauri 2）負責
   工作階段透過它的 direct-tcpip 通道穿隧過去；跳板主機中斷連線時，經由它的連線一併關閉。
 - **多終端機**：基於 xterm.js 的真實 PTY 工作階段，支援多分頁、分割停駐、版面配置自動儲存
   與還原。
+- **右鍵選單**：終端機、分頁、伺服器清單、輸入欄位與擴充功能清單都有應用程式自己的選單（終端機右鍵也可改為 PuTTY 式的複製 / 貼上）；外掛可透過 `ctx.menus` 加入項目。
 - **本機終端機**：不經過 SSH，直接在本機開一個 shell。預設程式為 Windows 上的 `pwsh.exe`
   （沒裝則 `powershell.exe`）、其他平台的 `$SHELL`（未設定則 `/bin/bash`），可在設定的
   「本機 shell」裡改成任意程式與參數。
@@ -210,6 +211,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.storage` | 外掛私有的持久化 KV（`<appData>/plugin-data/<pluginId>.json`） |
 | `ctx.i18n` | 註冊翻譯資源、`t()`、目前語言與語言變更事件；`registerLocale()` 貢獻整種語言（語言套件） |
 | `ctx.ui` | toast、確認方塊、輸入方塊、檔案選取、儲存對話方塊、右鍵選單 |
+| `ctx.menus` | 在宿主的右鍵選單（終端機、伺服器、分頁）加入項目 |
 | `ctx.log` | 寫入應用程式日誌 |
 | `ctx.subscriptions` | 放進去的 `Disposable` 會在外掛停用時自動釋放 |
 

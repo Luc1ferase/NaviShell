@@ -525,6 +525,13 @@ export interface MenuItem {
   checked?: boolean;
   /** `true` renders a separator; other fields are ignored. */
   separator?: boolean;
+  /**
+   * Shortcut hint shown on the right, e.g. `Ctrl+Shift+C`. Display only: the host does
+   * not bind it, the item is reachable by the key only when something else handles it.
+   */
+  shortcut?: string;
+  /** Nested items, opened as a submenu; `onClick` is ignored when this is set. */
+  submenu?: MenuItem[];
   onClick?: () => void;
 }
 
@@ -540,6 +547,52 @@ export interface UiApi {
   revealPath(path: string): Promise<void>;
   /** Show a context menu at viewport coordinates. */
   showContextMenu(items: MenuItem[], position: { x: number; y: number }): void;
+}
+
+// ---------------------------------------------------------------------------
+// Menu contributions
+// ---------------------------------------------------------------------------
+
+/** The host context menus a plugin can add items to. */
+export type MenuId = 'terminal' | 'server' | 'tab';
+
+/** What a `terminal` menu provider learns about the terminal the menu was opened on. */
+export interface TerminalMenuContext {
+  terminal: TerminalHandle;
+  /** The selected text at the time the menu opened; empty when nothing is selected. */
+  selection: string;
+}
+
+/** What a `server` menu provider learns about the server row the menu was opened on. */
+export interface ServerMenuContext {
+  server: ServerRecord;
+}
+
+/** What a `tab` menu provider learns about the dock tab the menu was opened on. */
+export interface TabMenuContext {
+  /** The dock panel id: `terminal:<terminalId>` for terminals, the panel's full id otherwise. */
+  panelId: string;
+  title: string;
+  /** Set when the tab holds a terminal. */
+  terminal?: TerminalHandle;
+}
+
+export interface MenuContexts {
+  terminal: TerminalMenuContext;
+  server: ServerMenuContext;
+  tab: TabMenuContext;
+}
+
+export interface MenusApi {
+  /**
+   * Contribute items to one of the host's context menus. The provider runs every time
+   * that menu opens and returns the items to append (an empty array adds nothing); the
+   * host groups each plugin's items behind a separator.
+   */
+  register<K extends MenuId>(
+    menu: K,
+    provider: (context: MenuContexts[K]) => MenuItem[],
+  ): Disposable;
 }
 
 export interface Logger {
@@ -570,6 +623,7 @@ export interface PluginContext {
   readonly storage: StorageApi;
   readonly i18n: I18nApi;
   readonly ui: UiApi;
+  readonly menus: MenusApi;
   readonly log: Logger;
 }
 

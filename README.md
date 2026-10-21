@@ -25,6 +25,7 @@ NaviShell 是一个跨平台 SSH 终端客户端：Rust（Tauri 2）负责连接
 - **跳板机（ProxyJump）**：服务器记录里挂一个 `jumpServerId`，先连跳板机，再把目标会话
   通过它的 direct-tcpip 通道隧穿过去；跳板机断开时，经由它的连接一起关闭。
 - **多终端**：基于 xterm.js 的真实 PTY 会话，支持多标签、分屏停靠、布局自动保存恢复。
+- **右键菜单**：终端、标签页、服务器列表、输入框和扩展列表都有应用自己的菜单（终端右键也可改为 PuTTY 式的复制 / 粘贴）；插件可通过 `ctx.menus` 追加菜单项。
 - **本地终端**：不经过 SSH，直接在本机开一个 shell。默认程序为 Windows 上的 `pwsh.exe`
   （没装则 `powershell.exe`）、其他平台的 `$SHELL`（未设置则 `/bin/bash`），可在设置的
   「本地 shell」里改成任意程序与参数。
@@ -209,6 +210,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.storage` | 插件私有的持久化 KV（`<appData>/plugin-data/<pluginId>.json`） |
 | `ctx.i18n` | 注册翻译资源、`t()`、当前语言与语言变更事件；`registerLocale()` 贡献整门语言（语言包） |
 | `ctx.ui` | toast、确认框、输入框、文件选择、保存对话框、右键菜单 |
+| `ctx.menus` | 向宿主的右键菜单（终端、服务器、标签页）追加菜单项 |
 | `ctx.log` | 写入应用日志 |
 | `ctx.subscriptions` | 放进去的 `Disposable` 会在插件停用时自动释放 |
 

@@ -23,6 +23,38 @@
     "unavailable": "Panel unavailable",
     "unavailableHint": "Its plugin is not loaded, disabled or failed to activate."
   },
+  "menu": {
+    "edit": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select all",
+      "openLink": "Open link",
+      "copyLink": "Copy link address"
+    },
+    "terminal": {
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select all",
+      "clear": "Clear",
+      "newTerminalHere": "New terminal on {{name}}",
+      "newLocalShell": "New local shell",
+      "close": "Close terminal"
+    },
+    "tab": {
+      "close": "Close",
+      "closeOthers": "Close others",
+      "closeRight": "Close to the right",
+      "closeAll": "Close all",
+      "splitRight": "Move to a new group on the right",
+      "splitDown": "Move to a new group below",
+      "maximize": "Maximize",
+      "restore": "Restore size",
+      "panels": "Panels"
+    }
+  },
   "topbar": {
     "quickConnect": "Connect",
     "newServer": "New server",
@@ -88,6 +120,13 @@
     },
     "cursorBlink": "Cursor blink",
     "cursorBlinkHint": "Blink the cursor",
+    "rightClick": "Right click",
+    "rightClickHint": "Shift+right click always opens the menu",
+    "rightClickMode": {
+      "menu": "Open the context menu",
+      "copyPaste": "Copy the selection, otherwise paste",
+      "paste": "Paste"
+    },
     "scrollback": "Scrollback",
     "webgl": "WebGL renderer",
     "webglHint": "Falls back to DOM rendering when unavailable",
@@ -230,6 +269,10 @@
       "disable": "Disable",
       "installVersion": "Install {{version}}",
       "busy": "Working…"
+    },
+    "menu": {
+      "openRepository": "Open repository",
+      "copyId": "Copy extension ID"
     },
     "badge": {
       "installed": "Installed",

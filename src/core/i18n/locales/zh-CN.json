@@ -23,6 +23,38 @@
     "unavailable": "面板不可用",
     "unavailableHint": "对应插件未加载、已禁用或激活失败。"
   },
+  "menu": {
+    "edit": {
+      "undo": "撤销",
+      "redo": "重做",
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "openLink": "打开链接",
+      "copyLink": "复制链接地址"
+    },
+    "terminal": {
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "clear": "清屏",
+      "newTerminalHere": "在 {{name}} 上新建终端",
+      "newLocalShell": "新建本地终端",
+      "close": "关闭终端"
+    },
+    "tab": {
+      "close": "关闭",
+      "closeOthers": "关闭其他",
+      "closeRight": "关闭右侧",
+      "closeAll": "全部关闭",
+      "splitRight": "移到右侧新分组",
+      "splitDown": "移到下方新分组",
+      "maximize": "最大化",
+      "restore": "还原大小",
+      "panels": "面板"
+    }
+  },
   "topbar": {
     "quickConnect": "连接",
     "newServer": "新建服务器",
@@ -88,6 +120,13 @@
     },
     "cursorBlink": "光标闪烁",
     "cursorBlinkHint": "让光标闪烁",
+    "rightClick": "右键",
+    "rightClickHint": "按住 Shift 点右键总是打开菜单",
+    "rightClickMode": {
+      "menu": "打开右键菜单",
+      "copyPaste": "有选中则复制，否则粘贴",
+      "paste": "粘贴"
+    },
     "scrollback": "回滚行数",
     "webgl": "WebGL 渲染",
     "webglHint": "不可用时自动回退到 DOM 渲染",
@@ -230,6 +269,10 @@
       "disable": "禁用",
       "installVersion": "安装 {{version}}",
       "busy": "处理中…"
+    },
+    "menu": {
+      "openRepository": "打开仓库",
+      "copyId": "复制扩展 ID"
     },
     "badge": {
       "installed": "已安装",

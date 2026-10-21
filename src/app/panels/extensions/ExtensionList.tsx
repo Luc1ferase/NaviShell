@@ -3,10 +3,13 @@ import { CircleArrowUp, Download } from 'lucide-react';
 
 import { Icon, resolveIcon } from '@/app/components/Icon';
 import { useI18n } from '@/core/i18n/useI18n';
+import { menuPositionFor } from '@/core/menus/guard';
 import { installPlugin } from '@/core/plugins/install';
+import { useUiStore } from '@/core/stores/ui';
 
 import { installAttempt } from './actions';
 import { ExtensionBadges } from './ExtensionBadges';
+import { extensionMenuItems } from './menu';
 import type { ExtensionItem } from './model';
 
 const ROW_SELECTOR = '[role="option"]';
@@ -25,9 +28,19 @@ interface ExtensionRowProps {
 
 function ExtensionRow({ item, selected, tabIndex, onSelect }: ExtensionRowProps): JSX.Element {
   const { t } = useI18n();
+  const showContextMenu = useUiStore((state) => state.showContextMenu);
   const [busy, setBusy] = useState(false);
   const { action } = item;
   const update = action.kind === 'update';
+
+  const onContextMenu = (event: MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    onSelect(item.id);
+    showContextMenu(
+      extensionMenuItems(item),
+      menuPositionFor(event.nativeEvent, event.currentTarget),
+    );
+  };
 
   const install = async (event: MouseEvent<HTMLButtonElement>) => {
     // Installing from the list must not move the selection away from what the user reads.
@@ -49,6 +62,7 @@ function ExtensionRow({ item, selected, tabIndex, onSelect }: ExtensionRowProps)
       aria-selected={selected}
       tabIndex={tabIndex}
       onClick={() => onSelect(item.id)}
+      onContextMenu={onContextMenu}
     >
       <Icon
         name={resolveIcon(item.icon) ? item.icon : 'Puzzle'}

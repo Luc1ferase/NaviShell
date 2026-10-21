@@ -3,13 +3,11 @@ import { ArrowLeft, CircleArrowUp, Download, ExternalLink, Trash2 } from 'lucide
 
 import { Icon, resolveIcon } from '@/app/components/Icon';
 import { useI18n } from '@/core/i18n/useI18n';
-import { call, errorMessage } from '@/core/ipc/client';
 import { installPlugin } from '@/core/plugins/install';
-import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
 import { useSettingsStore } from '@/core/stores/settings';
 import { useUiStore } from '@/core/stores/ui';
 
-import { installAttempt, openExternal } from './actions';
+import { installAttempt, openExternal, toggleExtension, uninstallExtension } from './actions';
 import { ExtensionBadges } from './ExtensionBadges';
 import { ExtensionDocument } from './ExtensionDocument';
 import { ExtensionMeta } from './ExtensionMeta';
@@ -36,7 +34,6 @@ export interface ExtensionDetailProps {
  */
 export function ExtensionDetail({ item, hostVersion, onBack }: ExtensionDetailProps): JSX.Element {
   const { t } = useI18n();
-  const confirm = useUiStore((state) => state.confirm);
   const toast = useUiStore((state) => state.toast);
   const disabledIds = useSettingsStore((state) => state.settings.plugins.disabled);
   const [tab, setTab] = useState<DetailTab>('details');
@@ -64,31 +61,16 @@ export function ExtensionDetail({ item, hostVersion, onBack }: ExtensionDetailPr
   const toggle = async () => {
     setRunning('toggle');
     try {
-      await setPluginEnabled(item.id, !enabled);
-    } catch (error) {
-      toast(errorMessage(error), 'error');
+      await toggleExtension(item, !enabled);
     } finally {
       setRunning(null);
     }
   };
 
   const uninstall = async () => {
-    const confirmed = await confirm({
-      title: t('plugins.uninstall.title'),
-      message: t('plugins.uninstall.message', { name: item.name }),
-      okLabel: t('plugins.uninstall.ok'),
-      danger: true,
-    });
-    if (!confirmed) return;
     setRunning('uninstall');
     try {
-      // Tear the plugin down before its files disappear, then rediscover what is left.
-      if (installed?.status === 'active') await deactivatePlugin(item.id);
-      await call('plugins_uninstall', { pluginId: item.id });
-      await reloadPlugins();
-      toast(t('plugins.uninstall.done', { name: item.name }), 'success');
-    } catch (error) {
-      toast(errorMessage(error), 'error');
+      await uninstallExtension(item);
     } finally {
       setRunning(null);
     }

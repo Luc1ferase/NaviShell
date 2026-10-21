@@ -31,6 +31,19 @@ pub enum CursorStyle {
     Bar,
 }
 
+/// What the right mouse button does on a terminal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TerminalRightClick {
+    /// Open the context menu.
+    #[default]
+    Menu,
+    /// Copy the selection, or paste when there is none.
+    CopyPaste,
+    /// Always paste.
+    Paste,
+}
+
 /// Appearance and behaviour of terminal panels.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -50,6 +63,8 @@ pub struct TerminalSettings {
     pub color_scheme: ColorSchemeSettings,
     /// xterm `minimumContrastRatio`; 1 disables it, 4.5 is WCAG AA.
     pub minimum_contrast_ratio: f64,
+    /// Right mouse button behaviour (the frontend applies it).
+    pub right_click: TerminalRightClick,
 }
 
 /// Which terminal color scheme to use under each resolved UI theme.
@@ -82,6 +97,7 @@ impl Default for TerminalSettings {
             term_type: "xterm-256color".to_string(),
             color_scheme: ColorSchemeSettings::default(),
             minimum_contrast_ratio: 4.5,
+            right_click: TerminalRightClick::default(),
         }
     }
 }

@@ -82,9 +82,16 @@ export type DialogRequest =
 /** Section of the settings panel a caller wants to bring into view. */
 export type SettingsSection = 'general' | 'terminal' | 'localShell' | 'plugins' | 'about';
 
+export interface ContextMenuPosition {
+  x: number;
+  y: number;
+  /** Highlight and focus the first item at once (the menu was opened from the keyboard). */
+  focusFirst?: boolean;
+}
+
 export interface ContextMenuState {
   items: MenuItem[];
-  position: { x: number; y: number };
+  position: ContextMenuPosition;
 }
 
 export interface ServerFormState {
@@ -114,7 +121,7 @@ export interface UiStore {
   /** Resolve (and remove) the front dialog. */
   settleDialog(id: string, value: unknown): void;
 
-  showContextMenu(items: MenuItem[], position: { x: number; y: number }): void;
+  showContextMenu(items: MenuItem[], position: ContextMenuPosition): void;
   hideContextMenu(): void;
 
   openServerForm(state?: ServerFormState): void;

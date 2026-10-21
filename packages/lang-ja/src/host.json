@@ -23,6 +23,38 @@
     "unavailable": "パネルを利用できません",
     "unavailableHint": "対応するプラグインが読み込まれていない、無効、またはアクティブ化に失敗しました。"
   },
+  "menu": {
+    "edit": {
+      "undo": "元に戻す",
+      "redo": "やり直す",
+      "cut": "切り取り",
+      "copy": "コピー",
+      "paste": "貼り付け",
+      "selectAll": "すべて選択",
+      "openLink": "リンクを開く",
+      "copyLink": "リンクアドレスをコピー"
+    },
+    "terminal": {
+      "copy": "コピー",
+      "paste": "貼り付け",
+      "selectAll": "すべて選択",
+      "clear": "画面をクリア",
+      "newTerminalHere": "{{name}} で新しいターミナル",
+      "newLocalShell": "新しいローカルシェル",
+      "close": "ターミナルを閉じる"
+    },
+    "tab": {
+      "close": "閉じる",
+      "closeOthers": "他を閉じる",
+      "closeRight": "右側を閉じる",
+      "closeAll": "すべて閉じる",
+      "splitRight": "右の新しいグループへ移動",
+      "splitDown": "下の新しいグループへ移動",
+      "maximize": "最大化",
+      "restore": "サイズを戻す",
+      "panels": "パネル"
+    }
+  },
   "topbar": {
     "quickConnect": "接続",
     "newServer": "新しいサーバー",
@@ -88,6 +120,13 @@
     },
     "cursorBlink": "カーソルの点滅",
     "cursorBlinkHint": "カーソルを点滅させます",
+    "rightClick": "右クリック",
+    "rightClickHint": "Shift+右クリックは常にメニューを開きます",
+    "rightClickMode": {
+      "menu": "コンテキストメニューを開く",
+      "copyPaste": "選択があればコピー、なければ貼り付け",
+      "paste": "貼り付け"
+    },
     "scrollback": "スクロールバックの行数",
     "webgl": "WebGL レンダラー",
     "webglHint": "利用できない場合は DOM レンダリングに切り替わります",
@@ -218,6 +257,10 @@
       "disable": "無効化",
       "installVersion": "{{version}} をインストール",
       "busy": "処理中…"
+    },
+    "menu": {
+      "openRepository": "リポジトリを開く",
+      "copyId": "拡張機能 ID をコピー"
     },
     "badge": {
       "installed": "インストール済み",
