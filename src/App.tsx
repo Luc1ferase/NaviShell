@@ -16,6 +16,7 @@ import { registerCorePanels } from '@/app/panels/corePanels';
 import { bootstrap, type BootstrapStep } from '@/core/bootstrap';
 import { onDidChangeLocale, setLocale, resolveLocale } from '@/core/i18n';
 import { errorMessage, listenHost } from '@/core/ipc/client';
+import { installContextMenuGuard } from '@/core/menus/guard';
 import { handleAuthPrompt } from '@/core/services/connect';
 import { flushLayoutPersist, refreshPanelTitles } from '@/core/services/layout';
 import { applyThemeToDocument, resolveTheme } from '@/core/services/theme';
@@ -112,6 +113,10 @@ export function App() {
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, []);
+
+  // -- context menus -------------------------------------------------------
+  // Right clicks nobody handled get the app's own menus (or none), never the WebView's.
+  useEffect(() => installContextMenuGuard(), []);
 
   // -- settings / locale / theme reactions ---------------------------------
   useEffect(() => {

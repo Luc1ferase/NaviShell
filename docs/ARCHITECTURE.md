@@ -43,13 +43,14 @@ NaviShell/
 │  │  ├─ ipc/client.ts        typed invoke wrappers (`call('ssh_connect', {...})`)
 │  │  ├─ stores/              zustand stores: settings, servers, connections, terminals, ui, plugins, marketplace, remoteText, extensionsView
 │  │  ├─ plugins/             plugin host: loader (builtin + external), require shim, PluginContext impl, registries
+│  │  ├─ menus/               context menus: contributions (plugin items per menu id), editing (field / selection / link menus), guard (document-level fallback), shortcuts (labels)
 │  │  ├─ terminal/            xterm factory, TerminalHandle impl
 │  │  └─ i18n/                i18next setup, locales/en.json, locales/zh-CN.json; language packs add more
 │  ├─ app/
 │  │  ├─ layout/              DockLayout (dockview), default layout, persistence
 │  │  ├─ panels/              ServersPanel, TerminalPanel, HomePanel, SettingsPanel, PluginPanel (generic), extensions/ (the marketplace view)
 │  │  ├─ components/          Dialogs (confirm/prompt/password/host-key), Toasts, ContextMenu, StatusBar, TopBar
-│  │  └─ menus/               panels.ts: the Panels menu (every registered panel, open ones checked) used by TopBar and StatusBar
+│  │  └─ menus/               panels.ts (the Panels menu), terminal.ts and tabs.ts (items of the terminal, tab and tab-bar menus)
 │  └─ styles/                 CSS variables + global styles (dark theme first)
 ├─ public/plugins/            GENERATED built-in plugin bundles (gitignored)
 ├─ packages/
@@ -88,6 +89,8 @@ NaviShell/
 - **Plugin contract**: `packages/plugin-api/src/index.ts`. Plugins only ever see
   `PluginContext`; they never call `invoke` directly. `ctx.local` (platform, arch and a
   shell-less one-shot `exec`) is the local counterpart of `ctx.connections.exec`.
+  `ctx.menus.register(menuId, provider)` adds items to the host's `terminal`, `server`
+  and `tab` context menus; the provider runs each time the menu opens.
 
 Changing a contract means updating both sides; prefer additive changes.
 
@@ -238,6 +241,16 @@ Changing a contract means updating both sides; prefer additive changes.
   component with params `{ terminalId, serverId, serverName }` and `renderer: 'always'`.
   The center group always contains the non-closable `core:home` panel so there is always a
   terminal area.
+- **Context menus**: every right click is the app's own; the WebView menu never shows.
+  One component (`ContextMenuHost`: keyboard navigation, submenus, shortcut hints) renders
+  whatever `ui.showContextMenu(items, position)` was given. Sources: the terminal panel
+  (`terminal.rightClick` setting: `menu`, `copyPaste` or `paste`; Shift+right click always
+  opens the menu), the dock (one listener in `DockLayout`: tabs carry their panel id in
+  `data-tab-panel-id`, the empty tab bar gets the group menu), server rows and the list
+  background, extension rows, and finally the document-level guard (`core/menus/guard.ts`)
+  that gives editable fields, selected text and links their menus and swallows the rest.
+  Plugins append items through `ctx.menus` (`core/menus/contributions.ts`), each plugin's
+  group behind a separator, in registration order.
 - **Layout persistence**: `api.toJSON()` debounced -> `layout_set`. On restore, terminal
   panels whose session no longer exists render a "session ended / reconnect" placeholder.
   If `fromJSON` throws, fall back to the default layout.

@@ -1,11 +1,14 @@
 /**
  * Registries for everything a plugin (or the host itself) can contribute: dock panels,
- * commands, terminal overlays and terminal key handlers.
+ * commands, terminal overlays, terminal key handlers and context menu items.
  */
 
 import type { ComponentType } from 'react';
 import { create } from 'zustand';
 import type {
+  MenuContexts,
+  MenuId,
+  MenuItem,
   PanelApi,
   PanelDefinition,
   PanelPosition,
@@ -66,6 +69,14 @@ export interface KeyHandlerEntry {
   handler: (terminal: TerminalHandle, event: KeyboardEvent) => boolean;
 }
 
+/** A plugin's contribution to one of the host context menus (see `MenusApi`). */
+export interface MenuProviderEntry {
+  key: string;
+  pluginId: string;
+  menu: MenuId;
+  provider: (context: MenuContexts[MenuId]) => MenuItem[];
+}
+
 const panelRegistered = createEmitter<PanelEntry>();
 /** Fires when a panel definition becomes available (used for `defaultOpen` handling). */
 export const onDidRegisterPanel = panelRegistered.event;
@@ -76,6 +87,7 @@ export interface RegistryStore {
   commands: Record<string, CommandEntry>;
   overlays: OverlayEntry[];
   keyHandlers: KeyHandlerEntry[];
+  menuProviders: MenuProviderEntry[];
 
   registerCorePanel(def: CorePanelDefinition): void;
   registerPluginPanel(pluginId: string, ctx: PluginContext, def: PanelDefinition): string;
@@ -97,6 +109,13 @@ export interface RegistryStore {
   ): string;
   unregisterKeyHandler(key: string): void;
 
+  registerMenuProvider<K extends MenuId>(
+    pluginId: string,
+    menu: K,
+    provider: (context: MenuContexts[K]) => MenuItem[],
+  ): string;
+  unregisterMenuProvider(key: string): void;
+
   /** Drop every contribution made by a plugin. */
   unregisterPlugin(pluginId: string): void;
 }
@@ -107,6 +126,7 @@ export const useRegistryStore = create<RegistryStore>((set, get) => ({
   commands: {},
   overlays: [],
   keyHandlers: [],
+  menuProviders: [],
 
   registerCorePanel(def) {
     const entry: PanelEntry = { kind: 'core', fullId: def.id, def };
@@ -164,6 +184,23 @@ export const useRegistryStore = create<RegistryStore>((set, get) => ({
     set({ keyHandlers: get().keyHandlers.filter((entry) => entry.key !== key) });
   },
 
+  registerMenuProvider(pluginId, menu, provider) {
+    const key = uuid();
+    // The provider is typed for its own menu; the store keeps every menu in one list.
+    const entry: MenuProviderEntry = {
+      key,
+      pluginId,
+      menu,
+      provider: provider as (context: MenuContexts[MenuId]) => MenuItem[],
+    };
+    set({ menuProviders: [...get().menuProviders, entry] });
+    return key;
+  },
+
+  unregisterMenuProvider(key) {
+    set({ menuProviders: get().menuProviders.filter((entry) => entry.key !== key) });
+  },
+
   unregisterPlugin(pluginId) {
     const panels = { ...get().panels };
     for (const [id, entry] of Object.entries(panels)) {
@@ -179,6 +216,7 @@ export const useRegistryStore = create<RegistryStore>((set, get) => ({
       commands,
       overlays: get().overlays.filter((overlay) => overlay.pluginId !== pluginId),
       keyHandlers: get().keyHandlers.filter((entry) => entry.pluginId !== pluginId),
+      menuProviders: get().menuProviders.filter((entry) => entry.pluginId !== pluginId),
     });
   },
 }));

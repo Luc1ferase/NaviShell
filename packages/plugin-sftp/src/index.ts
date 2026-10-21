@@ -58,6 +58,36 @@ export default definePlugin({
       }),
     );
 
+    // The panel follows the active terminal, so opening it from a terminal's menu shows
+    // that host; from a server's menu a terminal is opened first, which makes it active.
+    ctx.subscriptions.push(
+      ctx.menus.register('terminal', ({ terminal }) =>
+        terminal.kind === 'ssh'
+          ? [
+              {
+                id: 'browse',
+                label: ctx.i18n.t('menu.browseHere'),
+                icon: 'FolderTree',
+                onClick: () => ctx.panels.open(PANEL_ID),
+              },
+            ]
+          : [],
+      ),
+      ctx.menus.register('server', ({ server }) => [
+        {
+          id: 'explorer',
+          label: ctx.i18n.t('menu.openExplorer'),
+          icon: 'FolderTree',
+          onClick: () => {
+            void ctx.servers
+              .openTerminal(server.id)
+              .then(() => ctx.panels.open(PANEL_ID))
+              .catch((error: unknown) => ctx.log.warn('could not open a terminal', error));
+          },
+        },
+      ]),
+    );
+
     void instance.start();
   },
 

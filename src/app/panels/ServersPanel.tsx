@@ -4,6 +4,8 @@ import type { MenuItem, ServerRecord } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
 import { errorMessage } from '@/core/ipc/client';
+import { withMenuContributions } from '@/core/menus/contributions';
+import { menuPositionFor } from '@/core/menus/guard';
 import { deleteServer, duplicateInput, saveServer } from '@/core/services/servers';
 import { useServersStore } from '@/core/stores/servers';
 import { useUiStore } from '@/core/stores/ui';
@@ -117,16 +119,31 @@ export function ServersPanel() {
         icon: 'Copy',
         onClick: () => void duplicate(server),
       },
-      { separator: true, label: '' },
-      {
-        id: 'delete',
-        label: t('servers.menu.delete'),
-        icon: 'Trash2',
-        danger: true,
-        onClick: () => void removeServer(server),
-      },
     ];
-    showContextMenu(items, { x: event.clientX, y: event.clientY });
+    showContextMenu(
+      [
+        ...withMenuContributions(items, 'server', { server }),
+        { separator: true, label: '' },
+        {
+          id: 'delete',
+          label: t('servers.menu.delete'),
+          icon: 'Trash2',
+          danger: true,
+          onClick: () => void removeServer(server),
+        },
+      ],
+      menuPositionFor(event.nativeEvent, event.currentTarget),
+    );
+  };
+
+  /** The empty part of the list: only adding makes sense there. */
+  const openListMenu = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
+    event.preventDefault();
+    showContextMenu(
+      [{ id: 'add', label: t('servers.add'), icon: 'Plus', onClick: () => openServerForm() }],
+      menuPositionFor(event.nativeEvent, event.currentTarget),
+    );
   };
 
   return (
@@ -150,7 +167,7 @@ export function ServersPanel() {
         </button>
       </div>
 
-      <div className="ns-panel__body">
+      <div className="ns-panel__body" onContextMenu={openListMenu}>
         {groups.length === 0 ? (
           <div className="ns-empty">
             {servers.length === 0 ? t('servers.empty') : t('servers.noMatches')}

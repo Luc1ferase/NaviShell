@@ -31,6 +31,8 @@ export const en: Record<string, string> = {
   'state.boundToTerminal': 'Following the active terminal',
 
   'menu.open': 'Open',
+  'menu.browseHere': 'Browse files here',
+  'menu.openExplorer': 'Open the file manager',
   'menu.download': 'Download…',
   'menu.rename': 'Rename…',
   'menu.delete': 'Delete',
@@ -103,6 +105,8 @@ export const zhCN: Record<string, string> = {
   'state.boundToTerminal': '跟随当前终端',
 
   'menu.open': '打开',
+  'menu.browseHere': '在这里浏览文件',
+  'menu.openExplorer': '打开文件管理器',
   'menu.download': '下载…',
   'menu.rename': '重命名…',
   'menu.delete': '删除',

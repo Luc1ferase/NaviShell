@@ -56,7 +56,15 @@ export interface TerminalSettings {
    * they reach this ratio. 1 disables it; 4.5 is WCAG AA (VS Code's default); 7 is AAA.
    */
   minimumContrastRatio: number;
+  /**
+   * What the right mouse button does on a terminal: open the context menu, copy the
+   * selection or paste when there is none (PuTTY style), or always paste. Shift+right
+   * click opens the menu in every mode.
+   */
+  rightClick: TerminalRightClick;
 }
+
+export type TerminalRightClick = 'menu' | 'copyPaste' | 'paste';
 
 export interface LocalShellSettings {
   /**
@@ -108,6 +116,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     termType: 'xterm-256color',
     colorScheme: { dark: 'navishell-dark', light: 'navishell-light' },
     minimumContrastRatio: 4.5,
+    rightClick: 'menu',
   },
   localShell: { program: null, args: [] },
   updates: { checkOnStartup: true },

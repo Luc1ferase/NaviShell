@@ -23,6 +23,38 @@
     "unavailable": "面板無法使用",
     "unavailableHint": "對應的外掛未載入、已停用或啟動失敗。"
   },
+  "menu": {
+    "edit": {
+      "undo": "復原",
+      "redo": "重做",
+      "cut": "剪下",
+      "copy": "複製",
+      "paste": "貼上",
+      "selectAll": "全選",
+      "openLink": "開啟連結",
+      "copyLink": "複製連結網址"
+    },
+    "terminal": {
+      "copy": "複製",
+      "paste": "貼上",
+      "selectAll": "全選",
+      "clear": "清除畫面",
+      "newTerminalHere": "在 {{name}} 上新增終端機",
+      "newLocalShell": "新增本機終端機",
+      "close": "關閉終端機"
+    },
+    "tab": {
+      "close": "關閉",
+      "closeOthers": "關閉其他",
+      "closeRight": "關閉右側",
+      "closeAll": "全部關閉",
+      "splitRight": "移至右側新群組",
+      "splitDown": "移至下方新群組",
+      "maximize": "最大化",
+      "restore": "還原大小",
+      "panels": "面板"
+    }
+  },
   "topbar": {
     "quickConnect": "連線",
     "newServer": "新增伺服器",
@@ -88,6 +120,13 @@
     },
     "cursorBlink": "游標閃爍",
     "cursorBlinkHint": "讓游標閃爍",
+    "rightClick": "右鍵",
+    "rightClickHint": "按住 Shift 點右鍵一律開啟選單",
+    "rightClickMode": {
+      "menu": "開啟右鍵選單",
+      "copyPaste": "有選取就複製，否則貼上",
+      "paste": "貼上"
+    },
     "scrollback": "回捲行數",
     "webgl": "WebGL 轉譯",
     "webglHint": "無法使用時會改用 DOM 轉譯",
@@ -218,6 +257,10 @@
       "disable": "停用",
       "installVersion": "安裝 {{version}}",
       "busy": "處理中…"
+    },
+    "menu": {
+      "openRepository": "開啟儲存庫",
+      "copyId": "複製擴充功能 ID"
     },
     "badge": {
       "installed": "已安裝",

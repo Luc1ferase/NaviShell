@@ -17,7 +17,11 @@ import type { ITheme } from '@xterm/xterm';
 import { fallbackChain } from '@/core/i18n';
 import { useAvailableLocales, useI18n } from '@/core/i18n/useI18n';
 import { call, errorMessage } from '@/core/ipc/client';
-import { DEFAULT_PLUGIN_REGISTRY_URL, type FontFamily } from '@/core/ipc/contract';
+import {
+  DEFAULT_PLUGIN_REGISTRY_URL,
+  type FontFamily,
+  type TerminalRightClick,
+} from '@/core/ipc/contract';
 import { installPlugin, type InstallAttempt } from '@/core/plugins/install';
 import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
 import { openExtensionsPanel } from '@/core/services/layout';
@@ -981,6 +985,19 @@ export function SettingsPanel() {
                 <option value="block">{t('settings.cursor.block')}</option>
                 <option value="underline">{t('settings.cursor.underline')}</option>
                 <option value="bar">{t('settings.cursor.bar')}</option>
+              </select>
+            </Row>
+            <Row label={t('settings.rightClick')} hint={t('settings.rightClickHint')}>
+              <select
+                className="ns-select ns-settings__control--narrow"
+                value={settings.terminal.rightClick}
+                onChange={(event) =>
+                  updateTerminal({ rightClick: event.target.value as TerminalRightClick })
+                }
+              >
+                <option value="menu">{t('settings.rightClickMode.menu')}</option>
+                <option value="copyPaste">{t('settings.rightClickMode.copyPaste')}</option>
+                <option value="paste">{t('settings.rightClickMode.paste')}</option>
               </select>
             </Row>
             <Row label={t('settings.cursorBlink')}>

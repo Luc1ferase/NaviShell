@@ -1299,12 +1299,27 @@ body {
   position: fixed;
   z-index: 1500;
   min-width: 180px;
-  max-width: 320px;
+  max-width: 360px;
+  /* A menu taller than the window keeps its margins and scrolls inside. */
+  max-height: calc(100vh - 12px);
   padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--ns-bg-elevated);
   border: 1px solid var(--ns-border-strong);
   border-radius: var(--ns-radius);
   box-shadow: var(--ns-shadow);
+}
+
+/* Submenus are siblings in the DOM, so they say for themselves that they sit on top. */
+.ns-menu--submenu {
+  z-index: 1501;
+}
+
+/* Focus follows the highlight, so a ring would only ever double it. */
+.ns-menu:focus-visible,
+.ns-menu__item:focus-visible {
+  outline: none;
 }
 
 .ns-menu__item {
@@ -1323,7 +1338,7 @@ body {
   cursor: pointer;
 }
 
-.ns-menu__item:hover:not(:disabled) {
+.ns-menu__item--active:not(:disabled) {
   background: var(--ns-bg-hover);
 }
 
@@ -1336,7 +1351,7 @@ body {
   color: var(--ns-danger);
 }
 
-.ns-menu__item--danger:hover:not(:disabled) {
+.ns-menu__item--danger.ns-menu__item--active:not(:disabled) {
   background: var(--ns-danger-soft);
 }
 
@@ -1346,10 +1361,14 @@ body {
   background: var(--ns-border);
 }
 
-.ns-menu__check {
-  flex: 0 0 auto;
-  margin-left: 12px;
-  color: var(--ns-accent);
+/* Reserved on every row, with or without an icon, so the labels line up. */
+.ns-menu__icon {
+  display: inline-flex;
+  flex: 0 0 14px;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
 }
 
 .ns-menu__label {
@@ -1357,6 +1376,25 @@ body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.ns-menu__shortcut {
+  flex: 0 0 auto;
+  margin-left: 12px;
+  color: var(--ns-fg-subtle);
+  font-size: var(--ns-font-size-xs);
+  white-space: nowrap;
+}
+
+.ns-menu__check {
+  flex: 0 0 auto;
+  color: var(--ns-accent);
+}
+
+.ns-menu__arrow {
+  flex: 0 0 auto;
+  margin-right: -2px;
+  color: var(--ns-fg-subtle);
 }
 
 /* Extensions panel ------------------------------------------------------- */

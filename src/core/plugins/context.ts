@@ -228,6 +228,13 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
         useUiStore.getState().showContextMenu(items, position);
       },
     },
+
+    menus: {
+      register(menu, provider) {
+        const key = useRegistryStore.getState().registerMenuProvider(pluginId, menu, provider);
+        return toDisposableFn(() => useRegistryStore.getState().unregisterMenuProvider(key));
+      },
+    },
   };
 
   return ctx;

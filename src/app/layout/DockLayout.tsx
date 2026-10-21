@@ -11,6 +11,7 @@ import {
 import type { JsonValue } from '@navishell/plugin-api';
 
 import { useI18n } from '@/core/i18n/useI18n';
+import { menuPositionFor } from '@/core/menus/guard';
 import { useAppliedTheme } from '@/core/services/theme';
 import { onDidRegisterPanel } from '@/core/plugins/registry';
 import {
@@ -18,6 +19,7 @@ import {
   TERMINAL_PANEL_PREFIX,
   TERMINAL_TAB_COMPONENT,
   applyDefaultLayout,
+  getDockApi,
   maybeAutoOpenPanel,
   restoreLayout,
   runPendingAutoOpen,
@@ -28,7 +30,9 @@ import {
 import { useConnectionsStore } from '@/core/stores/connections';
 import { useServersStore } from '@/core/stores/servers';
 import { useTerminalsStore } from '@/core/stores/terminals';
+import { useUiStore } from '@/core/stores/ui';
 import { closeTerminal, setActiveTerminal } from '@/core/terminal/manager';
+import { tabBarMenuItems, tabMenuItems } from '@/app/menus/tabs';
 import { HomePanel } from '@/app/panels/HomePanel';
 import { PanelHost } from '@/app/panels/PluginPanel';
 import { TerminalPanel } from '@/app/panels/TerminalPanel';
@@ -90,6 +94,7 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
   useI18n();
   const disposables = useRef<Array<{ dispose(): void }>>([]);
   const savedLayoutRef = useRef(savedLayout);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const onReady = useCallback((event: DockviewReadyEvent) => {
     const api = event.api;
@@ -126,6 +131,34 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
     return () => subscription.dispose();
   }, []);
 
+  // Right clicks on a tab or on the empty part of a tab bar. dockview tags every tab
+  // element with its panel id; panel contents handle their own menus before this.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onContextMenu = (event: MouseEvent) => {
+      if (event.defaultPrevented) return;
+      const api = getDockApi();
+      const target = event.target instanceof Element ? event.target : null;
+      if (!api || !target) return;
+      const tab = target.closest<HTMLElement>('.dv-tab');
+      if (tab) {
+        const panel = tab.dataset.tabPanelId ? api.getPanel(tab.dataset.tabPanelId) : undefined;
+        if (!panel) return;
+        event.preventDefault();
+        useUiStore.getState().showContextMenu(tabMenuItems(panel), menuPositionFor(event, tab));
+        return;
+      }
+      const bar = target.closest<HTMLElement>('.dv-tabs-and-actions-container');
+      if (!bar) return;
+      event.preventDefault();
+      const group = api.groups.find((candidate) => candidate.element.contains(target));
+      useUiStore.getState().showContextMenu(tabBarMenuItems(group), menuPositionFor(event, bar));
+    };
+    root.addEventListener('contextmenu', onContextMenu);
+    return () => root.removeEventListener('contextmenu', onContextMenu);
+  }, []);
+
   useEffect(() => {
     const current = disposables.current;
     return () => {
@@ -136,6 +169,7 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
 
   return (
     <DockviewReact
+      ref={rootRef}
       className="ns-dock"
       theme={appliedTheme === 'light' ? themeLight : themeDark}
       components={COMPONENTS}
