@@ -28,9 +28,12 @@ export const TERMINAL_TAB_COMPONENT = 'terminalTab';
 
 let dockApi: DockviewApi | null = null;
 let restoring = false;
+/** The centre group that was focused most recently; new centre tabs open there. */
+let lastCenterGroupId: string | null = null;
 
 export function setDockApi(api: DockviewApi | null): void {
   dockApi = api;
+  lastCenterGroupId = null;
 }
 
 export function getDockApi(): DockviewApi | null {
@@ -47,12 +50,39 @@ export function panelTitle(entry: PanelEntry): string {
     : translatePlugin(entry.pluginId, entry.def.title);
 }
 
+/** Panels that live in the centre: Home, terminals and panels whose default spot is there. */
+function isCenterPanelId(id: string): boolean {
+  if (id === CORE_HOME_PANEL || id.startsWith(TERMINAL_PANEL_PREFIX)) return true;
+  return getPanelEntry(id)?.def.defaultPosition === 'center';
+}
+
+/** A group counts as a centre group while it holds at least one centre panel. */
+function isCenterGroup(group: DockviewGroupPanel): boolean {
+  return group.panels.some((panel) => isCenterPanelId(panel.id));
+}
+
+/**
+ * Remembers the focused group when it is a centre group, so that a centre tab opened
+ * while a side panel has the focus still lands where the user last worked. Wired to
+ * dockview's active-group event by the dock layout.
+ */
+export function noteActiveGroup(group: DockviewGroupPanel | undefined): void {
+  if (group && isCenterGroup(group)) lastCenterGroupId = group.id;
+}
+
+/**
+ * The group new centre tabs (and the reference for side panels) go to: the focused group
+ * when it is a centre group, else the centre group focused most recently, else the group
+ * holding Home. A focused side panel (Servers, a file manager) never receives centre tabs.
+ */
 function centerGroup(api: DockviewApi): DockviewGroupPanel | undefined {
+  const active = api.activeGroup;
+  if (active && isCenterGroup(active)) return active;
+  const last = api.groups.find((group) => group.id === lastCenterGroupId);
+  if (last && isCenterGroup(last)) return last;
   const home = api.getPanel(CORE_HOME_PANEL);
   if (home) return home.api.group;
-  const active = api.activeGroup;
-  if (active) return active;
-  return api.groups[0];
+  return active ?? api.groups[0];
 }
 
 function directionFor(position: PanelPosition): 'left' | 'right' | 'below' | 'within' {

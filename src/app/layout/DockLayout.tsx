@@ -21,6 +21,7 @@ import {
   applyDefaultLayout,
   getDockApi,
   maybeAutoOpenPanel,
+  noteActiveGroup,
   restoreLayout,
   runPendingAutoOpen,
   scheduleLayoutPersist,
@@ -104,8 +105,10 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
       applyDefaultLayout(api);
     }
     runPendingAutoOpen();
+    noteActiveGroup(api.activeGroup);
 
     disposables.current.push(
+      api.onDidActiveGroupChange((group) => noteActiveGroup(group)),
       api.onDidLayoutChange(() => scheduleLayoutPersist()),
       api.onDidRemovePanel((panel) => {
         if (!panel.id.startsWith(TERMINAL_PANEL_PREFIX)) return;
