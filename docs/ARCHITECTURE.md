@@ -298,8 +298,11 @@ Changing a contract means updating both sides; prefer additive changes.
   keys/Tab), records executed commands into history keyed by server id (or `local` for
   local shells) in `storage`, seeds history from `~/.bash_history` / `~/.zsh_history` via
   `connections.exec` on first open, shows a popup under the cursor after ≥2 chars,
-  navigates with ↑/↓, accepts with Tab/→ by sending Ctrl-U + full command, dismisses on
-  Esc. Must never swallow keys when the popup is hidden.
+  navigates with ↑/↓, accepts with → (or Tab/Enter once a candidate was picked with ↑/↓)
+  by sending Ctrl-U + full command, dismisses on Esc. Tab otherwise goes to the shell, and
+  the line the shell completed (or recalled with ↑/↓) is read back off the screen - the
+  text after the last seen prompt on the cursor's row - once the output settles. Must never
+  swallow keys when the popup is hidden.
   Four candidate sources, each badged in the popup and ranked in this order: `path` (entries
   of the remote directory the current token points at), `history`, `remote` (executables on
   the remote `PATH` from `compgen -c`, fetched once per connection and dropped when the
@@ -307,8 +310,13 @@ Changing a contract means updating both sides; prefer additive changes.
   synchronous: every remote lookup is a cache read that may *start* a background `exec`, and
   a cold cache simply means fewer candidates.
   Path completion needs the shell's cwd, which the plugin learns from OSC 7 (and OSC 133/633
-  `P;Cwd=`) through `terminal.xterm.parser.registerOscHandler`. Until a shell reports one,
-  relative tokens are resolved against `$HOME` and the popup badge says so (`path ~`). The
+  `P;Cwd=`) through `terminal.xterm.parser.registerOscHandler`, or - when the shell reports
+  nothing - from the prompt on screen: after each lull in the output (`onWriteParsed` +
+  60 ms) and at the first keystroke of a line, the cursor's row is parsed for the
+  `user@host:/path$` family of prompts (`~` expanded with the connection's `$HOME`; venv,
+  git-branch and time decorations tolerated; basename-only prompts yield nothing). A known
+  cwd is listed right away so the entries are cached before a path is typed. Without a cwd,
+  relative tokens get no path candidates at all: nothing is guessed. The
   opt-in `toggleShellIntegration` command (stored in plugin storage, default off) writes a
   one-line hook into each new SSH shell, 500 ms after its first output (bash: `DEBUG` trap +
   `PROMPT_COMMAND`; zsh: `preexec`/`precmd`; bash-preexec hook arrays are reused when

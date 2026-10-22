@@ -32,8 +32,6 @@ export interface Suggestion {
   matchStart: number;
   matchLength: number;
   score: number;
-  /** `path` items only: the directory was listed under `~` because the cwd is unknown. */
-  relativeToHome?: boolean;
 }
 
 export interface SuggestOptions {
@@ -48,8 +46,6 @@ export interface SuggestOptions {
   paths: readonly string[];
   /** Tokenisation of {@link line}; see {@link analyzeToken}. */
   token: TokenContext;
-  /** `true` when {@link paths} was listed under `~` because the remote cwd is unknown. */
-  pathsRelativeToHome: boolean;
   locale: Locale;
   /**
    * Description of a dictionary command in the current locale from the plugin's i18n
@@ -379,7 +375,6 @@ function offerPaths(options: SuggestOptions, offer: (candidate: Suggestion) => v
       matchStart: token.dir.length,
       matchLength: token.base.length,
       score: score + (directoriesFirst && entry.endsWith('/') ? 20 : 0) - lengthPenalty(entry),
-      relativeToHome: options.pathsRelativeToHome,
     });
   }
 }

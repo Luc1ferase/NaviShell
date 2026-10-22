@@ -1,10 +1,12 @@
 /**
  * Per-terminal input tracking, per-server history and the popup state machine.
  *
- * The plugin never reads the real shell buffer (it cannot), so it maintains its own idea of
- * the current input line from `terminal.onInput` and gives up (clears the line and hides the
- * popup) whenever something happens that could desynchronise it: escape sequences, Tab,
- * Ctrl-C/Ctrl-U or multi-line remote output.
+ * The plugin cannot ask the shell for its input line, so it maintains its own idea of it
+ * from `terminal.onInput` and gives up (clears the line and hides the popup) whenever
+ * something happens that could desynchronise it: escape sequences, Tab, Ctrl-C/Ctrl-U or
+ * multi-line remote output. After Tab and ↑/↓ - which hand the line to the shell on
+ * purpose - the line is read back off the screen once the shell has redrawn it, which works
+ * because the prompt it follows is known (see `RemoteIndex.typedLine`).
  *
  * History is grouped per server for SSH terminals and under a single `local` key for local
  * shells, which have no server to belong to. Remote-only work (executables on `PATH`, cwd
@@ -121,6 +123,9 @@ function isPrintable(char: string): boolean {
   return code >= 0x20 && code !== 0x7f;
 }
 
+/** ↑ and ↓ (normal and application cursor mode): the shell puts a history line on screen. */
+const HISTORY_KEYS: ReadonlySet<string> = new Set(['\x1b[A', '\x1b[B', '\x1bOA', '\x1bOB']);
+
 /** Which history bucket a terminal records into. Local shells share one bucket. */
 function historyKey(terminal: TerminalHandle): string {
   if (terminal.kind === 'local') return LOCAL_HISTORY_KEY;
@@ -141,6 +146,10 @@ export class CompletionController {
   private readonly loaded = new Set<string>();
   private readonly seeded = new Set<string>();
   private readonly started = new Set<string>();
+  /** Terminals where the shell changed the line (Tab, ↑/↓): the screen must be re-read. */
+  private readonly resync = new Set<string>();
+  /** Terminals whose line was read off the screen: no popup until the user types again. */
+  private readonly silent = new Set<string>();
   private readonly persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly pendingTyped = new Map<string, PendingCommand>();
   private readonly pendingExact = new Map<string, PendingCommand>();
@@ -151,6 +160,7 @@ export class CompletionController {
   constructor(private readonly ctx: PluginContext) {
     this.remote = new RemoteIndex(ctx, {
       onChange: this.onRemoteData,
+      onScreenSettled: this.onScreenSettled,
       onIntegrationActive: this.onIntegrationActive,
       onExactCommand: this.onExactCommand,
       onCommandExit: this.onCommandExit,
@@ -331,6 +341,8 @@ export class CompletionController {
     this.terminals.delete(terminalId);
     this.states.delete(terminalId);
     this.started.delete(terminalId);
+    this.resync.delete(terminalId);
+    this.silent.delete(terminalId);
     this.remote.forgetTerminal(terminalId);
     this.emit();
   }
@@ -460,7 +472,9 @@ export class CompletionController {
   // -- input tracking ------------------------------------------------------
 
   private handleInput(terminal: TerminalHandle, data: string): void {
-    let line = this.stateFor(terminal.id).line;
+    this.silent.delete(terminal.id);
+    const before = this.stateFor(terminal.id).line;
+    let line = before;
     let abort = false;
     for (const char of data) {
       if (char === '\r' || char === '\n') {
@@ -474,7 +488,9 @@ export class CompletionController {
       }
       if (char === '\x1b' || char === '\t') {
         // Escape sequences (arrows, history search, …) and Tab completion move the real
-        // cursor in ways we cannot follow: drop our copy of the line.
+        // cursor in ways we cannot follow: drop our copy of the line. Tab and ↑/↓ leave
+        // the cursor at the end of a line the shell drew, so that one can be read back.
+        if (char === '\t' || HISTORY_KEYS.has(data)) this.resync.add(terminal.id);
         line = '';
         abort = true;
         break;
@@ -490,7 +506,22 @@ export class CompletionController {
       this.setState(terminal.id, this.hiddenFor(terminal.id));
       return;
     }
+    if (before === '' && line !== '') line = this.lineStart(terminal) + line;
     this.refresh(terminal, line);
+  }
+
+  /**
+   * What the shell already holds when the first keystroke of a line arrives: nothing,
+   * usually - and then the text before the cursor is the prompt, worth remembering - or
+   * the line it completed on Tab / recalled on ↑, still on screen.
+   */
+  private lineStart(terminal: TerminalHandle): string {
+    if (this.resync.delete(terminal.id)) {
+      const typed = this.remote.typedLine(terminal);
+      if (typed !== null) return typed;
+    }
+    this.remote.inspectPrompt(terminal, true);
+    return '';
   }
 
   private handleOutput(terminal: TerminalHandle, data: Uint8Array): void {
@@ -545,17 +576,44 @@ export class CompletionController {
   };
 
   /**
+   * The screen went quiet after remote output. If the shell was handed the line (Tab,
+   * ↑/↓), what it drew after the prompt is the line now: take it back, but keep the popup
+   * down until the next keystroke - a ↑ that opened a popup would catch the next ↑.
+   * Otherwise, with nothing typed, the row may be a fresh prompt worth reading.
+   */
+  private readonly onScreenSettled = (terminalId: string): void => {
+    if (this.disposed) return;
+    const terminal = this.terminals.get(terminalId);
+    if (!terminal) return;
+    if (this.resync.has(terminalId)) {
+      const typed = this.remote.typedLine(terminal);
+      if (typed !== null && typed !== '') {
+        this.resync.delete(terminalId);
+        this.silent.add(terminalId);
+        this.setState(terminalId, this.hiddenFor(terminalId, typed));
+        return;
+      }
+      // `''`: the known prompt with nothing after it yet - keep waiting. `null`: the row
+      // does not start with it; the shell may still be drawing, or a new prompt is up.
+      if (typed === '') return;
+    }
+    if (this.stateFor(terminalId).line === '') this.remote.inspectPrompt(terminal, false);
+  };
+
+  /**
    * Remote data landed (executables, a directory listing). Recompute the terminals that
    * have something on their prompt; the tracked lines are untouched.
    *
    * A terminal the user is navigating with ↑/↓ is left alone: a recomputed list would
-   * reset the selection under their fingers.
+   * reset the selection under their fingers. So is one whose line was read off the screen:
+   * nothing was typed there yet.
    */
   private readonly onRemoteData = (): void => {
     if (this.disposed) return;
     for (const [id, state] of [...this.states]) {
       const terminal = this.terminals.get(id);
-      if (terminal && state.line !== '' && state.selected === 0) this.refresh(terminal, state.line);
+      if (!terminal || state.line === '' || state.selected !== 0 || this.silent.has(id)) continue;
+      this.refresh(terminal, state.line);
     }
   };
 
@@ -567,16 +625,14 @@ export class CompletionController {
       return;
     }
     const token = analyzeToken(line);
-    // Both lookups are cache reads that may start a background fetch; neither waits.
-    const paths = this.remote.paths(terminal.connectionId, terminal.id, token);
+    // Both remote lookups are cache reads that may start a background fetch; neither waits.
     const suggestions = suggest({
       line,
       history: this.historyFor(historyKey(terminal)),
       remote: this.remote.executables(terminal.connectionId),
       dictionary: dictionary(),
-      paths: paths.entries,
+      paths: this.remote.paths(terminal.connectionId, terminal.id, token),
       token,
-      pathsRelativeToHome: paths.relativeToHome,
       locale: this.ctx.i18n.locale,
       describe: this.describeCommand,
       maxItems: settings.maxItems,
@@ -673,7 +729,9 @@ export class CompletionController {
    *
    * The popup must never get in the way of running what was typed: Enter goes through to
    * the shell unless the user explicitly picked a candidate with ↑/↓ (then it accepts, like
-   * VS Code's "partial" selection mode). Tab and → always accept the highlighted candidate.
+   * VS Code's "partial" selection mode). → always accepts the highlighted candidate; Tab
+   * does so only after ↑/↓ and otherwise goes to the shell, whose own completion is exact
+   * where ours is a cache - `cd AI<Tab>` must keep completing the directory.
    *
    * Swallowed keys are also `preventDefault()`-ed: without it the browser would still emit
    * the `keypress` that follows a `keydown`, and xterm would send Enter to the shell -
@@ -696,6 +754,9 @@ export class CompletionController {
         this.move(terminal.id, 1);
         return swallow();
       case 'Tab':
+        if (!state.navigated) return true;
+        void this.accept(terminal.id);
+        return swallow();
       case 'ArrowRight':
         void this.accept(terminal.id);
         return swallow();
