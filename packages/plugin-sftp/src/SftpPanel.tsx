@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { LoaderCircle, Plug, Server, TriangleAlert } from 'lucide-react';
-import type { MenuItem, PanelProps, SftpEntry } from '@navishell/plugin-api';
+import type { FileIconRequest, MenuItem, PanelProps, SftpEntry } from '@navishell/plugin-api';
 import { EmptyState } from './components/EmptyState';
 import { EntryList } from './components/EntryList';
 import { FileEditor } from './components/FileEditor';
@@ -25,6 +25,19 @@ export function SftpPanel({ ctx, controller }: SftpPanelProps): JSX.Element {
   const entries = useMemo(
     () => (state.showHidden ? state.entries : state.entries.filter((entry) => !isHidden(entry))),
     [state.entries, state.showHidden],
+  );
+
+  // Redraw the list when the user picks another file icon theme (or its plugin comes or goes).
+  const [iconTheme, setIconTheme] = useState(0);
+  useEffect(() => {
+    const subscription = ctx.fileIcons.onDidChangeTheme(() => setIconTheme((n) => n + 1));
+    return () => subscription.dispose();
+  }, [ctx]);
+  const themeIcon = useCallback(
+    (request: FileIconRequest) => ctx.fileIcons.resolve(request),
+    // The theme is not an input of the lookup, but a new theme needs a new callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ctx, iconTheme],
   );
 
   const showMenu = useCallback(
@@ -124,6 +137,7 @@ export function SftpPanel({ ctx, controller }: SftpPanelProps): JSX.Element {
         selected={state.selected}
         locale={ctx.i18n.locale}
         t={t}
+        themeIcon={themeIcon}
         onSelect={(entry) => controller.select(entry.path)}
         onOpen={(entry) => void controller.open(entry)}
         onContextMenu={showMenu}

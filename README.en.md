@@ -244,6 +244,7 @@ The `ctx` passed to `activate(ctx)` is everything a plugin can touch. **Never ca
 | `ctx.i18n` | register translations, `t()`, current locale and locale-change events; `registerLocale()` contributes a whole UI language (a language pack) |
 | `ctx.ui` | toasts, confirm and prompt dialogs, file and save pickers, context menus |
 | `ctx.menus` | add items to the host's context menus (terminal, server, tab) |
+| `ctx.fileIcons` | contribute a file icon theme for the file manager (`registerTheme`), make it the active one once (`activate`), read the active theme's icons (`resolve`) |
 | `ctx.log` | write to the application log |
 | `ctx.subscriptions` | `Disposable`s pushed here are released automatically on deactivation |
 
@@ -312,6 +313,36 @@ ctx.i18n.registerLocale({
 
 The completion plugin's dictionary descriptions live in its `navishell.completion` bundle
 under `dict.<command>` keys. `packages/lang-ja` is a template you can copy as is.
+
+### File icon themes
+
+The icons in the file manager are a theme, like VS Code's file icon themes, and themes come
+from plugins. A theme is a lookup from an entry (name, kind, lower-case extension) to an icon
+(SVG markup or an image URL), registered in `activate`; the user picks it under Settings →
+Appearance → File icons, or the plugin makes it the active one on its first run:
+
+```ts
+ctx.subscriptions.push(
+  ctx.fileIcons.registerTheme({
+    id: 'material',
+    label: { en: 'Material', 'zh-CN': 'Material' },
+    icon: ({ name, kind, extension }) => {
+      if (kind === 'dir') return { svg: FOLDER_SVG };
+      if (extension === 'py') return { url: PYTHON_DATA_URL };
+      return undefined; // the host draws its own icon
+    },
+  }),
+);
+if (!(await ctx.storage.get('applied', false))) {
+  ctx.fileIcons.activate('material');
+  await ctx.storage.set('applied', true);
+}
+```
+
+The host draws the icon as an `<img>`, so nothing in the markup can run or restyle the page.
+`packages/plugin-material-icons` (the Material File Icons plugin in the marketplace) is a
+complete example: a curated set of the Material Icon Theme's SVGs and three maps - file
+names, extensions, folder names - to pick from.
 
 ## License
 

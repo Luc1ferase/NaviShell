@@ -49,6 +49,7 @@ export function mergeSettings(raw: Partial<AppSettings> | null | undefined): App
     },
     closeConnectionWithLastTerminal:
       raw?.closeConnectionWithLastTerminal ?? DEFAULT_SETTINGS.closeConnectionWithLastTerminal,
+    fileIconTheme: raw?.fileIconTheme ?? DEFAULT_SETTINGS.fileIconTheme,
   };
 }
 

@@ -227,6 +227,22 @@ importers:
         specifier: ^8.3.4
         version: 8.3.4(@types/node@24.19.2)
 
+  packages/plugin-material-icons:
+    dependencies:
+      '@navishell/plugin-api':
+        specifier: workspace:*
+        version: link:../plugin-api
+    devDependencies:
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.1.2(vite@8.3.4(@types/node@24.19.2))
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^8.3.4
+        version: 8.3.4(@types/node@24.19.2)
+
   packages/plugin-sftp:
     dependencies:
       '@navishell/plugin-api':

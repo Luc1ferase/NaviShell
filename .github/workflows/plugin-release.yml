@@ -1,5 +1,6 @@
 # Publishes one of the plugins that live in packages/ but are not bundled with the app
-# (currently packages/plugin-hwmon). Dispatch it by hand, pick the package, and it builds
+# (packages/plugin-hwmon, packages/plugin-material-icons). Dispatch it by hand, pick the
+# package, and it builds
 # the plugin, zips it with scripts/pack-plugin.mjs and attaches the zip plus its SHA-256
 # to a GitHub release tagged `plugin-<id>-v<version>`.
 #

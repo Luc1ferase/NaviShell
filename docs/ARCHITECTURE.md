@@ -91,6 +91,11 @@ NaviShell/
   shell-less one-shot `exec`) is the local counterpart of `ctx.connections.exec`.
   `ctx.menus.register(menuId, provider)` adds items to the host's `terminal`, `server`
   and `tab` context menus; the provider runs each time the menu opens.
+  `ctx.fileIcons.registerTheme(theme)` contributes a file icon theme (a lookup from an
+  entry's name, kind and extension to SVG markup or an image URL); the chosen theme's key
+  (`<pluginId>:<themeId>`) is `settings.fileIconTheme`, `core/services/fileIcons.ts`
+  resolves it against the registry and fires a change event, and the SFTP panel draws the
+  result as an `<img>` (host icons when no theme is active or it has none).
 
 Changing a contract means updating both sides; prefer additive changes.
 

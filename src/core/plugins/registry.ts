@@ -1,11 +1,13 @@
 /**
  * Registries for everything a plugin (or the host itself) can contribute: dock panels,
- * commands, terminal overlays, terminal key handlers and context menu items.
+ * commands, terminal overlays, terminal key handlers, context menu items and file icon
+ * themes.
  */
 
 import type { ComponentType } from 'react';
 import { create } from 'zustand';
 import type {
+  FileIconTheme,
   MenuContexts,
   MenuId,
   MenuItem,
@@ -77,6 +79,14 @@ export interface MenuProviderEntry {
   provider: (context: MenuContexts[MenuId]) => MenuItem[];
 }
 
+/** A file icon theme a plugin contributed (see `FileIconsApi`). */
+export interface FileIconThemeEntry {
+  /** `<pluginId>:<theme.id>`, the value the settings store keeps. */
+  key: string;
+  pluginId: string;
+  theme: FileIconTheme;
+}
+
 const panelRegistered = createEmitter<PanelEntry>();
 /** Fires when a panel definition becomes available (used for `defaultOpen` handling). */
 export const onDidRegisterPanel = panelRegistered.event;
@@ -88,6 +98,7 @@ export interface RegistryStore {
   overlays: OverlayEntry[];
   keyHandlers: KeyHandlerEntry[];
   menuProviders: MenuProviderEntry[];
+  fileIconThemes: FileIconThemeEntry[];
 
   registerCorePanel(def: CorePanelDefinition): void;
   registerPluginPanel(pluginId: string, ctx: PluginContext, def: PanelDefinition): string;
@@ -116,6 +127,10 @@ export interface RegistryStore {
   ): string;
   unregisterMenuProvider(key: string): void;
 
+  /** Returns the theme's key; registering the same key again replaces the theme. */
+  registerFileIconTheme(pluginId: string, theme: FileIconTheme): string;
+  unregisterFileIconTheme(key: string): void;
+
   /** Drop every contribution made by a plugin. */
   unregisterPlugin(pluginId: string): void;
 }
@@ -127,6 +142,7 @@ export const useRegistryStore = create<RegistryStore>((set, get) => ({
   overlays: [],
   keyHandlers: [],
   menuProviders: [],
+  fileIconThemes: [],
 
   registerCorePanel(def) {
     const entry: PanelEntry = { kind: 'core', fullId: def.id, def };
@@ -201,6 +217,21 @@ export const useRegistryStore = create<RegistryStore>((set, get) => ({
     set({ menuProviders: get().menuProviders.filter((entry) => entry.key !== key) });
   },
 
+  registerFileIconTheme(pluginId, theme) {
+    const key = `${pluginId}:${theme.id}`;
+    set({
+      fileIconThemes: [
+        ...get().fileIconThemes.filter((entry) => entry.key !== key),
+        { key, pluginId, theme },
+      ],
+    });
+    return key;
+  },
+
+  unregisterFileIconTheme(key) {
+    set({ fileIconThemes: get().fileIconThemes.filter((entry) => entry.key !== key) });
+  },
+
   unregisterPlugin(pluginId) {
     const panels = { ...get().panels };
     for (const [id, entry] of Object.entries(panels)) {
@@ -217,6 +248,7 @@ export const useRegistryStore = create<RegistryStore>((set, get) => ({
       overlays: get().overlays.filter((overlay) => overlay.pluginId !== pluginId),
       keyHandlers: get().keyHandlers.filter((entry) => entry.pluginId !== pluginId),
       menuProviders: get().menuProviders.filter((entry) => entry.pluginId !== pluginId),
+      fileIconThemes: get().fileIconThemes.filter((entry) => entry.pluginId !== pluginId),
     });
   },
 }));

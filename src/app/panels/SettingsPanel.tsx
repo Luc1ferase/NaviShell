@@ -24,6 +24,8 @@ import {
 } from '@/core/ipc/contract';
 import { installPlugin, type InstallAttempt } from '@/core/plugins/install';
 import { deactivatePlugin, reloadPlugins, setPluginEnabled } from '@/core/plugins/loader';
+import { useRegistryStore } from '@/core/plugins/registry';
+import { fileIconThemeLabel, setFileIconTheme } from '@/core/services/fileIcons';
 import { openExtensionsPanel } from '@/core/services/layout';
 import {
   checkPluginUpdates,
@@ -45,6 +47,30 @@ import { Icon } from '@/app/components/Icon';
 const REPO_URL = 'https://github.com/Luc1ferase/NaviShell';
 
 /** A swatch of one terminal palette: prompt-like text on its background plus the 16 ANSI colors. */
+/** The file icon theme for file lists: the host's own icons, or one a plugin contributed. */
+function FileIconThemeSelect() {
+  const { t } = useI18n();
+  const chosen = useSettingsStore((state) => state.settings.fileIconTheme);
+  const themes = useRegistryStore((state) => state.fileIconThemes);
+  // The chosen theme's plugin is disabled or gone; keep the value visible.
+  const orphan = chosen !== null && !themes.some((entry) => entry.key === chosen);
+  return (
+    <select
+      className="ns-select ns-settings__control--narrow"
+      value={chosen ?? ''}
+      onChange={(event) => setFileIconTheme(event.target.value || null)}
+    >
+      <option value="">{t('settings.fileIcons.default')}</option>
+      {themes.map((entry) => (
+        <option key={entry.key} value={entry.key}>
+          {fileIconThemeLabel(entry)}
+        </option>
+      ))}
+      {orphan ? <option value={chosen}>{chosen}</option> : null}
+    </select>
+  );
+}
+
 function SchemePreview({ theme }: { theme: ITheme }) {
   return (
     <div
@@ -872,6 +898,9 @@ export function SettingsPanel() {
                 <option value="light">{t('settings.theme.light')}</option>
                 <option value="system">{t('settings.theme.system')}</option>
               </select>
+            </Row>
+            <Row label={t('settings.fileIconsLabel')} hint={t('settings.fileIconsHint')}>
+              <FileIconThemeSelect />
             </Row>
             <Row label={t('settings.closeWithLastTerminal')}>
               <label className="ns-check">

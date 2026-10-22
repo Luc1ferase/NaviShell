@@ -26,6 +26,7 @@ import {
   translatePlugin,
 } from '../i18n';
 import { connectToServer, disconnectConnection } from '../services/connect';
+import { onDidChangeFileIconTheme, resolveFileIcon, setFileIconTheme } from '../services/fileIcons';
 import { closePanel, isPanelOpen, openPanel, togglePanel } from '../services/layout';
 import { createSftpClient } from '../services/sftp';
 import { getConnection, listConnections, onDidChangeConnections } from '../stores/connections';
@@ -234,6 +235,19 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
         const key = useRegistryStore.getState().registerMenuProvider(pluginId, menu, provider);
         return toDisposableFn(() => useRegistryStore.getState().unregisterMenuProvider(key));
       },
+    },
+
+    fileIcons: {
+      registerTheme(theme) {
+        const key = useRegistryStore.getState().registerFileIconTheme(pluginId, theme);
+        return toDisposableFn(() => useRegistryStore.getState().unregisterFileIconTheme(key));
+      },
+      activate(id) {
+        // A plugin may only switch to one of its own themes.
+        setFileIconTheme(`${pluginId}:${id}`);
+      },
+      resolve: resolveFileIcon,
+      onDidChangeTheme: onDidChangeFileIconTheme,
     },
   };
 
