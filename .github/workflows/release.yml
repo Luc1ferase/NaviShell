@@ -9,6 +9,10 @@
 # and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. The draft release MUST be published for the
 # in-app updater to see it, since `releases/latest/download/latest.json` only resolves
 # once a release is published and not marked as a prerelease.
+#
+# The updater checks a download against the signature recorded for its platform in
+# `latest.json`; the per-file `.sig` assets tauri-action uploads next to the installers
+# are copies of the same signatures, so the last job removes them from the draft.
 
 name: Release
 
@@ -167,3 +171,39 @@ jobs:
           updaterJsonPreferNsis: true
           retryAttempts: 2
           args: ${{ matrix.args }}
+
+  # Every bundle leg uploads `<installer>.sig` next to its installer, but the updater
+  # never reads those: it takes the signature from `latest.json` (built from the same
+  # files on the runner). Drop them so the asset list is what a person would download.
+  tidy:
+    name: Remove .sig assets
+    needs: [guard, bundle]
+    # Runs after the matrix even when a leg failed, so a partial draft is tidied too.
+    if: always() && needs.guard.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # A draft is not reachable through `releases/tags/<tag>`, so the release is found
+      # by listing. Every release carrying this version's tag is tidied.
+      - name: Delete the signature assets from the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="v$(jq -r .version src-tauri/tauri.conf.json)"
+          releases=$(gh api --paginate "repos/$GH_REPO/releases" \
+            --jq ".[] | select(.tag_name == \"$tag\") | .id")
+          if [ -z "$releases" ]; then
+            echo "::warning::no release with tag $tag; nothing to tidy"
+            exit 0
+          fi
+          for release in $releases; do
+            gh api "repos/$GH_REPO/releases/$release/assets?per_page=100" \
+              --jq '.[] | select(.name | endswith(".sig")) | "\(.id) \(.name)"' |
+            while read -r id name; do
+              gh api -X DELETE "repos/$GH_REPO/releases/assets/$id" --silent
+              echo "removed $name"
+            done
+          done
