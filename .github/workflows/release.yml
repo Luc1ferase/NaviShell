@@ -2,8 +2,8 @@
 #
 # Triggered by pushing a tag like `v0.1.0` (bump the version in package.json,
 # src-tauri/tauri.conf.json and src-tauri/Cargo.toml first) or manually from the Actions tab.
-# Every matrix leg uploads its installers to the same *draft* release, which a human then
-# reviews and publishes.
+# One job creates the *draft* release, every matrix leg uploads its installers into it,
+# and a human then reviews and publishes it.
 #
 # Requires two repository secrets for the update signatures: `TAURI_SIGNING_PRIVATE_KEY`
 # and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. The draft release MUST be published for the
@@ -55,9 +55,66 @@ jobs:
           fi
           echo "build=$build" >> "$GITHUB_OUTPUT"
 
+  # The bundle legs start within the same second, and when each asked tauri-action to
+  # create the draft "if none exists" two of them did: the installers - and the updater's
+  # `latest.json` - ended up split across two drafts with the same tag. The draft is
+  # therefore created here, once, and the legs only upload into it. A draft left by an
+  # earlier run of the same version is reused, so a failed leg can simply be rerun.
+  draft:
+    name: Create the draft release
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.draft.outputs.id }}
+      tag: ${{ steps.draft.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find or create the draft
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BODY: |
+            Download the installer for your platform from the assets below.
+
+            - Windows: `.msi` / `.exe`
+            - macOS: `.dmg` (aarch64 for Apple silicon, x64 for Intel)
+            - Linux: `.AppImage`, `.deb` and `.rpm` (x64 and arm64)
+
+            Built from ${{ github.sha }}.
+        run: |
+          tag="v$(jq -r .version src-tauri/tauri.conf.json)"
+          # A draft is not reachable through `releases/tags/<tag>`, so list and match.
+          matches=$(gh api --paginate "repos/$GH_REPO/releases" \
+            --jq ".[] | select(.tag_name == \"$tag\") | \"\(.id) \(.draft)\"")
+          count=$(printf '%s\n' "$matches" | grep -c . || true)
+          if [ "$count" -gt 1 ]; then
+            echo "::error::$count releases carry the tag $tag; delete the stale drafts first"
+            exit 1
+          fi
+          if [ "$count" -eq 1 ]; then
+            set -- $matches
+            if [ "$2" != "true" ]; then
+              echo "::error::$tag is already published; bump the version before building"
+              exit 1
+            fi
+            id=$1
+            echo "reusing draft $id for $tag"
+          else
+            id=$(gh api -X POST "repos/$GH_REPO/releases" \
+              -f tag_name="$tag" -f target_commitish="$GITHUB_SHA" -f name="NaviShell $tag" \
+              -f body="$BODY" -F draft=true -F prerelease=false --jq .id)
+            echo "created draft $id for $tag"
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
   bundle:
     name: ${{ matrix.label }}
-    needs: guard
+    needs: [guard, draft]
     if: needs.guard.outputs.build == 'true'
     runs-on: ${{ matrix.platform }}
     strategy:
@@ -149,18 +206,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: NaviShell v__VERSION__
-          releaseBody: |
-            Download the installer for your platform from the assets below.
-
-            - Windows: `.msi` / `.exe`
-            - macOS: `.dmg` (aarch64 for Apple silicon, x64 for Intel)
-            - Linux: `.AppImage` and `.deb` (x64 and arm64)
-
-            Built from ${{ github.sha }}.
-          releaseDraft: true
-          prerelease: false
+          # Upload into the draft the `draft` job made; never create a release here.
+          releaseId: ${{ needs.draft.outputs.id }}
           # The in-app updater reads
           # `releases/latest/download/latest.json`, which GitHub only resolves for a
           # published, non-prerelease release. Publishing the draft created here is
@@ -177,33 +224,20 @@ jobs:
   # files on the runner). Drop them so the asset list is what a person would download.
   tidy:
     name: Remove .sig assets
-    needs: [guard, bundle]
+    needs: [draft, bundle]
     # Runs after the matrix even when a leg failed, so a partial draft is tidied too.
-    if: always() && needs.guard.outputs.build == 'true'
+    if: always() && needs.draft.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # A draft is not reachable through `releases/tags/<tag>`, so the release is found
-      # by listing. Every release carrying this version's tag is tidied.
       - name: Delete the signature assets from the draft release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE: ${{ needs.draft.outputs.id }}
         run: |
-          tag="v$(jq -r .version src-tauri/tauri.conf.json)"
-          releases=$(gh api --paginate "repos/$GH_REPO/releases" \
-            --jq ".[] | select(.tag_name == \"$tag\") | .id")
-          if [ -z "$releases" ]; then
-            echo "::warning::no release with tag $tag; nothing to tidy"
-            exit 0
-          fi
-          for release in $releases; do
-            gh api "repos/$GH_REPO/releases/$release/assets?per_page=100" \
-              --jq '.[] | select(.name | endswith(".sig")) | "\(.id) \(.name)"' |
-            while read -r id name; do
-              gh api -X DELETE "repos/$GH_REPO/releases/assets/$id" --silent
-              echo "removed $name"
-            done
+          gh api "repos/$GH_REPO/releases/$RELEASE/assets?per_page=100" \
+            --jq '.[] | select(.name | endswith(".sig")) | "\(.id) \(.name)"' |
+          while read -r id name; do
+            gh api -X DELETE "repos/$GH_REPO/releases/assets/$id" --silent
+            echo "removed $name"
           done
