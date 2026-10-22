@@ -235,8 +235,7 @@ export function applyDefaultLayout(api: DockviewApi): void {
     api.clear();
     api.addPanel({
       id: CORE_HOME_PANEL,
-      component: 'home',
-      tabComponent: FIXED_TAB_COMPONENT,
+      component: 'panel',
       title: t('panel.home.title'),
       params: { panelId: CORE_HOME_PANEL },
     });
@@ -254,21 +253,36 @@ export function applyDefaultLayout(api: DockviewApi): void {
   }
 }
 
+/**
+ * Layouts saved before 0.9.0 carry Welcome as the dedicated `home` component with the
+ * fixed (closeless) tab. It is an ordinary core panel now, so the saved entry is rewritten
+ * to the generic `panel` component before dockview sees it; a closed Welcome stays closed.
+ */
+function migrateLayout(layout: SerializedDockview): SerializedDockview {
+  const home = layout.panels?.[CORE_HOME_PANEL];
+  if (!home || (home.contentComponent === 'panel' && home.tabComponent !== FIXED_TAB_COMPONENT)) {
+    return layout;
+  }
+  const { tabComponent: _fixed, ...rest } = home;
+  return {
+    ...layout,
+    panels: {
+      ...layout.panels,
+      [CORE_HOME_PANEL]: {
+        ...rest,
+        contentComponent: 'panel',
+        params: { ...rest.params, panelId: CORE_HOME_PANEL },
+      },
+    },
+  };
+}
+
 /** Returns `true` when the serialised layout was applied. */
 export function restoreLayout(api: DockviewApi, layout: JsonValue | null): boolean {
   if (!layout || typeof layout !== 'object') return false;
   restoring = true;
   try {
-    api.fromJSON(layout as unknown as SerializedDockview);
-    if (!api.getPanel(CORE_HOME_PANEL)) {
-      api.addPanel({
-        id: CORE_HOME_PANEL,
-        component: 'home',
-        tabComponent: FIXED_TAB_COMPONENT,
-        title: t('panel.home.title'),
-        params: { panelId: CORE_HOME_PANEL },
-      });
-    }
+    api.fromJSON(migrateLayout(layout as unknown as SerializedDockview));
     return true;
   } catch (error) {
     console.error('[navishell] failed to restore the saved layout', error);
