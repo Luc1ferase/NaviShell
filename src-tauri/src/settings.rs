@@ -142,6 +142,9 @@ pub struct AppSettings {
     pub plugins: PluginSettings,
     /// Close the SSH connection when its last terminal closes.
     pub close_connection_with_last_terminal: bool,
+    /// A plugin's file icon theme (`<pluginId>:<themeId>`); `None` draws the host's icons.
+    /// Resolved by the frontend, so it is an open string.
+    pub file_icon_theme: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -152,6 +155,7 @@ impl Default for AppSettings {
             terminal: TerminalSettings::default(),
             plugins: PluginSettings::default(),
             close_connection_with_last_terminal: true,
+            file_icon_theme: None,
         }
     }
 }

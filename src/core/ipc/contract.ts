@@ -100,6 +100,12 @@ export interface AppSettings {
   };
   /** Auto-close the SSH connection when its last terminal closes. */
   closeConnectionWithLastTerminal: boolean;
+  /**
+   * The file icon theme a plugin contributed, as `<pluginId>:<themeId>`; `null` draws the
+   * host's own icons. A theme that is not registered (plugin disabled or gone) falls back
+   * to the host icons without touching the choice.
+   */
+  fileIconTheme: string | null;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -128,6 +134,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     autoUpdate: false,
   },
   closeConnectionWithLastTerminal: true,
+  fileIconTheme: null,
 };
 
 export type CredentialKind = 'password' | 'passphrase';

@@ -108,6 +108,11 @@
     "about": "關於",
     "localeLabel": "語言",
     "themeLabel": "主題",
+    "fileIconsLabel": "檔案圖示",
+    "fileIconsHint": "檔案管理員裡的圖示；市集裡的圖示外掛會在這裡新增主題。",
+    "fileIcons": {
+      "default": "預設"
+    },
     "locale": {
       "system": "跟隨系統"
     },

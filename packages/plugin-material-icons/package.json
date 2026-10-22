@@ -1,0 +1,21 @@
+{
+  "name": "@navishell/plugin-material-icons",
+  "version": "0.1.0",
+  "description": "NaviShell file icon theme with the Material Icon Theme icons; installed from the marketplace, not bundled with the app",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "pack": "node ../../scripts/pack-plugin.mjs .",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@navishell/plugin-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.4"
+  }
+}

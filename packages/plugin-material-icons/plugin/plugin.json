@@ -1,0 +1,21 @@
+{
+  "id": "luciferase.material-icons",
+  "name": {
+    "en": "Material File Icons",
+    "zh-CN": "Material 文件图标",
+    "zh-TW": "Material 檔案圖示",
+    "ja": "Material ファイル アイコン"
+  },
+  "version": "0.1.0",
+  "description": {
+    "en": "File and folder icons for the file manager from the Material Icon Theme, with icons for ML work such as PyTorch checkpoints and notebooks.",
+    "zh-CN": "来自 Material Icon Theme 的文件管理器文件与文件夹图标，含 PyTorch 检查点、Notebook 等机器学习常用文件的图标。",
+    "zh-TW": "來自 Material Icon Theme 的檔案管理員檔案與資料夾圖示，含 PyTorch 檢查點、Notebook 等機器學習常用檔案的圖示。",
+    "ja": "Material Icon Theme によるファイル マネージャー用のファイルとフォルダーのアイコン。PyTorch のチェックポイントやノートブックなど ML 向けのアイコンも含みます。"
+  },
+  "author": "Luciferase",
+  "homepage": "https://github.com/Luc1ferase/NaviShell/tree/master/packages/plugin-material-icons",
+  "main": "main.js",
+  "icon": "Palette",
+  "minHostVersion": "0.10.0"
+}

@@ -214,6 +214,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.i18n` | 註冊翻譯資源、`t()`、目前語言與語言變更事件；`registerLocale()` 貢獻整種語言（語言套件） |
 | `ctx.ui` | toast、確認方塊、輸入方塊、檔案選取、儲存對話方塊、右鍵選單 |
 | `ctx.menus` | 在宿主的右鍵選單（終端機、伺服器、分頁）加入項目 |
+| `ctx.fileIcons` | 為檔案管理員提供一套檔案圖示主題（`registerTheme`）、首次執行時將它設為目前主題（`activate`）、讀取目前主題的圖示（`resolve`） |
 | `ctx.log` | 寫入應用程式日誌 |
 | `ctx.subscriptions` | 放進去的 `Disposable` 會在外掛停用時自動釋放 |
 
@@ -282,6 +283,35 @@ ctx.i18n.registerLocale({
 
 指令自動完成外掛的字典說明以 `dict.<指令>` 為鍵放在 `navishell.completion` 的項目裡。
 `packages/lang-zh-tw` 就是一份可以直接照抄的範本。
+
+### 檔案圖示主題
+
+檔案管理員裡的圖示是一套主題，和 VS Code 的檔案圖示主題一樣由外掛提供。主題就是一個
+查詢函式：給它項目（名稱、種類、小寫副檔名），它回傳圖示（SVG 文字或圖片 URL），在
+`activate` 裡註冊；使用者在「設定 → 外觀 → 檔案圖示」裡選用，外掛也可以在首次執行時
+自己把它設為目前主題：
+
+```ts
+ctx.subscriptions.push(
+  ctx.fileIcons.registerTheme({
+    id: 'material',
+    label: { en: 'Material', 'zh-TW': 'Material' },
+    icon: ({ name, kind, extension }) => {
+      if (kind === 'dir') return { svg: FOLDER_SVG };
+      if (extension === 'py') return { url: PYTHON_DATA_URL };
+      return undefined; // 交給宿主畫預設圖示
+    },
+  }),
+);
+if (!(await ctx.storage.get('applied', false))) {
+  ctx.fileIcons.activate('material');
+  await ctx.storage.set('applied', true);
+}
+```
+
+宿主用 `<img>` 畫圖示，所以 SVG 裡的任何指令碼和樣式都不會生效。
+`packages/plugin-material-icons`（市集裡的 Material File Icons）是一份完整範例：精選的
+Material Icon Theme 圖示，加上檔名、副檔名、目錄名三張對應表。
 
 ## 授權條款
 

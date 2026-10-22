@@ -108,6 +108,11 @@
     "about": "关于",
     "localeLabel": "语言",
     "themeLabel": "主题",
+    "fileIconsLabel": "文件图标",
+    "fileIconsHint": "文件管理器里的图标；插件市场里的图标插件会在这里添加主题。",
+    "fileIcons": {
+      "default": "默认"
+    },
     "locale": {
       "system": "跟随系统"
     },

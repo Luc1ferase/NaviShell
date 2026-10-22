@@ -108,6 +108,11 @@
     "about": "About",
     "localeLabel": "Language",
     "themeLabel": "Theme",
+    "fileIconsLabel": "File icons",
+    "fileIconsHint": "Icons in the file manager; plugins from the marketplace add themes here.",
+    "fileIcons": {
+      "default": "Default"
+    },
     "locale": {
       "system": "Follow system"
     },

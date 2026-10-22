@@ -108,6 +108,11 @@
     "about": "バージョン情報",
     "localeLabel": "言語",
     "themeLabel": "テーマ",
+    "fileIconsLabel": "ファイル アイコン",
+    "fileIconsHint": "ファイル マネージャーのアイコン。マーケットプレイスのプラグインがここにテーマを追加します。",
+    "fileIcons": {
+      "default": "既定"
+    },
     "locale": {
       "system": "システムに従う"
     },

@@ -213,6 +213,7 @@ react          react/jsx-runtime      react-dom      react-dom/client
 | `ctx.i18n` | 注册翻译资源、`t()`、当前语言与语言变更事件；`registerLocale()` 贡献整门语言（语言包） |
 | `ctx.ui` | toast、确认框、输入框、文件选择、保存对话框、右键菜单 |
 | `ctx.menus` | 向宿主的右键菜单（终端、服务器、标签页）追加菜单项 |
+| `ctx.fileIcons` | 为文件管理器贡献一套文件图标主题（`registerTheme`）、首次运行时把它设为当前主题（`activate`）、读取当前主题的图标（`resolve`） |
 | `ctx.log` | 写入应用日志 |
 | `ctx.subscriptions` | 放进去的 `Disposable` 会在插件停用时自动释放 |
 
@@ -281,6 +282,35 @@ ctx.i18n.registerLocale({
 
 命令补全插件的词典描述以 `dict.<命令>` 为键放在 `navishell.completion` 的条目里。
 `packages/lang-ja` 就是一份可以直接照抄的模板。
+
+### 文件图标主题
+
+文件管理器里的图标是一套主题，和 VS Code 的文件图标主题一样由插件提供。主题就是一个
+查找函数：给它条目（名字、类型、小写扩展名），它返回图标（SVG 文本或图片 URL），在
+`activate` 里注册；用户在「设置 → 外观 → 文件图标」里选用，插件也可以在首次运行时自己
+把它设为当前主题：
+
+```ts
+ctx.subscriptions.push(
+  ctx.fileIcons.registerTheme({
+    id: 'material',
+    label: { en: 'Material', 'zh-CN': 'Material' },
+    icon: ({ name, kind, extension }) => {
+      if (kind === 'dir') return { svg: FOLDER_SVG };
+      if (extension === 'py') return { url: PYTHON_DATA_URL };
+      return undefined; // 交给宿主画默认图标
+    },
+  }),
+);
+if (!(await ctx.storage.get('applied', false))) {
+  ctx.fileIcons.activate('material');
+  await ctx.storage.set('applied', true);
+}
+```
+
+宿主用 `<img>` 画图标，所以 SVG 里的任何脚本和样式都不会生效。
+`packages/plugin-material-icons`（插件市场里的 Material File Icons）是一份完整范例：精选的
+Material Icon Theme 图标，加上文件名、扩展名、目录名三张映射表。
 
 ## 许可
 

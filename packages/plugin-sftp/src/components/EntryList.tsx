@@ -1,6 +1,6 @@
 import type { JSX, KeyboardEvent, MouseEvent } from 'react';
 import { Archive, Box, File, FileCode, FileSymlink, FileText, Folder, Image } from 'lucide-react';
-import type { SftpEntry } from '@navishell/plugin-api';
+import type { FileIcon, FileIconRequest, SftpEntry } from '@navishell/plugin-api';
 import { formatMtime, formatOctal, formatPermissions, formatSize } from '../format';
 import type { Translate } from '../types';
 
@@ -46,6 +46,13 @@ function extensionOf(name: string): string {
   return index > 0 ? name.slice(index + 1).toLowerCase() : '';
 }
 
+/** What an icon theme hands out, as an `<img>` source. */
+function iconSrc(icon: FileIcon): string {
+  if ('url' in icon) return icon.url;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(icon.svg)}`;
+}
+
+/** The host's own icon for an entry, used when no theme is active or it has none. */
 function EntryIcon({ entry }: { entry: SftpEntry }): JSX.Element {
   if (entry.kind === 'dir') return <Folder size={15} className="ns-sftp-icon-dir" />;
   if (entry.kind === 'symlink') return <FileSymlink size={15} className="ns-sftp-icon-link" />;
@@ -65,6 +72,8 @@ interface EntryListProps {
   selected: string | null;
   locale: string;
   t: Translate;
+  /** The active file icon theme's icon for an entry; `undefined` draws the default. */
+  themeIcon: (request: FileIconRequest) => FileIcon | undefined;
   onSelect: (entry: SftpEntry) => void;
   onOpen: (entry: SftpEntry) => void;
   onContextMenu: (entry: SftpEntry, position: { x: number; y: number }) => void;
@@ -78,6 +87,7 @@ export function EntryList({
   selected,
   locale,
   t,
+  themeIcon,
   onSelect,
   onOpen,
   onContextMenu,
@@ -157,7 +167,23 @@ export function EntryList({
           onContextMenu={(event) => onRowContextMenu(entry, event)}
         >
           <span className="ns-sftp-cell-icon">
-            <EntryIcon entry={entry} />
+            {(() => {
+              const themed = themeIcon({
+                name: entry.name,
+                kind: entry.kind,
+                extension: extensionOf(entry.name),
+              });
+              return themed ? (
+                <img
+                  className="ns-sftp-icon-theme"
+                  src={iconSrc(themed)}
+                  alt=""
+                  draggable={false}
+                />
+              ) : (
+                <EntryIcon entry={entry} />
+              );
+            })()}
           </span>
           <span className="ns-sftp-cell-name" title={entry.path}>
             {entry.name}

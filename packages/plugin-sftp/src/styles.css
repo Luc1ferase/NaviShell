@@ -209,6 +209,13 @@
   color: var(--ns-accent);
 }
 
+/* An icon from a file icon theme plugin (a data: or https: image). */
+.ns-sftp-icon-theme {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 /* File-type tints come from the host palette so they stay readable on both themes. */
 .ns-sftp-icon-link {
   color: var(--ns-purple);

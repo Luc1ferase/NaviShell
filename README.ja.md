@@ -249,6 +249,7 @@ externals 設定済み）。
 | `ctx.i18n` | 翻訳リソースの登録、`t()`、現在のロケールとロケール変更イベント。`registerLocale()` で UI 言語全体（言語パック）を提供 |
 | `ctx.ui` | トースト、確認ダイアログ、入力ダイアログ、ファイル選択、保存ダイアログ、コンテキストメニュー |
 | `ctx.menus` | ホストのコンテキストメニュー（ターミナル、サーバー、タブ）に項目を追加 |
+| `ctx.fileIcons` | ファイル マネージャーのファイル アイコン テーマを提供（`registerTheme`）、初回に有効化（`activate`）、現在のテーマのアイコンを取得（`resolve`） |
 | `ctx.log` | アプリケーションログへの書き込み |
 | `ctx.subscriptions` | ここに入れた `Disposable` はプラグイン無効化時に自動で解放される |
 
@@ -317,6 +318,36 @@ ctx.i18n.registerLocale({
 
 コマンド補完プラグインの辞書の説明は、`navishell.completion` のバンドル内に
 `dict.<コマンド>` というキーで置きます。`packages/lang-ja` をそのままテンプレートとして使えます。
+
+### ファイル アイコン テーマ
+
+ファイル マネージャーのアイコンはテーマであり、VS Code のファイル アイコン テーマと同じく
+プラグインが提供します。テーマはエントリ（名前、種類、小文字の拡張子）からアイコン（SVG
+マークアップまたは画像 URL）への対応で、`activate` で登録します。ユーザーは「設定 → 外観 →
+ファイル アイコン」で選び、プラグインが初回起動時に自分で有効化することもできます：
+
+```ts
+ctx.subscriptions.push(
+  ctx.fileIcons.registerTheme({
+    id: 'material',
+    label: { en: 'Material', ja: 'Material' },
+    icon: ({ name, kind, extension }) => {
+      if (kind === 'dir') return { svg: FOLDER_SVG };
+      if (extension === 'py') return { url: PYTHON_DATA_URL };
+      return undefined; // ホスト既定のアイコンに任せる
+    },
+  }),
+);
+if (!(await ctx.storage.get('applied', false))) {
+  ctx.fileIcons.activate('material');
+  await ctx.storage.set('applied', true);
+}
+```
+
+ホストはアイコンを `<img>` として描くため、マークアップ内のスクリプトやスタイルは
+一切効きません。`packages/plugin-material-icons`（マーケットプレイスの Material File
+Icons）が完全な例です。Material Icon Theme の SVG を厳選し、ファイル名・拡張子・
+フォルダー名の 3 つの対応表で選びます。
 
 ## ライセンス
 

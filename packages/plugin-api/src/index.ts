@@ -603,6 +603,53 @@ export interface Logger {
 }
 
 // ---------------------------------------------------------------------------
+// File icon themes
+// ---------------------------------------------------------------------------
+
+/** What a file icon theme is asked about: one entry of a directory listing. */
+export interface FileIconRequest {
+  /** The entry's name, e.g. `package.json`. */
+  name: string;
+  kind: SftpEntryKind;
+  /** Lower-case extension without the dot (`archive.tar.gz` → `gz`); `''` when there is none. */
+  extension: string;
+}
+
+/**
+ * An icon as a theme hands it out: SVG markup, or an image URL (`data:` or `https:`). The
+ * host draws it as an `<img>` at the row's icon size, so scripts and styles in the markup
+ * never run and the icon cannot affect the page around it.
+ */
+export type FileIcon = { svg: string } | { url: string };
+
+/** A set of file and folder icons for the file manager, like VS Code's file icon themes. */
+export interface FileIconTheme {
+  /** Unique within the plugin; the host refers to the theme as `<pluginId>:<id>`. */
+  id: string;
+  /** Shown under Settings → Appearance → File icons. */
+  label: LocalizedText;
+  /**
+   * The icon for an entry, or `undefined` to let the host draw its own default for it.
+   * Called for every visible row, so keep it a lookup.
+   */
+  icon(request: FileIconRequest): FileIcon | undefined;
+}
+
+export interface FileIconsApi {
+  /**
+   * Contribute a theme. It appears in the File icons setting; the user picks it there, or
+   * the plugin calls {@link activate} once (say, on its first run).
+   */
+  registerTheme(theme: FileIconTheme): Disposable;
+  /** Make one of this plugin's themes the active one (`<id>` as passed to `registerTheme`). */
+  activate(id: string): void;
+  /** The active theme's icon for an entry; `undefined` when no theme is active or it has none. */
+  resolve(request: FileIconRequest): FileIcon | undefined;
+  /** Fires when the active theme changes: picked in Settings, registered, or gone. */
+  onDidChangeTheme(cb: () => void): Disposable;
+}
+
+// ---------------------------------------------------------------------------
 // Plugin context
 // ---------------------------------------------------------------------------
 
@@ -624,6 +671,7 @@ export interface PluginContext {
   readonly i18n: I18nApi;
   readonly ui: UiApi;
   readonly menus: MenusApi;
+  readonly fileIcons: FileIconsApi;
   readonly log: Logger;
 }
 
