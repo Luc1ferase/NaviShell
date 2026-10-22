@@ -1,14 +1,25 @@
 import { useRegistryStore, type CorePanelDefinition } from '@/core/plugins/registry';
 import {
   CORE_EXTENSIONS_PANEL,
+  CORE_HOME_PANEL,
   CORE_SERVERS_PANEL,
   CORE_SETTINGS_PANEL,
 } from '@/core/services/layout';
 import { ExtensionsPanel } from './extensions/ExtensionsPanel';
+import { HomePanel } from './HomePanel';
 import { ServersPanel } from './ServersPanel';
 import { SettingsPanel } from './SettingsPanel';
 
 const CORE_PANELS: CorePanelDefinition[] = [
+  {
+    // Welcome is an ordinary centre panel: closable, and listed in the View menu so it
+    // can come back.
+    id: CORE_HOME_PANEL,
+    titleKey: 'panel.home.title',
+    icon: 'Home',
+    component: HomePanel,
+    defaultPosition: 'center',
+  },
   {
     id: CORE_SERVERS_PANEL,
     titleKey: 'panel.servers.title',

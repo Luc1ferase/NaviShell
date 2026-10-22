@@ -34,7 +34,6 @@ import { useTerminalsStore } from '@/core/stores/terminals';
 import { useUiStore } from '@/core/stores/ui';
 import { closeTerminal, setActiveTerminal } from '@/core/terminal/manager';
 import { tabBarMenuItems, tabMenuItems } from '@/app/menus/tabs';
-import { HomePanel } from '@/app/panels/HomePanel';
 import { PanelHost } from '@/app/panels/PluginPanel';
 import { TerminalPanel } from '@/app/panels/TerminalPanel';
 
@@ -77,7 +76,6 @@ function Watermark() {
 const COMPONENTS: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   panel: PanelHost,
   terminal: TerminalPanel,
-  home: HomePanel,
 };
 
 const TAB_COMPONENTS = {
