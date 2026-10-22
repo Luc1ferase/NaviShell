@@ -46,12 +46,15 @@ plugins that use exactly the same API as third-party ones.
   `~/.zsh_history`; completes executables on the remote `PATH` (`compgen -c`) and paths in
   remote directories; adds a built-in dictionary of 275 common commands (with git / docker /
   kubectl / systemctl subcommands) and shows the candidates under the cursor with their
-  source. Path completion relies on the shell reporting its working directory (OSC 7); the
+  source. Path completion needs the working directory: the shell's own report (OSC 7) when
+  there is one, else the prompt on screen (`user@host:/path$`-style prompts that show the
+  full path); with neither, nothing is guessed and no path candidates are shown. The
   optional **shell integration** toggle (off by default, "Enable/disable shell integration"
   in the command list) injects a one-line `PROMPT_COMMAND` / `precmd` hook into new SSH
   terminals so bash and zsh report the directory after every prompt. The popup never gets
-  in the way: Enter always runs the line as typed, Tab / → take the highlighted candidate,
-  and Enter only accepts a candidate once you picked one with ↑↓.
+  in the way: Enter always runs the line as typed, Tab still goes to the shell's own
+  completion, → takes the highlighted candidate, and Tab / Enter only accept a candidate
+  once you picked one with ↑↓.
 - **Plugin installation**: besides dropping a directory into the plugins folder, Settings →
   Plugins installs from a zip URL (with an optional SHA-256 check) or a local zip file and
   uninstalls in place, all without a restart. A **marketplace** tab lists the plugins of a

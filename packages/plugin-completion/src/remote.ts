@@ -6,7 +6,8 @@
  *
  * - **executables**: the names on the remote `PATH`, fetched once per connection,
  * - **cwd**: where each terminal currently is, learned from OSC 7 (and OSC 133/633
- *   `P;Cwd=`) which many shells emit on their own,
+ *   `P;Cwd=`) when the shell emits them, else read off the prompt on screen (the
+ *   `user@host:/path$` family of prompts; see {@link parsePromptCwd}),
  * - **listings**: the entries of a remote directory, for completing a path token.
  *
  * It also watches each terminal for the rest of the VS Code-style shell integration
@@ -35,10 +36,14 @@ const EXECUTABLES_CAP = 8000;
 const LISTING_CAP = 2000;
 /** Quiet period after a new terminal's first output before the hook is injected. */
 const INTEGRATION_DELAY_MS = 500;
+/** Quiet period after the last parsed output before the screen is read for a prompt. */
+const PROMPT_SETTLE_MS = 60;
 /** Separator for the `<connectionId>/<dir>` listing key; cannot occur in either part. */
 const KEY_SEPARATOR = '\u0000';
 
 const EMPTY: readonly string[] = [];
+
+type Xterm = TerminalHandle['xterm'];
 
 /**
  * One line that teaches bash and zsh to report what the plugin needs, as OSC sequences:
@@ -96,7 +101,7 @@ const SHELL_INTEGRATION_SNIPPET =
 /** What a connection told us about itself. */
 interface ConnectionData {
   executables: readonly string[];
-  /** `$HOME`, used to resolve `~` and relative paths when the cwd is unknown. */
+  /** `$HOME`, used to resolve `~` in tokens and in prompts. */
   home: string | null;
 }
 
@@ -107,19 +112,15 @@ interface Listing {
   pending: boolean;
 }
 
-/** The directory entries to complete against, and how they were resolved. */
-export interface PathLookup {
-  entries: readonly string[];
-  /** `true` when a relative token was resolved against `~` because the cwd is unknown. */
-  relativeToHome: boolean;
-}
-
-const NOTHING: PathLookup = { entries: EMPTY, relativeToHome: false };
-
 /** What the index reports back to the controller as reports land. */
 export interface RemoteIndexHooks {
   /** Data arrived that could change the suggestions on screen. */
   onChange(): void;
+  /**
+   * Remote output has been drawn and the screen went quiet: a prompt may be up. The
+   * controller calls {@link RemoteIndex.inspectPrompt} when nothing has been typed.
+   */
+  onScreenSettled(terminalId: string): void;
   /** A terminal's first OSC 133/633 report: a shell integration is running in it. */
   onIntegrationActive(terminalId: string): void;
   /** OSC 633 `E`: the exact command line the shell is about to run. */
@@ -131,7 +132,15 @@ export interface RemoteIndexHooks {
 export class RemoteIndex {
   private readonly connections = new Map<string, ConnectionData>();
   private readonly listings = new Map<string, Listing>();
+  /** Exact cwd per terminal, reported by the shell (OSC 7, `P;Cwd=`). */
   private readonly cwds = new Map<string, string>();
+  /** Cwd per terminal as its prompt shows it: `/abs`, `~` or `~/rel`. */
+  private readonly promptCwds = new Map<string, string>();
+  /** The prompt of each terminal as last seen on screen, up to the cursor. */
+  private readonly prompts = new Map<string, string>();
+  /** Connection of each tracked SSH terminal, to list its cwd once `$HOME` is known. */
+  private readonly terminalConnections = new Map<string, string>();
+  private readonly settleTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly integrated = new Set<string>();
   /** Terminals that have sent at least one OSC 133/633 report. */
   private readonly integrationActive = new Set<string>();
@@ -154,10 +163,15 @@ export class RemoteIndex {
   dispose(): void {
     this.disposed = true;
     for (const timer of this.timers) clearTimeout(timer);
+    for (const timer of this.settleTimers.values()) clearTimeout(timer);
     this.timers.clear();
+    this.settleTimers.clear();
     this.connections.clear();
     this.listings.clear();
+    this.terminalConnections.clear();
     this.cwds.clear();
+    this.promptCwds.clear();
+    this.prompts.clear();
     this.integrated.clear();
     this.integrationActive.clear();
     this.exactCapture.clear();
@@ -193,16 +207,17 @@ export class RemoteIndex {
 
   /**
    * Watches a terminal's output stream for shell integration reports: the cwd, the exact
-   * command lines and their exit codes. The returned disposables belong to the caller (the
-   * controller disposes them with the rest of the terminal's subscriptions).
+   * command lines and their exit codes. SSH terminals are also watched for lulls in their
+   * output, when the prompt can be read off the screen. The returned disposables belong to
+   * the caller (the controller disposes them with the rest of the terminal's subscriptions).
    *
-   * All of this is a nicety, so a host that does not hand out a usable xterm parser costs
-   * us the reports and nothing else - it must never break opening a terminal.
+   * All of this is a nicety, so a host that does not hand out a usable xterm costs us the
+   * reports and nothing else - it must never break opening a terminal.
    */
   trackTerminal(terminal: TerminalHandle): Disposable[] {
     try {
       const { parser } = terminal.xterm;
-      return [
+      const subscriptions: Disposable[] = [
         // OSC 7 is the de-facto "this is my cwd" sequence. Claim it: nothing else wants it.
         parser.registerOscHandler(7, (data) => this.rememberCwd(terminal.id, parseOsc7(data))),
         // VS Code-style shell integration: the cwd as a property, the exact command line
@@ -215,6 +230,14 @@ export class RemoteIndex {
           }),
         ),
       ];
+      if (terminal.kind === 'ssh' && terminal.connectionId !== null) {
+        this.terminalConnections.set(terminal.id, terminal.connectionId);
+        // `onWriteParsed` fires once output has reached the buffer (xterm writes
+        // asynchronously), which is when the screen can be read. A prompt may arrive in
+        // several chunks, so wait for a short lull and read it whole.
+        subscriptions.push(terminal.xterm.onWriteParsed(() => this.scheduleSettle(terminal)));
+      }
+      return subscriptions;
     } catch (error) {
       this.ctx.log.warn('[completion] could not watch the terminal for cwd reports', error);
       return [];
@@ -222,20 +245,93 @@ export class RemoteIndex {
   }
 
   forgetTerminal(terminalId: string): void {
+    const timer = this.settleTimers.get(terminalId);
+    if (timer) clearTimeout(timer);
+    this.settleTimers.delete(terminalId);
+    this.terminalConnections.delete(terminalId);
     this.cwds.delete(terminalId);
+    this.promptCwds.delete(terminalId);
+    this.prompts.delete(terminalId);
     this.integrated.delete(terminalId);
     this.integrationActive.delete(terminalId);
     this.exactCapture.delete(terminalId);
   }
 
-  /** The last cwd a terminal reported, or `null` when it never did. */
-  cwd(terminalId: string): string | null {
-    return this.cwds.get(terminalId) ?? null;
-  }
-
   /** `true` once a terminal has reported a command line, so its history can be exact. */
   hasExactCapture(terminalId: string): boolean {
     return this.exactCapture.has(terminalId);
+  }
+
+  private scheduleSettle(terminal: TerminalHandle): void {
+    if (this.disposed) return;
+    const existing = this.settleTimers.get(terminal.id);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.settleTimers.delete(terminal.id);
+      if (this.disposed || terminal.isDisposed) return;
+      this.hooks.onScreenSettled(terminal.id);
+    }, PROMPT_SETTLE_MS);
+    this.settleTimers.set(terminal.id, timer);
+  }
+
+  /**
+   * Reads the line the cursor is on and, when it is a prompt that shows the working
+   * directory, remembers that directory for the terminal and starts listing it, so the
+   * entries are there by the time a path is typed. Only called while nothing is typed on
+   * the line: a half-typed `cat >` must not pass for a prompt.
+   *
+   * `typing` is `true` for the first keystroke of a command line - the one moment the text
+   * before the cursor is known to be the prompt. It is then remembered as the prompt even
+   * when no directory could be read from it, which is what lets {@link typedLine} find a
+   * line the shell itself completed.
+   *
+   * A terminal whose shell reports its cwd is left alone: that report is exact.
+   */
+  inspectPrompt(terminal: TerminalHandle, typing: boolean): void {
+    if (this.disposed || terminal.kind !== 'ssh' || this.cwds.has(terminal.id)) return;
+    const text = textBeforeCursor(terminal.xterm);
+    if (text === null) return;
+    const shown = parsePromptCwd(text);
+    if (typing && text !== '') this.prompts.set(terminal.id, text);
+    if (shown === null) return;
+    this.prompts.set(terminal.id, text);
+    if (this.promptCwds.get(terminal.id) !== shown) {
+      this.promptCwds.set(terminal.id, shown);
+      this.ctx.log.debug(`[completion] prompt of ${terminal.id} shows ${shown}`);
+    }
+    const { connectionId } = terminal;
+    if (connectionId === null) return;
+    const data = this.connections.get(connectionId);
+    if (!data) {
+      void this.fetchConnection(connectionId);
+      return;
+    }
+    const cwd = this.resolveCwd(terminal.id, data.home);
+    if (cwd !== null) this.ensureListing(connectionId, cwd);
+  }
+
+  /**
+   * What follows the prompt on the cursor's line, or `null` when the line does not start
+   * with the prompt last seen in this terminal. How the controller recovers the input line
+   * after the shell changed it (Tab completion, history recall).
+   */
+  typedLine(terminal: TerminalHandle): string | null {
+    const prompt = this.prompts.get(terminal.id);
+    if (prompt === undefined || prompt === '') return null;
+    const text = textBeforeCursor(terminal.xterm);
+    if (text === null || !text.startsWith(prompt)) return null;
+    return text.slice(prompt.length);
+  }
+
+  /** The terminal's cwd: the shell's own report when there is one, else the prompt's. */
+  private resolveCwd(terminalId: string, home: string | null): string | null {
+    const exact = this.cwds.get(terminalId);
+    if (exact !== undefined) return exact;
+    const shown = this.promptCwds.get(terminalId);
+    if (shown === undefined) return null;
+    if (shown.startsWith('/')) return shown;
+    if (home === null) return null;
+    return shown === '~' ? home : join(home, shown.slice(2));
   }
 
   /**
@@ -292,29 +388,37 @@ export class RemoteIndex {
 
   /**
    * Entries to complete the current path token against, listing the directory in the
-   * background when the cache is cold or older than {@link LISTING_TTL_MS}.
+   * background when the cache is cold or older than {@link LISTING_TTL_MS}. Empty while
+   * the directory cannot be known (a relative token in a terminal whose cwd nobody has
+   * told us): nothing is guessed, and the shell's own completion is a Tab away.
    */
-  paths(connectionId: string | null, terminalId: string, token: TokenContext): PathLookup {
-    if (connectionId === null || !token.isPath) return NOTHING;
+  paths(connectionId: string | null, terminalId: string, token: TokenContext): readonly string[] {
+    if (connectionId === null || !token.isPath) return EMPTY;
     const data = this.connections.get(connectionId);
     if (!data) {
       void this.fetchConnection(connectionId);
-      return NOTHING;
+      return EMPTY;
     }
-    const resolved = resolveDirectory(token.dir, this.cwd(terminalId), data.home);
-    if (resolved === null) return NOTHING;
-    const key = `${connectionId}${KEY_SEPARATOR}${resolved.dir}`;
+    const dir = resolveDirectory(token.dir, this.resolveCwd(terminalId, data.home), data.home);
+    return dir === null ? EMPTY : this.ensureListing(connectionId, dir);
+  }
+
+  /** The cached entries of a directory; starts a fetch when the cache is cold or stale. */
+  private ensureListing(connectionId: string, dir: string): readonly string[] {
+    const key = `${connectionId}${KEY_SEPARATOR}${dir}`;
     const listing = this.listings.get(key);
     if (!listing || (!listing.pending && Date.now() - listing.fetchedAt > LISTING_TTL_MS)) {
-      void this.fetchListing(connectionId, key, resolved.dir);
+      void this.fetchListing(connectionId, key, dir);
     }
-    return { entries: listing?.entries ?? EMPTY, relativeToHome: resolved.relativeToHome };
+    return listing?.entries ?? EMPTY;
   }
 
   // -- fetching ------------------------------------------------------------
 
   private rememberCwd(terminalId: string, path: string | null): boolean {
     if (path === null || this.disposed) return false;
+    // The shell's own report makes the prompt irrelevant from now on.
+    this.promptCwds.delete(terminalId);
     if (this.cwds.get(terminalId) === path) return true;
     this.cwds.set(terminalId, path);
     return true;
@@ -330,11 +434,18 @@ export class RemoteIndex {
       this.fetchExecutables(connectionId),
     ]);
     if (this.disposed || !this.connections.has(connectionId)) return;
-    this.connections.set(connectionId, { executables, home: home[0] ?? null });
+    const data: ConnectionData = { executables, home: home[0] ?? null };
+    this.connections.set(connectionId, data);
     this.ctx.log.debug(
-      `[completion] ${executables.length} executables on ${connectionId}, home ${home[0] ?? '?'}`,
+      `[completion] ${executables.length} executables on ${connectionId}, home ${data.home ?? '?'}`,
     );
     if (executables.length > 0) this.hooks.onChange();
+    // Prompts read before `$HOME` was known can be resolved now: list those directories.
+    for (const [terminalId, owner] of this.terminalConnections) {
+      if (owner !== connectionId) continue;
+      const cwd = this.resolveCwd(terminalId, data.home);
+      if (cwd !== null) this.ensureListing(connectionId, cwd);
+    }
   }
 
   private async fetchExecutables(connectionId: string): Promise<readonly string[]> {
@@ -451,34 +562,95 @@ function decodePath(raw: string): string | null {
   return path.startsWith('/') ? path : null;
 }
 
-interface ResolvedDir {
-  /** Absolute remote directory to list. */
-  dir: string;
-  relativeToHome: boolean;
+// ---------------------------------------------------------------------------
+// The screen (pure, given an xterm)
+// ---------------------------------------------------------------------------
+
+/**
+ * The cursor's line up to the cursor, joined with the rows it wrapped from, so a long
+ * prompt or command line reads as one string. `null` in the alternate screen (vim, less):
+ * nothing there is a prompt.
+ */
+export function textBeforeCursor(xterm: Xterm): string | null {
+  const buffer = xterm.buffer.active;
+  if (buffer.type === 'alternate') return null;
+  let y = buffer.baseY + buffer.cursorY;
+  let line = buffer.getLine(y);
+  if (!line) return null;
+  let text = line.translateToString(false, 0, buffer.cursorX);
+  while (line.isWrapped && y > 0) {
+    y -= 1;
+    line = buffer.getLine(y);
+    if (!line) break;
+    text = line.translateToString(false) + text;
+  }
+  return text;
+}
+
+// ---------------------------------------------------------------------------
+// Prompts (pure)
+// ---------------------------------------------------------------------------
+
+/** A prompt ends with one of these (`$ `, `# `, `% `, `> `, `❯ `)… */
+const PROMPT_END = /[$#%>❯›»λ]\s*$/u;
+/** …or starts with one (oh-my-zsh's `➜`), when nothing marks its end. */
+const PROMPT_START = /^[➜❯λ»]/u;
+/**
+ * What prompts hang after the directory: a git branch (`(master)`, `git:(master) ✗`),
+ * a venv or conda environment, the time, an exit status.
+ */
+const PROMPT_DECORATION = /\s*(?:git:\([^()]*\)|\([^()]*\)|\[[^[\]]*\]|\{[^{}]*\}|[✗✔✘✓×*!?+]+)$/u;
+/** `user@host:/path` or `user@host:~/path`, the directory running to the end (spaces allowed). */
+const HOST_PATH = /@[^\s@:]+:((?:~|\/)[^:[\]()$#%>❯›»λ]*)$/u;
+/** The last word (after whitespace, `:`, `[` or `(`) when it is an absolute or `~` path. */
+const LAST_PATH = /(?:^|[\s:[(])((?:~|\/)[^\s:[\]()]*)$/u;
+
+/**
+ * The working directory a prompt line shows, as it shows it - `/abs`, `~` or `~/rel` - or
+ * `null` when the line does not look like a prompt showing one.
+ *
+ * Covers the common shapes: `user@host:/path$`, `[user@host ~]$`, `/path $`, `➜  ~`,
+ * with venv, git-branch, time or status decorations after the directory, in bash and zsh
+ * alike. Prompts that show only the directory's name (`\W`, `%1~`) yield `null`: a name is
+ * not a location, and guessing one would list the wrong directory.
+ */
+export function parsePromptCwd(line: string): string | null {
+  const text = line.trimEnd();
+  const end = PROMPT_END.exec(text);
+  if (end) return promptPath(text.slice(0, end.index));
+  return PROMPT_START.test(text) ? promptPath(text) : null;
+}
+
+/** The directory at the end of a prompt's text (the prompt symbol already removed). */
+function promptPath(text: string): string | null {
+  let rest = text.trimEnd();
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    // A closing bracket may belong to a group opened before the directory: `[user@host ~]`.
+    const bare = rest.replace(/[\])}]+$/u, '').trimEnd();
+    const path = HOST_PATH.exec(bare)?.[1] ?? LAST_PATH.exec(bare)?.[1];
+    if (path !== undefined) return path.length > 1 ? path.replace(/\/+$/u, '') : path;
+    const stripped = rest.replace(PROMPT_DECORATION, '');
+    if (stripped === rest) return null;
+    rest = stripped;
+  }
+  return null;
 }
 
 /**
- * Turn the directory part of a token into an absolute remote path.
- *
- * `null` means there is nothing to resolve against yet (no cwd and no `$HOME`), which is
- * the state right after connecting and before the first fetch landed.
+ * Turn the directory part of a token into an absolute remote path, or `null` when it
+ * cannot be known: a relative token while the terminal's cwd is unknown, or `~` before
+ * `$HOME` arrived. Nothing is guessed - a listing of the wrong directory is worse than
+ * none, and the shell's own completion is a Tab away.
  */
 export function resolveDirectory(
   dir: string,
   cwd: string | null,
   home: string | null,
-): ResolvedDir | null {
-  if (dir.startsWith('/')) return { dir, relativeToHome: false };
-  if (dir.startsWith('~/')) {
-    return home === null ? null : { dir: join(home, dir.slice(2)), relativeToHome: false };
-  }
-  const base = cwd ?? home;
-  if (base === null) return null;
-  return {
-    dir: dir === '' ? base : join(base, dir),
-    // The popup says so, because the guess is wrong as soon as the user has cd'ed.
-    relativeToHome: cwd === null,
-  };
+): string | null {
+  if (dir.startsWith('/')) return dir;
+  if (dir.startsWith('~/')) return home === null ? null : join(home, dir.slice(2));
+  if (cwd === null) return null;
+  return dir === '' ? cwd : join(cwd, dir);
 }
 
 function join(base: string, rest: string): string {

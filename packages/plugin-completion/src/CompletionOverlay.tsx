@@ -89,8 +89,6 @@ export function createOverlayComponent(
               : state.navigated
                 ? ' ns-completion-item-active'
                 : ' ns-completion-item-preselected';
-          // A path listed under `~` is a guess: the shell never told us where it is.
-          const guessed = suggestion.relativeToHome === true;
           return (
             <button
               type="button"
@@ -107,12 +105,7 @@ export function createOverlayComponent(
               <span className="ns-completion-text">
                 <Highlighted suggestion={suggestion} />
               </span>
-              <span
-                className={`ns-completion-badge${guessed ? ' ns-completion-badge-note' : ''}`}
-                title={guessed ? ctx.i18n.t('badge.pathHomeHint') : undefined}
-              >
-                {ctx.i18n.t(guessed ? 'badge.pathHome' : BADGES[suggestion.source])}
-              </span>
+              <span className="ns-completion-badge">{ctx.i18n.t(BADGES[suggestion.source])}</span>
               {suggestion.description ? (
                 <span className="ns-completion-description">{suggestion.description}</span>
               ) : null}
@@ -121,8 +114,15 @@ export function createOverlayComponent(
         })}
         <div className="ns-completion-hints">
           <span>{ctx.i18n.t('hint.navigate')}</span>
-          <span>{ctx.i18n.t('hint.accept')}</span>
-          <span>{ctx.i18n.t(state.navigated ? 'hint.enterAccept' : 'hint.enterRun')}</span>
+          {state.navigated ? (
+            <span>{ctx.i18n.t('hint.enterAccept')}</span>
+          ) : (
+            <>
+              <span>{ctx.i18n.t('hint.accept')}</span>
+              <span>{ctx.i18n.t('hint.tabShell')}</span>
+              <span>{ctx.i18n.t('hint.enterRun')}</span>
+            </>
+          )}
           <span>{ctx.i18n.t('hint.dismiss')}</span>
           {/* The shell is reporting its cwd and the commands it runs, so both are exact. */}
           {state.integrationActive ? (
