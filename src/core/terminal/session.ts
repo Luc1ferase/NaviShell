@@ -295,15 +295,21 @@ export class TerminalSession implements TerminalHandle {
     }
     if (event.type !== 'keydown') return true;
 
+    // Returning `false` only keeps xterm from acting on the key; the browser's own
+    // action for the combination still runs unless the event is cancelled. For
+    // Ctrl+Shift+V that action is "paste as plain text", which lands in xterm's textarea
+    // as a `paste` event - a second copy of what pasteFromClipboard() already sent.
     const key = event.key.toLowerCase();
     if (event.ctrlKey && event.shiftKey && !event.altKey && key === 'c') {
       if (this.xterm.hasSelection()) {
+        event.preventDefault();
         void this.copySelection();
         return false;
       }
       return true;
     }
     if (event.ctrlKey && event.shiftKey && !event.altKey && key === 'v') {
+      event.preventDefault();
       void this.pasteFromClipboard();
       return false;
     }
