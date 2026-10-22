@@ -115,6 +115,14 @@ function insideMenu(target: EventTarget | null): boolean {
 }
 
 /**
+ * True for the button that opened a menu (a menu bar entry). Closing on its mousedown
+ * would race its own handler, so the anchor is left to decide whether to toggle or switch.
+ */
+function isMenuAnchor(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[data-menu-anchor]') !== null;
+}
+
+/**
  * The app's context menu: a root panel plus one panel per open submenu, fed by
  * `useUiStore().contextMenu`. It stands in for the WebView's native menu everywhere, so
  * it has to serve the keyboard as well as the mouse, and the two share one highlight.
@@ -264,12 +272,23 @@ export function ContextMenuHost() {
         moveTo(innermost, stepIndex(items, items.length, -1));
         return;
       case 'ArrowRight':
-        if (!item?.submenu?.length) return;
+        // Nothing to open to the right: the opener may want the key instead (menu bar).
+        if (!item?.submenu?.length) {
+          if (!menu?.onNavigate) return;
+          claim();
+          menu.onNavigate(1);
+          return;
+        }
         claim();
         openSubmenu(innermost, index, item.submenu, true);
         return;
       case 'ArrowLeft':
-        if (innermost <= 0) return;
+        if (innermost <= 0) {
+          if (!menu?.onNavigate) return;
+          claim();
+          menu.onNavigate(-1);
+          return;
+        }
         claim();
         closeSubmenu(innermost);
         return;
@@ -310,7 +329,8 @@ export function ContextMenuHost() {
   useEffect(() => {
     if (!menu) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!insideMenu(event.target)) hide();
+      if (insideMenu(event.target) || isMenuAnchor(event.target)) return;
+      hide();
     };
     const onWheel = (event: WheelEvent) => {
       if (!insideMenu(event.target)) hide();

@@ -9,8 +9,8 @@ import { ServerFormDialog } from '@/app/components/ServerFormDialog';
 import { Splash } from '@/app/components/Splash';
 import { StatusBar } from '@/app/components/StatusBar';
 import { TerminalOverlayHost } from '@/app/components/TerminalOverlayHost';
+import { TitleBar } from '@/app/components/TitleBar';
 import { Toasts } from '@/app/components/Toasts';
-import { TopBar } from '@/app/components/TopBar';
 import { DockLayout } from '@/app/layout/DockLayout';
 import { registerCorePanels } from '@/app/panels/corePanels';
 import { bootstrap, type BootstrapStep } from '@/core/bootstrap';
@@ -168,7 +168,7 @@ export function App() {
 
   return (
     <div className="ns-app">
-      <TopBar />
+      <TitleBar />
       <div className="ns-app__body">
         <DockLayout savedLayout={savedLayout} />
       </div>

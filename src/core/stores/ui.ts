@@ -89,9 +89,18 @@ export interface ContextMenuPosition {
   focusFirst?: boolean;
 }
 
+export interface ContextMenuOptions {
+  /**
+   * Lets the opener take over the arrow keys that would leave the menu: a menu bar entry
+   * uses it to hand the keyboard to its neighbour. `-1` is left, `1` is right.
+   */
+  onNavigate?: (direction: -1 | 1) => void;
+}
+
 export interface ContextMenuState {
   items: MenuItem[];
   position: ContextMenuPosition;
+  onNavigate?: (direction: -1 | 1) => void;
 }
 
 export interface ServerFormState {
@@ -121,7 +130,11 @@ export interface UiStore {
   /** Resolve (and remove) the front dialog. */
   settleDialog(id: string, value: unknown): void;
 
-  showContextMenu(items: MenuItem[], position: ContextMenuPosition): void;
+  showContextMenu(
+    items: MenuItem[],
+    position: ContextMenuPosition,
+    options?: ContextMenuOptions,
+  ): void;
   hideContextMenu(): void;
 
   openServerForm(state?: ServerFormState): void;
@@ -201,8 +214,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
     }
   },
 
-  showContextMenu(items, position) {
-    set({ contextMenu: { items, position } });
+  showContextMenu(items, position, options) {
+    set({ contextMenu: { items, position, onNavigate: options?.onNavigate } });
   },
   hideContextMenu() {
     set({ contextMenu: null });

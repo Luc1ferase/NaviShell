@@ -53,19 +53,39 @@
       "maximize": "Maximize",
       "restore": "Restore size",
       "panels": "Panels"
+    },
+    "connection": {
+      "newServer": "New server…",
+      "noServers": "No servers yet",
+      "disconnectAll": "Disconnect all"
+    },
+    "view": {
+      "theme": "Theme"
+    },
+    "help": {
+      "about": "About NaviShell",
+      "checkUpdates": "Check for updates",
+      "repository": "GitHub repository",
+      "reportIssue": "Report an issue"
     }
   },
+  "menubar": {
+    "label": "Menu bar",
+    "connection": "Connection",
+    "terminal": "Terminal",
+    "view": "View",
+    "help": "Help"
+  },
+  "titlebar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close"
+  },
   "topbar": {
-    "quickConnect": "Connect",
-    "newServer": "New server",
-    "newLocalTerminal": "Local terminal",
-    "newLocalTerminalTooltip": "New local terminal (Ctrl+Shift+`)",
     "settings": "Settings",
-    "panels": "Panels",
     "panelsTooltip": "Open or reveal a panel",
     "noPanels": "No panels registered",
-    "noServers": "No servers yet",
-    "extensions": "Extensions",
     "extensionsTooltip": "Browse, install and update extensions",
     "extensionsUpdatesTooltip": "{{count}} plugin updates available"
   },

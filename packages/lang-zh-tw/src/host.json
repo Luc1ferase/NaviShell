@@ -53,19 +53,39 @@
       "maximize": "最大化",
       "restore": "還原大小",
       "panels": "面板"
+    },
+    "connection": {
+      "newServer": "新增伺服器…",
+      "noServers": "尚無伺服器",
+      "disconnectAll": "中斷所有連線"
+    },
+    "view": {
+      "theme": "主題"
+    },
+    "help": {
+      "about": "關於 NaviShell",
+      "checkUpdates": "檢查更新",
+      "repository": "GitHub 儲存庫",
+      "reportIssue": "回報問題"
     }
   },
+  "menubar": {
+    "label": "選單列",
+    "connection": "連線",
+    "terminal": "終端機",
+    "view": "檢視",
+    "help": "說明"
+  },
+  "titlebar": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "還原",
+    "close": "關閉"
+  },
   "topbar": {
-    "quickConnect": "連線",
-    "newServer": "新增伺服器",
-    "newLocalTerminal": "本機終端機",
-    "newLocalTerminalTooltip": "新增本機終端機（Ctrl+Shift+`）",
     "settings": "設定",
-    "panels": "面板",
     "panelsTooltip": "開啟或切換到某個面板",
     "noPanels": "沒有已註冊的面板",
-    "noServers": "尚無伺服器",
-    "extensions": "擴充功能",
     "extensionsTooltip": "瀏覽、安裝與更新擴充功能",
     "extensionsUpdatesTooltip": "{{count}} 個外掛有可用更新"
   },
