@@ -124,34 +124,111 @@ body {
   }
 }
 
-/* --- top bar ------------------------------------------------------------- */
+/* --- title bar ----------------------------------------------------------- */
 
-.ns-topbar {
+.ns-titlebar {
   display: flex;
-  gap: 6px;
   align-items: center;
-  padding: 0 8px;
+  height: 100%;
+  padding: 0;
   background: var(--ns-bg-elevated);
   user-select: none;
 }
 
-.ns-topbar__brand {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  padding-right: 10px;
-  font-size: var(--ns-font-size);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ns-fg);
+/* macOS keeps its traffic lights over the overlay title bar; leave room for them. */
+.ns-titlebar--mac {
+  padding-left: 78px;
 }
 
-.ns-topbar__brand svg {
+.ns-titlebar__brand {
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 10px;
   color: var(--ns-accent);
 }
 
-.ns-topbar__spacer {
+/* The icon must not take the mousedown, or the brand stops working as a drag handle. */
+.ns-titlebar__brand svg {
+  pointer-events: none;
+}
+
+.ns-titlebar__drag {
   flex: 1;
+  overflow: hidden;
+  color: var(--ns-fg-muted);
+  font-size: var(--ns-font-size-sm);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.ns-titlebar__actions {
+  display: flex;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+/* Icon-only until updates are waiting, then it widens to carry the count beside the icon. */
+.ns-titlebar__ext:has(.ns-badge) {
+  gap: 4px;
+  width: auto;
+  padding: 0 5px;
+}
+
+.ns-window-controls {
+  display: flex;
+  height: 100%;
+}
+
+.ns-window-controls__btn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  color: var(--ns-fg);
+  background: transparent;
+  border: 0;
+  cursor: default;
+}
+
+.ns-window-controls__btn:hover {
+  background: var(--ns-bg-hover);
+}
+
+.ns-window-controls__btn--close:hover {
+  color: #fff;
+  background: #e81123;
+}
+
+/* --- menu bar ------------------------------------------------------------ */
+
+.ns-menubar {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.ns-menubar__item {
+  height: 100%;
+  padding: 0 8px;
+  color: var(--ns-fg);
+  font: inherit;
+  font-size: var(--ns-font-size-sm);
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: default;
+}
+
+.ns-menubar__item:hover,
+.ns-menubar__item--open {
+  background: var(--ns-bg-hover);
+}
+
+.ns-menubar__item:focus-visible {
+  outline: 1px solid var(--ns-accent);
+  outline-offset: -1px;
 }
 
 /* --- status bar ---------------------------------------------------------- */

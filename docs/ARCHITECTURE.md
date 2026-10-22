@@ -49,7 +49,7 @@ NaviShell/
 │  ├─ app/
 │  │  ├─ layout/              DockLayout (dockview), default layout, persistence
 │  │  ├─ panels/              ServersPanel, TerminalPanel, HomePanel, SettingsPanel, PluginPanel (generic), extensions/ (the marketplace view)
-│  │  ├─ components/          Dialogs (confirm/prompt/password/host-key), Toasts, ContextMenu, StatusBar, TopBar
+│  │  ├─ components/          Dialogs (confirm/prompt/password/host-key), Toasts, ContextMenu, StatusBar, TitleBar (custom title bar, window controls), MenuBar
 │  │  └─ menus/               panels.ts (the Panels menu), terminal.ts and tabs.ts (items of the terminal, tab and tab-bar menus)
 │  └─ styles/                 CSS variables + global styles (dark theme first)
 ├─ public/plugins/            GENERATED built-in plugin bundles (gitignored)

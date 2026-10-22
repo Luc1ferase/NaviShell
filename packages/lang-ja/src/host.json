@@ -53,19 +53,39 @@
       "maximize": "最大化",
       "restore": "サイズを戻す",
       "panels": "パネル"
+    },
+    "connection": {
+      "newServer": "新しいサーバー…",
+      "noServers": "サーバーがありません",
+      "disconnectAll": "すべて切断"
+    },
+    "view": {
+      "theme": "テーマ"
+    },
+    "help": {
+      "about": "NaviShell のバージョン情報",
+      "checkUpdates": "更新を確認",
+      "repository": "GitHub リポジトリ",
+      "reportIssue": "問題を報告"
     }
   },
+  "menubar": {
+    "label": "メニューバー",
+    "connection": "接続",
+    "terminal": "ターミナル",
+    "view": "表示",
+    "help": "ヘルプ"
+  },
+  "titlebar": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "元のサイズに戻す",
+    "close": "閉じる"
+  },
   "topbar": {
-    "quickConnect": "接続",
-    "newServer": "新しいサーバー",
-    "newLocalTerminal": "ローカル ターミナル",
-    "newLocalTerminalTooltip": "新しいローカル ターミナル (Ctrl+Shift+`)",
     "settings": "設定",
-    "panels": "パネル",
     "panelsTooltip": "パネルを開く、または表示する",
     "noPanels": "登録されたパネルはありません",
-    "noServers": "サーバーがありません",
-    "extensions": "拡張機能",
     "extensionsTooltip": "拡張機能の閲覧・インストール・更新",
     "extensionsUpdatesTooltip": "{{count}} 件のプラグイン更新があります"
   },

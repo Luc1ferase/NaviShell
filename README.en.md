@@ -31,6 +31,7 @@ plugins that use exactly the same API as third-party ones.
 - **Multiple terminals**: real PTY sessions on xterm.js with tabs, split docking and a
   layout that is saved and restored automatically.
 - **Context menus**: terminals, tabs, the server list, text fields and the extension list all have the app's own right-click menus (the terminal's right button can also copy / paste PuTTY style); plugins add their own items through `ctx.menus`.
+- **Title bar and menu bar**: on Windows the app draws its own title bar and window controls (macOS keeps the traffic lights, Linux its native decorations); a VS Code-style menu bar (Connection / Terminal / View / Help) sits in it.
 - **Local terminals**: open a shell on this machine without SSH. The default program is
   `pwsh.exe` on Windows (`powershell.exe` when it is missing) and `$SHELL` elsewhere
   (`/bin/bash` when unset); Settings → Local shell accepts any program and arguments.
@@ -159,7 +160,7 @@ Settings → Plugins can also install straight from a zip, skipping the manual c
 
 ### Plugin marketplace
 
-The **Extensions** button in the top bar opens the extensions panel, in the spirit of VS
+The **Extensions** button in the title bar opens the extensions panel, in the spirit of VS
 Code's extensions view: a list on the left with Marketplace, Installed and Updates views,
 search and category filters; a detail pane on the right that renders the plugin's README,
 changelog and version list, with install, update, enable, disable and uninstall, and the
@@ -173,7 +174,7 @@ changelog are sanitized before rendering (no scripts, only http(s) links and ima
 links open in the system browser.
 
 Shortly after start and every few hours the app fetches the index in the background to
-look for plugin updates (switch it off under Settings → Plugins); the top bar and the
+look for plugin updates (switch it off under Settings → Plugins); the title bar and the
 status bar badge the count and a toast points at them, and the updates this version
 supports can optionally be installed automatically.
 

@@ -53,19 +53,39 @@
       "maximize": "最大化",
       "restore": "还原大小",
       "panels": "面板"
+    },
+    "connection": {
+      "newServer": "新建服务器…",
+      "noServers": "尚无服务器",
+      "disconnectAll": "断开全部连接"
+    },
+    "view": {
+      "theme": "主题"
+    },
+    "help": {
+      "about": "关于 NaviShell",
+      "checkUpdates": "检查更新",
+      "repository": "GitHub 仓库",
+      "reportIssue": "报告问题"
     }
   },
+  "menubar": {
+    "label": "菜单栏",
+    "connection": "连接",
+    "terminal": "终端",
+    "view": "视图",
+    "help": "帮助"
+  },
+  "titlebar": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原",
+    "close": "关闭"
+  },
   "topbar": {
-    "quickConnect": "连接",
-    "newServer": "新建服务器",
-    "newLocalTerminal": "本地终端",
-    "newLocalTerminalTooltip": "新建本地终端（Ctrl+Shift+`）",
     "settings": "设置",
-    "panels": "面板",
     "panelsTooltip": "打开或切换到某个面板",
     "noPanels": "没有已注册的面板",
-    "noServers": "尚无服务器",
-    "extensions": "扩展",
     "extensionsTooltip": "浏览、安装和更新扩展",
     "extensionsUpdatesTooltip": "{{count}} 个插件有可用更新"
   },
