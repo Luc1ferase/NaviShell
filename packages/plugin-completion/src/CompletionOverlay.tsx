@@ -119,7 +119,6 @@ export function createOverlayComponent(
           ) : (
             <>
               <span>{ctx.i18n.t('hint.accept')}</span>
-              <span>{ctx.i18n.t('hint.tabShell')}</span>
               <span>{ctx.i18n.t('hint.enterRun')}</span>
             </>
           )}

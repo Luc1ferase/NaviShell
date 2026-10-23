@@ -729,9 +729,9 @@ export class CompletionController {
    *
    * The popup must never get in the way of running what was typed: Enter goes through to
    * the shell unless the user explicitly picked a candidate with ↑/↓ (then it accepts, like
-   * VS Code's "partial" selection mode). → always accepts the highlighted candidate; Tab
-   * does so only after ↑/↓ and otherwise goes to the shell, whose own completion is exact
-   * where ours is a cache - `cd AI<Tab>` must keep completing the directory.
+   * VS Code's "partial" selection mode). Tab and → always accept the highlighted candidate,
+   * as in an editor; the shell's own completion gets Tab only while the popup is hidden,
+   * that is when there is no candidate to offer.
    *
    * Swallowed keys are also `preventDefault()`-ed: without it the browser would still emit
    * the `keypress` that follows a `keydown`, and xterm would send Enter to the shell -
@@ -754,7 +754,6 @@ export class CompletionController {
         this.move(terminal.id, 1);
         return swallow();
       case 'Tab':
-        if (!state.navigated) return true;
         void this.accept(terminal.id);
         return swallow();
       case 'ArrowRight':

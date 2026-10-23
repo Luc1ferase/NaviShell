@@ -52,9 +52,9 @@ plugins that use exactly the same API as third-party ones.
   optional **shell integration** toggle (off by default, "Enable/disable shell integration"
   in the command list) injects a one-line `PROMPT_COMMAND` / `precmd` hook into new SSH
   terminals so bash and zsh report the directory after every prompt. The popup never gets
-  in the way: Enter always runs the line as typed, Tab still goes to the shell's own
-  completion, → takes the highlighted candidate, and Tab / Enter only accept a candidate
-  once you picked one with ↑↓.
+  in the way: Enter always runs the line as typed, Tab or → takes the highlighted
+  candidate, and Enter only accepts one once you picked it with ↑↓. With nothing to offer
+  the popup stays away and Tab goes to the shell's own completion as usual.
 - **Plugin installation**: besides dropping a directory into the plugins folder, Settings →
   Plugins installs from a zip URL (with an optional SHA-256 check) or a local zip file and
   uninstalls in place, all without a restart. A **marketplace** tab lists the plugins of a
