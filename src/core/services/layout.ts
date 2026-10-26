@@ -3,8 +3,13 @@
  * default layout, panel open/close helpers and layout persistence.
  */
 
-import type { DockviewApi, DockviewGroupPanel, SerializedDockview } from 'dockview-react';
-import type { JsonValue, PanelPosition, TerminalKind } from '@navishell/plugin-api';
+import type {
+  DockviewApi,
+  DockviewGroupPanel,
+  IDockviewPanel,
+  SerializedDockview,
+} from 'dockview-react';
+import type { Disposable, JsonValue, PanelPosition, TerminalKind } from '@navishell/plugin-api';
 
 import { call } from '../ipc/client';
 import { t, translatePlugin } from '../i18n';
@@ -25,6 +30,30 @@ export const FIXED_TAB_COMPONENT = 'fixedTab';
 
 /** Tab component id used for terminal tabs (adds a tooltip describing the session). */
 export const TERMINAL_TAB_COMPONENT = 'terminalTab';
+
+/** Tab component id for closable core and plugin panels: close goes through the guards. */
+export const PANEL_TAB_COMPONENT = 'panelTab';
+
+/** `params` of every `panel` dockview component, core and plugin panels alike. */
+export interface GenericPanelParams {
+  /** The registry id (`<pluginId>:<id>` or `core:*`); every instance shares it. */
+  panelId: string;
+  /** Set for a separate instance of a plugin panel (see `OpenPanelOptions.instance`). */
+  instance?: string;
+  /** Opaque data for the plugin component. */
+  params?: JsonValue;
+  /** An instance's own title; the registry title is used when absent. */
+  title?: string;
+  /** Tooltip shown on the tab. */
+  tooltip?: string;
+  /** Closed instead of restored when the layout is loaded at startup. */
+  transient?: boolean;
+}
+
+/** The dockview id of a panel: the registry id, or `<id>#<instance>` for an instance. */
+export function instancePanelId(fullId: string, instance?: string): string {
+  return instance === undefined ? fullId : `${fullId}#${instance}`;
+}
 
 let dockApi: DockviewApi | null = null;
 let restoring = false;
@@ -101,6 +130,7 @@ function directionFor(position: PanelPosition): 'left' | 'right' | 'below' | 'wi
     case 'bottom':
       return 'below';
     case 'center':
+    case 'main':
       return 'within';
     default:
       return 'right';
@@ -116,21 +146,38 @@ export interface OpenPanelOptions {
   size?: number;
   /** Default `true`. */
   activate?: boolean;
+  /** Open a separate instance keyed by this string (see the plugin API's `OpenPanelOptions`). */
+  instance?: string;
+  params?: JsonValue;
+  title?: string;
+  tooltip?: string;
+  transient?: boolean;
 }
 
-export function isPanelOpen(fullId: string): boolean {
-  return Boolean(dockApi?.getPanel(fullId));
+export function isPanelOpen(fullId: string, instance?: string): boolean {
+  return Boolean(dockApi?.getPanel(instancePanelId(fullId, instance)));
 }
 
-export function closePanel(fullId: string): void {
-  dockApi?.getPanel(fullId)?.api.close();
+/** Close without asking the panel's close guard: for the owner's own close and deactivation. */
+export function closePanel(fullId: string, instance?: string): void {
+  dockApi?.getPanel(instancePanelId(fullId, instance))?.api.close();
+}
+
+/** Close the shared panel and every instance of it (a plugin panel being unregistered). */
+export function closePanelInstances(fullId: string): void {
+  const api = dockApi;
+  if (!api) return;
+  for (const panel of api.panels) {
+    if ((panel.params as GenericPanelParams | undefined)?.panelId === fullId) panel.api.close();
+  }
 }
 
 export function openPanel(fullId: string, options: OpenPanelOptions = {}): void {
   const api = dockApi;
   if (!api) return;
 
-  const existing = api.getPanel(fullId);
+  const dockId = instancePanelId(fullId, options.instance);
+  const existing = api.getPanel(dockId);
   if (existing) {
     if (options.activate !== false) existing.api.setActive();
     return;
@@ -141,8 +188,9 @@ export function openPanel(fullId: string, options: OpenPanelOptions = {}): void 
   const size = options.size ?? (entry?.kind === 'plugin' ? entry.def.defaultSize : undefined);
   const closable = entry?.kind === 'plugin' ? entry.def.closable !== false : true;
   const direction = directionFor(position);
-  const group = direction === 'within' ? focusedGroup(api) : centerGroup(api);
-  const title = entry ? panelTitle(entry) : fullId;
+  const group =
+    direction === 'within' && position !== 'main' ? focusedGroup(api) : centerGroup(api);
+  const title = options.title ?? (entry ? panelTitle(entry) : fullId);
 
   const sizing =
     direction === 'left' || direction === 'right'
@@ -151,24 +199,82 @@ export function openPanel(fullId: string, options: OpenPanelOptions = {}): void 
         ? { initialHeight: size ?? 240 }
         : {};
 
+  const params: GenericPanelParams = { panelId: fullId };
+  if (options.instance !== undefined) params.instance = options.instance;
+  if (options.params !== undefined) params.params = options.params;
+  if (options.title !== undefined) params.title = options.title;
+  if (options.tooltip !== undefined) params.tooltip = options.tooltip;
+  if (options.transient) params.transient = true;
+
   api.addPanel({
-    id: fullId,
+    id: dockId,
     component: 'panel',
     title,
-    params: { panelId: fullId },
+    params,
     inactive: options.activate === false,
-    tabComponent: closable ? undefined : FIXED_TAB_COMPONENT,
+    tabComponent: closable ? PANEL_TAB_COMPONENT : FIXED_TAB_COMPONENT,
+    ...(entry?.kind === 'plugin' && entry.def.keepAlive ? { renderer: 'always' as const } : {}),
     ...sizing,
     ...(group ? { position: { referenceGroup: group, direction } } : {}),
   });
 }
 
 export function togglePanel(fullId: string, options: OpenPanelOptions = {}): void {
-  if (isPanelOpen(fullId)) {
-    closePanel(fullId);
+  if (isPanelOpen(fullId, options.instance)) {
+    closePanel(fullId, options.instance);
   } else {
     openPanel(fullId, options);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Close guards
+// ---------------------------------------------------------------------------
+
+type CloseGuard = () => boolean | Promise<boolean>;
+
+/** By dockview panel id; a panel has at most one (the last registered wins). */
+const closeGuards = new Map<string, CloseGuard>();
+
+/** Installs a panel's close guard; disposing it (or the panel going away) removes it. */
+export function setCloseGuard(dockId: string, guard: CloseGuard): Disposable {
+  closeGuards.set(dockId, guard);
+  return {
+    dispose() {
+      if (closeGuards.get(dockId) === guard) closeGuards.delete(dockId);
+    },
+  };
+}
+
+export function dropCloseGuard(dockId: string): void {
+  closeGuards.delete(dockId);
+}
+
+/**
+ * A close started by the user: asks the panel's guard first, when it has one. Resolves
+ * `true` when the panel is gone afterwards. Guard failures count as consent, so a broken
+ * plugin can never pin a tab open.
+ */
+export async function requestClosePanel(dockId: string): Promise<boolean> {
+  const panel = dockApi?.getPanel(dockId);
+  if (!panel) return true;
+  const guard = closeGuards.get(dockId);
+  if (guard) {
+    let allowed = true;
+    try {
+      allowed = await guard();
+    } catch (error) {
+      console.warn('[navishell] panel close guard failed', error);
+    }
+    if (!allowed) return false;
+  }
+  dockApi?.getPanel(dockId)?.api.close();
+  return true;
+}
+
+/** Closes the panels one after another, so each guard gets its own answer. */
+export async function requestClosePanels(panels: IDockviewPanel[]): Promise<void> {
+  for (const panel of panels) await requestClosePanel(panel.id);
 }
 
 export function openSettingsPanel(): void {
@@ -283,6 +389,11 @@ export function restoreLayout(api: DockviewApi, layout: JsonValue | null): boole
   restoring = true;
   try {
     api.fromJSON(migrateLayout(layout as unknown as SerializedDockview));
+    // Transient instances (an editor tab on a connection that no longer exists) cannot
+    // come back with the layout, so they go instead of showing a placeholder.
+    for (const panel of api.panels) {
+      if ((panel.params as GenericPanelParams | undefined)?.transient) panel.api.close();
+    }
     return true;
   } catch (error) {
     console.error('[navishell] failed to restore the saved layout', error);

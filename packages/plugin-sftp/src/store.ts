@@ -84,6 +84,9 @@ const INITIAL_STATE: SftpState = {
   viewer: null,
 };
 
+/** The editor plugin's command that opens a remote file in its own tab. */
+const EDITOR_OPEN_COMMAND = 'navishell.editor:open';
+
 /** Largest file the built-in quick editor will load. */
 const MAX_EDIT_BYTES = 512 * 1024;
 /** How long a finished transfer stays in the list. */
@@ -349,6 +352,27 @@ export class SftpController {
       // A symlink may point at a directory: try listing it, fall back to the editor.
       const ok = await this.navigate(entry.path, { silent: true });
       if (ok) return;
+    }
+    await this.openFile(entry);
+  }
+
+  /**
+   * Hands a file to the editor plugin, which opens it in its own tab; the inline quick
+   * editor below is the fallback for when that plugin is disabled.
+   */
+  private async openFile(entry: SftpEntry): Promise<void> {
+    const connectionId = this.state.connectionId;
+    if (connectionId && this.ctx.commands.has(EDITOR_OPEN_COMMAND)) {
+      try {
+        await this.ctx.commands.execute(EDITOR_OPEN_COMMAND, {
+          connectionId,
+          path: entry.path,
+          name: entry.name,
+        });
+      } catch (error) {
+        this.fail(error);
+      }
+      return;
     }
     await this.openInEditor(entry);
   }

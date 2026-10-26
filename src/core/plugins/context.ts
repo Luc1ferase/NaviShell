@@ -27,7 +27,13 @@ import {
 } from '../i18n';
 import { connectToServer, disconnectConnection } from '../services/connect';
 import { onDidChangeFileIconTheme, resolveFileIcon, setFileIconTheme } from '../services/fileIcons';
-import { closePanel, isPanelOpen, openPanel, togglePanel } from '../services/layout';
+import {
+  closePanel,
+  closePanelInstances,
+  isPanelOpen,
+  openPanel,
+  togglePanel,
+} from '../services/layout';
 import { createSftpClient } from '../services/sftp';
 import { getConnection, listConnections, onDidChangeConnections } from '../stores/connections';
 import { getServer, listServers, onDidChangeServers } from '../stores/servers';
@@ -98,21 +104,21 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
         const registry = useRegistryStore.getState();
         const id = registry.registerPluginPanel(pluginId, ctx, def);
         return toDisposableFn(() => {
-          closePanel(id);
+          closePanelInstances(id);
           useRegistryStore.getState().unregisterPanel(id);
         });
       },
-      open(id) {
-        openPanel(fullPanelId(id));
+      open(id, options) {
+        openPanel(fullPanelId(id), { ...options });
       },
-      close(id) {
-        closePanel(fullPanelId(id));
+      close(id, instance) {
+        closePanel(fullPanelId(id), instance);
       },
-      isOpen(id) {
-        return isPanelOpen(fullPanelId(id));
+      isOpen(id, instance) {
+        return isPanelOpen(fullPanelId(id), instance);
       },
-      toggle(id) {
-        togglePanel(fullPanelId(id));
+      toggle(id, options) {
+        togglePanel(fullPanelId(id), { ...options });
       },
     },
 
@@ -129,6 +135,9 @@ export function createPluginContext(options: CreatePluginContextOptions): Plugin
         return toDisposableFn(() => useRegistryStore.getState().unregisterCommand(fullId));
       },
       execute: executeCommand,
+      has(fullId) {
+        return Boolean(useRegistryStore.getState().commands[fullId]);
+      },
     },
 
     servers: {

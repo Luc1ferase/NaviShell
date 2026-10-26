@@ -14,6 +14,7 @@ import type { Disposable, PanelApi } from '@navishell/plugin-api';
 import { PluginErrorBoundary } from '@/app/components/ErrorBoundary';
 import { useI18n } from '@/core/i18n/useI18n';
 import { useRegistryStore } from '@/core/plugins/registry';
+import { setCloseGuard, type GenericPanelParams } from '@/core/services/layout';
 
 function asDisposable(disposable: { dispose(): void }): Disposable {
   return { dispose: () => disposable.dispose() };
@@ -44,12 +45,11 @@ export function createPanelApiAdapter(api: DockviewPanelApi): PanelApi {
     close: () => api.close(),
     // dockview has no explicit focus for panels; activating a panel focuses it.
     focus: () => api.setActive(),
+    onWillClose: (cb) => setCloseGuard(api.id, cb),
   };
 }
 
-export interface GenericPanelParams {
-  panelId: string;
-}
+export type { GenericPanelParams };
 
 export function PanelHost(props: IDockviewPanelProps<GenericPanelParams>) {
   const { t } = useI18n();
@@ -75,7 +75,13 @@ export function PanelHost(props: IDockviewPanelProps<GenericPanelParams>) {
   const Component = entry.def.component;
   return (
     <PluginErrorBoundary label={entry.pluginId}>
-      <Component panelId={panelId} ctx={entry.ctx} api={api} />
+      <Component
+        panelId={panelId}
+        instance={props.params.instance}
+        params={props.params.params}
+        ctx={entry.ctx}
+        api={api}
+      />
     </PluginErrorBoundary>
   );
 }

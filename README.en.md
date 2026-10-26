@@ -39,8 +39,12 @@ plugins that use exactly the same API as third-party ones.
   changed fingerprint raises a dialog.
 - **SFTP file manager** (built-in plugin): follows the active terminal's connection (local
   terminals have none, so it falls back to a connection dropdown); browse / upload /
-  download / rename / delete / new folder, a transfer list with progress and cancel, and
-  quick editing of small files.
+  download / rename / delete / new folder, a transfer list with progress and cancel;
+  double-clicking a text file opens it in the editor.
+- **Editor** (built-in plugin): a lightweight code editor (CodeMirror 6) with a tab per
+  file: highlighting by extension, auto-indent and bracket pairing, find / replace,
+  folding, Ctrl+S writes the file back to the server, closing an unsaved tab asks first,
+  and so does saving over a file that changed on the server meanwhile.
 - **Command completion** (built-in plugin): records command history per server (local
   terminals share the `local` key) and seeds it from the remote `~/.bash_history` and
   `~/.zsh_history`; completes executables on the remote `PATH` (`compgen -c`) and paths in
@@ -234,7 +238,7 @@ The `ctx` passed to `activate(ctx)` is everything a plugin can touch. **Never ca
 
 | Namespace | What it offers |
 | --------- | -------------- |
-| `ctx.panels` | register / open / close dockable panels (`register`, `open`, `toggle`) |
+| `ctx.panels` | register / open / close dockable panels (`register`, `open`, `toggle`); `open` with `instance` and `params` gives one panel several tabs (the editor opens one per file), and `api.onWillClose` lets a panel ask before it closes |
 | `ctx.commands` | register commands, execute any command (`<pluginId>:<id>`) |
 | `ctx.servers` | server list, connect, open a terminal |
 | `ctx.connections` | connection list, one-shot `exec`, `sftp(connectionId)`, disconnect |

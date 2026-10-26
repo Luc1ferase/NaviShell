@@ -16,16 +16,20 @@ import { useAppliedTheme } from '@/core/services/theme';
 import { onDidRegisterPanel } from '@/core/plugins/registry';
 import {
   FIXED_TAB_COMPONENT,
+  PANEL_TAB_COMPONENT,
   TERMINAL_PANEL_PREFIX,
   TERMINAL_TAB_COMPONENT,
   applyDefaultLayout,
+  dropCloseGuard,
   getDockApi,
   maybeAutoOpenPanel,
   noteActiveGroup,
+  requestClosePanel,
   restoreLayout,
   runPendingAutoOpen,
   scheduleLayoutPersist,
   setDockApi,
+  type GenericPanelParams,
   type TerminalPanelParams,
 } from '@/core/services/layout';
 import { useConnectionsStore } from '@/core/stores/connections';
@@ -39,6 +43,17 @@ import { TerminalPanel } from '@/app/panels/TerminalPanel';
 
 function FixedTab(props: IDockviewPanelHeaderProps) {
   return <DockviewDefaultTab hideClose {...props} />;
+}
+
+/** Closable panel tab: the close button asks the panel's close guard (unsaved changes). */
+function PanelTab(props: IDockviewPanelHeaderProps<GenericPanelParams>) {
+  return (
+    <DockviewDefaultTab
+      {...props}
+      title={props.params.tooltip}
+      closeActionOverride={() => void requestClosePanel(props.api.id)}
+    />
+  );
 }
 
 /** Terminal tab with a tooltip describing where the session runs. */
@@ -80,6 +95,7 @@ const COMPONENTS: Record<string, FunctionComponent<IDockviewPanelProps>> = {
 
 const TAB_COMPONENTS = {
   [FIXED_TAB_COMPONENT]: FixedTab,
+  [PANEL_TAB_COMPONENT]: PanelTab,
   [TERMINAL_TAB_COMPONENT]: TerminalTab,
 };
 
@@ -109,6 +125,7 @@ export function DockLayout({ savedLayout }: DockLayoutProps) {
       api.onDidActiveGroupChange((group) => noteActiveGroup(group)),
       api.onDidLayoutChange(() => scheduleLayoutPersist()),
       api.onDidRemovePanel((panel) => {
+        dropCloseGuard(panel.id);
         if (!panel.id.startsWith(TERMINAL_PANEL_PREFIX)) return;
         // Dragging a tab into another group also fires this event, so wait a tick and
         // only tear the terminal down when the panel really is gone.
