@@ -243,7 +243,13 @@ export function isHostError(e: unknown): e is HostError {
 // Panels (dockable views)
 // ---------------------------------------------------------------------------
 
-export type PanelPosition = 'left' | 'right' | 'bottom' | 'center';
+/**
+ * Where a panel docks. `center` joins the group that has the focus (a settings-like
+ * panel opened from the top bar lands next to what the user is looking at); `main` joins
+ * the main area, the group holding the terminals, wherever the focus is (an editor tab
+ * opened from the file manager must not land inside the file manager's group).
+ */
+export type PanelPosition = 'left' | 'right' | 'bottom' | 'center' | 'main';
 
 export interface PanelApi {
   readonly id: string;
@@ -257,11 +263,23 @@ export interface PanelApi {
   setTitle(title: string): void;
   close(): void;
   focus(): void;
+  /**
+   * Veto a close started by the user (the tab's close button, a middle click, the tab
+   * menu): the callback may ask a question and resolve `false` to keep the panel open,
+   * as an editor does for unsaved changes. Closes made by the plugin itself (`close()`,
+   * `PanelsApi.close`) and by deactivation are not asked. Only the last registered
+   * callback is consulted.
+   */
+  onWillClose(cb: () => boolean | Promise<boolean>): Disposable;
 }
 
 export interface PanelProps {
-  /** Full panel id (`<pluginId>:<panelId>`). */
+  /** Full panel id (`<pluginId>:<panelId>`), the same for every instance of a panel. */
   panelId: string;
+  /** The `instance` key this panel was opened with; absent for the shared instance. */
+  instance?: string;
+  /** The `params` this panel was opened with. */
+  params?: JsonValue;
   ctx: PluginContext;
   api: PanelApi;
 }
@@ -282,15 +300,48 @@ export interface PanelDefinition {
   defaultSize?: number;
   /** Whether the user can close the panel from its tab. Default: true. */
   closable?: boolean;
+  /**
+   * Keep the component mounted while its tab is hidden behind another one. The default
+   * unmounts hidden panels and mounts them again when they show, which is right for a
+   * view that is rebuilt from the registry and `params`; it is wrong for state that
+   * lives only in the component, like an editor's unsaved text. Default: false.
+   */
+  keepAlive?: boolean;
+}
+
+/** Options for {@link PanelsApi.open}. */
+export interface OpenPanelOptions {
+  /**
+   * Open a separate instance of the panel, keyed by this string, instead of the shared
+   * one: an editor tab per file, say. Instances share the definition and each gets its
+   * own tab; the host ids them `<pluginId>:<id>#<instance>`. Opening an instance that is
+   * already open reveals it.
+   */
+  instance?: string;
+  /** Plain data handed to the component as `props.params`. Saved with the layout. */
+  params?: JsonValue;
+  /** Tab title for this instance; defaults to the definition's title. */
+  title?: string;
+  /** Tooltip for the tab (a full path, say); defaults to no tooltip. */
+  tooltip?: string;
+  /** Where to place it when it is not open yet; defaults to the definition's `defaultPosition`. */
+  position?: PanelPosition;
+  /**
+   * Close the panel instead of restoring it when the app starts again: for content that
+   * cannot be recreated from `params` alone, like a file on a connection that is gone.
+   * Default `false`.
+   */
+  transient?: boolean;
 }
 
 export interface PanelsApi {
   register(def: PanelDefinition): Disposable;
   /** Open (or reveal and focus) a registered panel by its plugin-local id. */
-  open(id: string): void;
-  close(id: string): void;
-  isOpen(id: string): boolean;
-  toggle(id: string): void;
+  open(id: string, options?: OpenPanelOptions): void;
+  /** Close the shared instance, or the given one. Closing a panel that is not open is a no-op. */
+  close(id: string, instance?: string): void;
+  isOpen(id: string, instance?: string): boolean;
+  toggle(id: string, options?: OpenPanelOptions): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,6 +361,8 @@ export interface CommandsApi {
   register(def: CommandDefinition): Disposable;
   /** Execute any command by full id (`<pluginId>:<id>` or a host command like `host:openSettings`). */
   execute<T = unknown>(fullId: string, ...args: unknown[]): Promise<T>;
+  /** Whether a command with this full id is registered right now (its plugin is active). */
+  has(fullId: string): boolean;
 }
 
 // ---------------------------------------------------------------------------

@@ -12,7 +12,12 @@ import { t } from '@/core/i18n';
 import { errorMessage } from '@/core/ipc/client';
 import { withMenuContributions } from '@/core/menus/contributions';
 import { shortcutLabel } from '@/core/menus/shortcuts';
-import { FIXED_TAB_COMPONENT, TERMINAL_PANEL_PREFIX } from '@/core/services/layout';
+import {
+  FIXED_TAB_COMPONENT,
+  TERMINAL_PANEL_PREFIX,
+  requestClosePanel,
+  requestClosePanels,
+} from '@/core/services/layout';
 import { useUiStore } from '@/core/stores/ui';
 import { getTerminal, openLocalTerminal } from '@/core/terminal/manager';
 import { panelMenuItems } from './panels';
@@ -29,9 +34,7 @@ function closable(panel: IDockviewPanel): boolean {
 }
 
 function closeAll(panels: IDockviewPanel[]): void {
-  for (const panel of panels) {
-    if (closable(panel)) panel.api.close();
-  }
+  void requestClosePanels(panels.filter(closable));
 }
 
 function newLocalShellItem(): MenuItem {
@@ -57,7 +60,7 @@ export function tabMenuItems(panel: IDockviewPanel): MenuItem[] {
       label: t('menu.tab.close'),
       icon: 'X',
       disabled: !closable(panel),
-      onClick: () => panel.api.close(),
+      onClick: () => void requestClosePanel(panel.id),
     },
     {
       id: 'close-others',

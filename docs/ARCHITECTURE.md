@@ -55,6 +55,7 @@ NaviShell/
 ├─ public/plugins/            GENERATED built-in plugin bundles (gitignored)
 ├─ packages/
 │  ├─ plugin-api/             @navishell/plugin-api  <-- PLUGIN CONTRACT (types + helpers)
+│  ├─ plugin-editor/          built-in code editor plugin (CodeMirror 6; one tab per file)
 │  ├─ plugin-sftp/            built-in file manager plugin
 │  ├─ plugin-completion/      built-in command completion plugin
 │  └─ plugin-hwmon/           hardware monitor; NOT bundled: packed by scripts/pack-plugin.mjs, published by plugin-release.yml
@@ -241,8 +242,13 @@ Changing a contract means updating both sides; prefer additive changes.
   instead of calling the plugin.
 - **Panels**: one registry for core panels (`core:servers`, `core:extensions`, `core:settings`) and plugin panels
   (`<pluginId>:<panelId>`). Dockview uses a single generic `panel` component whose params are
-  `{ panelId }`; it looks the definition up in the registry and renders it (or a
-  placeholder if the plugin is not loaded/disabled). Terminal tabs use the `terminal`
+  `{ panelId, instance?, params?, title?, tooltip?, transient? }`; it looks the definition
+  up in the registry and renders it (or a placeholder if the plugin is not loaded/disabled).
+  `ctx.panels.open(id, { instance, params })` opens a separate instance of a plugin panel
+  (dockview id `<fullId>#<instance>`; the editor opens one per file), `transient` instances
+  are closed instead of restored at startup, and `api.onWillClose` installs a close guard
+  that the tab's close button and the tab menu consult (`layout.ts: requestClosePanel`);
+  a plugin's own `close` and deactivation skip it. Terminal tabs use the `terminal`
   component with params `{ terminalId, serverId, serverName }` and `renderer: 'always'`.
   The center group always contains the non-closable `core:home` panel so there is always a
   terminal area.

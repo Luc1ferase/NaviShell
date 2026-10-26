@@ -9,7 +9,10 @@ interface FileEditorProps {
   t: Translate;
 }
 
-/** Quick read/edit view for small text files, shown as a sheet over the entry list. */
+/**
+ * Quick read/edit view for small text files, shown as a sheet over the entry list. Only
+ * used when the editor plugin (`navishell.editor`) is disabled; otherwise files open there.
+ */
 export function FileEditor({ viewer, controller, t }: FileEditorProps): JSX.Element {
   return (
     <div className="ns-sftp-editor">

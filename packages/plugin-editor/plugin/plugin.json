@@ -1,0 +1,21 @@
+{
+  "id": "navishell.editor",
+  "name": {
+    "en": "Editor",
+    "zh-CN": "编辑器",
+    "zh-TW": "編輯器",
+    "ja": "エディター"
+  },
+  "version": "0.1.0",
+  "description": {
+    "en": "Lightweight code editor for files opened from the file manager, with syntax highlighting and auto-indent.",
+    "zh-CN": "从文件管理器打开文件用的轻量代码编辑器，带语法高亮和自动缩进。",
+    "zh-TW": "從檔案管理員開啟檔案用的輕量程式碼編輯器，具備語法醒目提示與自動縮排。",
+    "ja": "ファイル マネージャーから開いたファイル用の軽量コード エディター。シンタックス ハイライトと自動インデント付き。"
+  },
+  "author": "NaviShell",
+  "main": "main.js",
+  "styles": ["style.css"],
+  "icon": "FileCode",
+  "minHostVersion": "0.11.0"
+}

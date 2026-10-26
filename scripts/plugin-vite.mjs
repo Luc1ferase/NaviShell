@@ -25,9 +25,11 @@ export const HOST_PROVIDED_MODULES = [
 /**
  * @param {string} pluginId e.g. "navishell.sftp"
  * @param {string} pkgDirUrl pass `import.meta.url` from the plugin's vite.config.ts
- * @param {{ outDir?: string }} [options] `outDir` (relative to the package) replaces the
- *   default `<repo>/public/plugins/<id>/`; plugins that are not bundled with the app build
- *   into their own `dist/` and are zipped from there (see scripts/pack-plugin.mjs).
+ * @param {{ outDir?: string, minify?: boolean }} [options] `outDir` (relative to the
+ *   package) replaces the default `<repo>/public/plugins/<id>/`; plugins that are not
+ *   bundled with the app build into their own `dist/` and are zipped from there (see
+ *   scripts/pack-plugin.mjs). `minify` (default false, so bundles stay readable) is for
+ *   plugins that carry a large library.
  */
 export function createPluginConfig(pluginId, pkgDirUrl, options = {}) {
   const pkgDir = path.dirname(fileURLToPath(pkgDirUrl));
@@ -46,7 +48,7 @@ export function createPluginConfig(pluginId, pkgDirUrl, options = {}) {
       outDir,
       emptyOutDir: true,
       sourcemap: false,
-      minify: false,
+      minify: options.minify ?? false,
       cssCodeSplit: false,
       target: ['es2022', 'chrome105', 'safari14'],
       lib: {

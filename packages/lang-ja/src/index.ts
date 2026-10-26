@@ -12,6 +12,7 @@ import type { PluginContext } from '@navishell/plugin-api';
 import host from './host.json';
 import completion from './plugins/navishell.completion.json';
 import completionDict from './plugins/navishell.completion.dict.json';
+import editor from './plugins/navishell.editor.json';
 import sftp from './plugins/navishell.sftp.json';
 
 export default definePlugin({
@@ -23,6 +24,7 @@ export default definePlugin({
         matches: ['ja'],
         host,
         plugins: {
+          'navishell.editor': editor,
           'navishell.sftp': sftp,
           'navishell.completion': { ...completion, ...completionDict },
         },
